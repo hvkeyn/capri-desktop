@@ -24,6 +24,8 @@ class Plan {
     this.status = 'running'; // running | done | failed | stopped
     this.steps = [];
     this.log = [];
+    this.attachments = []; // what was handed to her: { name, kind, bytes }
+    this.summary = '';     // the paragraph she tells you at the end, when the order is over
     this.startedAt = Date.now();
     this.endedAt = null;
     this.error = null;
@@ -48,6 +50,17 @@ class Plan {
 
   setPhase(phase) {
     if (PHASES.includes(phase)) this.phase = phase;
+    return this;
+  }
+
+  // What you gave her with the work order, as the board shows it: a chip each, and no content (the
+  // content is in the prompt and in the folder, not in a state file the overlay keeps around).
+  give(attachments = []) {
+    this.attachments = attachments.map((a) => ({
+      name: String(a.name || ''),
+      kind: a.kind || 'text',
+      bytes: Number(a.bytes) || 0,
+    }));
     return this;
   }
 
@@ -144,6 +157,8 @@ class Plan {
       error: this.error,
       steps: this.steps.map((s) => ({ ...s })),
       counts,
+      attachments: this.attachments.map((a) => ({ ...a })),
+      summary: this.summary,
       current: current ? { id: current.id, title: current.title } : null,
       log: this.log.slice(-12),
       startedAt: this.startedAt,

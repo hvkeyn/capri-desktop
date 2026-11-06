@@ -11,6 +11,8 @@ const path = require('node:path');
 
 const guard = require('../src/main/agent/guard');
 const fsx = require('../src/main/agent/fsx');
+const exec = require('../src/main/agent/exec');
+const attach = require('../src/main/agent/attach');
 const spec = require('../src/main/agent/spec');
 const { Runner } = require('../src/main/agent/runner');
 const store = require('../src/main/agent/store');
@@ -45,14 +47,40 @@ test('guard mode allows a project tools, refuses a shell and the destructive one
   assert.equal(guard.checkCommand('python -m pytest').ok, true);
   const ps = guard.checkCommand('powershell -Command "Remove-Item C:\\ -Recurse"');
   assert.equal(ps.ok, false);
-  assert.match(ps.reason, /never run/);
+  assert.match(ps.reason, /shell|full/);
   const cmd = guard.checkCommand('cmd /c del /s /q C:\\');
   assert.equal(cmd.ok, false);
   const disk = guard.checkCommand('format C:');
   assert.equal(disk.ok, false);
-  // trusted is wider, but the same hard refusals stand
+  assert.match(disk.reason, /never run/);
+  // trusted is wider, but the same hard refusals stand, and a shell is still not its business
   assert.equal(guard.checkCommand('npm test', { autonomy: 'trusted' }).ok, true);
   assert.equal(guard.checkCommand('format C:', { autonomy: 'trusted' }).ok, false);
+  assert.equal(guard.checkCommand('pwsh -NoProfile -Command "npm test"', { autonomy: 'trusted' }).ok, false);
+  // full is the harness's own reach: a shell too, and the disk is still off limits
+  assert.equal(guard.checkCommand('pwsh -NoProfile -Command "npm test | tee out.txt"', { autonomy: 'full' }).ok, true);
+  assert.equal(guard.checkCommand('cmd /c dir', { autonomy: 'full' }).ok, true);
+  assert.equal(guard.checkCommand('format C:', { autonomy: 'full' }).ok, false);
+  assert.equal(guard.checkCommand('reg add HKCU\\x', { autonomy: 'full' }).ok, false);
+});
+
+// ---- running a command --------------------------------------------------------------------------
+
+test('a command really runs in the folder, and a shell only at full', async (t) => {
+  const root = scratch(t);
+  fs.writeFileSync(path.join(root, 'child.js'), "require('node:fs').writeFileSync('out.txt','ran')\n");
+  const viaNode = await exec.run('node child.js', { root, autonomy: 'guard' });
+  assert.equal(viaNode.ok, true, viaNode.error);
+  assert.match(fs.readFileSync(path.join(root, 'out.txt'), 'utf8'), /ran/);
+
+  if (process.platform !== 'win32') return;
+  // a shell is refused below full, and is not a shell at all above it: it is argv that happens to be one
+  const denied = await exec.run('powershell -NoProfile -Command "Set-Content -Path stamp.txt -Value hi"', { root, autonomy: 'trusted' });
+  assert.equal(denied.ok, false);
+  assert.match(denied.error, /full access/);
+  const shell = await exec.run('powershell -NoProfile -Command "Set-Content -Path stamp.txt -Value hi"', { root, autonomy: 'full' });
+  assert.equal(shell.ok, true, `${shell.error} ${shell.stderr}`);
+  assert.equal(fs.readFileSync(path.join(root, 'stamp.txt'), 'utf8').trim(), 'hi');
 });
 
 // ---- the folder ---------------------------------------------------------------------------------
@@ -303,4 +331,84 @@ test('the agent seeds her harness, hears a correction, and runs a work order to 
   assert.equal(again.ok, true);
   agent.stopWork();
   assert.equal((await agent.runner.completion).status, 'stopped');
+});
+
+// ---- what you hand her --------------------------------------------------------------------------
+
+test('files, the clipboard and a picture become a context block and a copy she can re-read', (t) => {
+  const root = scratch(t);
+  const dir = path.join(root, 'specs', '001-x');
+  fs.mkdirSync(dir, { recursive: true });
+  const textFile = path.join(root, 'notes.txt');
+  fs.writeFileSync(textFile, 'the header must be sticky\n');
+  const imageFile = path.join(root, 'shot.png');
+  fs.writeFileSync(imageFile, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0]));
+  const binaryFile = path.join(root, 'app.exe');
+  fs.writeFileSync(binaryFile, Buffer.from([0x4d, 0x5a, 0x90, 0x00]));
+
+  const items = attach.readPaths([textFile, imageFile, binaryFile, path.join(root, 'nope.txt')]);
+  assert.equal(items[0].kind, 'text');
+  assert.match(items[0].text, /sticky/);
+  assert.equal(items[1].kind, 'image');
+  assert.equal(items[1].mime, 'image/png');
+  assert.equal(items[2].kind, 'binary');
+  assert.equal(items[3].kind, 'skipped');
+
+  const clip = attach.fromText('make it blue instead');
+  assert.equal(clip.kind, 'text');
+  assert.match(attach.contextBlock([clip]), /blue instead/);
+  assert.equal(attach.fromText('   '), null);
+
+  // a picture the model couldn't see is named as one, not silently dropped
+  const prepared = attach.prepare(dir, [items[0], items[1], { ...items[2], description: '' }]);
+  assert.match(prepared.context, /notes\.txt/);
+  assert.match(prepared.context, /must be sticky/);
+  assert.match(prepared.context, /shot\.png/);
+  assert.match(prepared.context, /could not look/);
+  assert.match(prepared.context, /app\.exe/);
+  assert.ok(fs.existsSync(path.join(dir, 'attachments', 'notes.txt')));
+  assert.ok(fs.existsSync(path.join(dir, 'attachments', 'shot.png')));
+  assert.ok(fs.existsSync(path.join(dir, 'attachments.md')));
+
+  // a picture that was read carries what it showed
+  const seen = attach.contextBlock([{ ...items[1], description: 'a dark header with three links' }]);
+  assert.match(seen, /dark header with three links/);
+});
+
+test('a work order reads what you gave it and reports in the character voice', async (t) => {
+  const root = scratch(t);
+  const sent = [];
+  const ask = async ({ messages }) => {
+    sent.push(messages.map((m) => String(m.content)).join('\n'));
+    const last = String(messages[messages.length - 1].content || '');
+    if (/Write `spec\.md`/.test(last)) return { text: '# Spec' };
+    if (/Write `plan\.md`/.test(last)) return { text: '# Plan' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '- [ ] T001 do it' };
+    if (/Write `report\.md`/.test(last)) return { text: '# Report\n---\nDone, choom.' };
+    if (/T001/.test(last)) {
+      return { text: '', toolCalls: [{ id: '1', name: 'update_plan', arguments: JSON.stringify({ status: 'done', note: 'did it' }) }] };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({
+    ask,
+    store: { savePlan() {}, observe() {} },
+    emit() {},
+    narrator: { name: 'Johnny Silverhand', persona: ['You are Johnny Silverhand, a rockerboy with a grudge.'] },
+  });
+  runner.start({
+    goal: 'fix it',
+    workspace: root,
+    attachments: [{ kind: 'text', name: 'notes.txt', text: 'the header must be sticky', bytes: 24 }],
+  });
+  const done = await runner.completion;
+  assert.equal(done.status, 'done');
+  assert.equal(done.attachments.length, 1);
+  assert.equal(done.attachments[0].name, 'notes.txt');
+  // who is reporting, and what they were handed, are in the first thing the model reads
+  assert.match(sent[0], /Johnny Silverhand/);
+  assert.match(sent[0], /the header must be sticky/);
+  // and the copies are in the feature folder, for read_file
+  assert.ok(fs.existsSync(path.join(root, 'specs', '001-fix-it', 'attachments', 'notes.txt')));
+  assert.match(done.summary, /choom/);
 });

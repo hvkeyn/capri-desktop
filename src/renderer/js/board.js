@@ -28,12 +28,16 @@ const TEXT = {
     close: 'Close', pick: 'Choose a folder…', goal: 'WORK ORDER', now: 'NOW', steps: 'STEPS',
     running: 'RUNNING', done: 'DONE', failed: 'FAILED', stopped: 'STOPPED', queued: 'QUEUED',
     empty: 'Nothing running. Give me a folder and a sentence.', workspace: 'FOLDER', pickFirst: 'Folder: your home, Capri Workspace',
+    files: 'Files…', clipboard: 'Clipboard', dropHint: 'or drop a file here', report: 'REPORT',
+    remove: 'Remove', clipboardEmpty: 'nothing on the clipboard',
   },
   ru: {
     order: 'Работа', placeholder: 'Что нужно сделать?', start: 'Начать', stop: 'Стоп', folder: 'Папка',
     close: 'Закрыть', pick: 'Выбрать папку…', goal: 'ЗАДАНИЕ', now: 'СЕЙЧАС', steps: 'ШАГИ',
     running: 'ИДЁТ', done: 'ГОТОВО', failed: 'СБОЙ', stopped: 'ОСТАНОВЛЕНО', queued: 'В ОЧЕРЕДИ',
     empty: 'Пока ничего. Дай мне папку и одну фразу.', workspace: 'ПАПКА', pickFirst: 'Папка: домашняя, Capri Workspace',
+    files: 'Файлы…', clipboard: 'Из буфера', dropHint: 'или перетащи файл сюда', report: 'ОТЧЁТ',
+    remove: 'Убрать', clipboardEmpty: 'в буфере пусто',
   },
   fr: {
     order: 'Commande', placeholder: 'Que dois-je faire ?', start: 'Commencer', stop: 'Arrêter', folder: 'Dossier',
@@ -77,6 +81,7 @@ export class Board {
     this.onStop = null;
     this.onPick = null;     // () => Promise<workspace>, the folder picker in main
     this.workspace = null;
+    this.attachments = [];  // what you handed her: { name, kind, bytes, … }
     this.open = false;
     this.timer = null;
     this.face = 'caret';    // which phase we last acted out, so she doesn't repeat herself
@@ -111,9 +116,21 @@ export class Board {
     this.pickBtn.type = 'button';
     this.pickBtn.addEventListener('click', () => this.pick());
     target.append(this.ws, this.pickBtn);
+    // what you hand her: a file picker, the clipboard (files and text), and a drop — the chips name
+    // each thing, and the whole row disappears when there is nothing attached
+    this.filesWrap = el('div', 'board__files');
+    this.attBtn = el('button', 'board__pick', '');
+    this.attBtn.type = 'button';
+    this.attBtn.addEventListener('click', () => this.attach());
+    this.clipBtn = el('button', 'board__pick', '');
+    this.clipBtn.type = 'button';
+    this.clipBtn.addEventListener('click', () => this.fromClipboard());
+    this.chips = el('ul', 'board__chips');
+    this.filesHint = el('span', 'board__files-hint', '');
+    this.filesWrap.append(this.attBtn, this.clipBtn, this.chips, this.filesHint);
     this.startBtn = el('button', 'board__action is-primary', '');
     this.startBtn.type = 'submit';
-    this.orderWrap.append(this.goalLabel, this.goalInput, target, this.startBtn);
+    this.orderWrap.append(this.goalLabel, this.goalInput, target, this.filesWrap, this.startBtn);
     this.orderWrap.addEventListener('submit', (e) => {
       e.preventDefault();
       this.submit();
@@ -148,7 +165,13 @@ export class Board {
     this.folderBtn.type = 'button';
     this.folderBtn.addEventListener('click', () => this.folder());
     this.foot.append(this.elapsed, this.stopBtn, this.folderBtn);
-    this.runWrap.append(this.goal, this.stepper, this.now, this.stepsTitle, this.stepsList, this.logTitle, this.log, this.foot);
+    // her report, in her own voice, when the order is over: the reason the board doesn't just vanish
+    this.report = el('section', 'board__report');
+    this.reportLabel = el('span', 'board__now-label', '');
+    this.reportLine = el('p', 'board__report-line', '');
+    this.report.append(this.reportLabel, this.reportLine);
+    this.report.hidden = true;
+    this.runWrap.append(this.goal, this.stepper, this.now, this.stepsTitle, this.stepsList, this.logTitle, this.log, this.report, this.foot);
 
     this.empty = el('p', 'board__empty', '');
 
@@ -156,10 +179,22 @@ export class Board {
     this.el.hidden = true;
     this.render();
     window.addEventListener('resize', () => this.place());
+    // dropping a file on the board hands it to her; anything else dropped is not the browser's business
+    this.el.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      this.el.classList.add('is-dropping');
+    });
+    this.el.addEventListener('dragleave', () => this.el.classList.remove('is-dropping'));
+    this.el.addEventListener('drop', (event) => {
+      event.preventDefault();
+      this.el.classList.remove('is-dropping');
+      this.dropped(event.dataTransfer?.files);
+    });
   }
 
   get t() {
-    return TEXT[this.lang()] || TEXT.en;
+    // a language that hasn't caught up with a new word reads it in English instead of drawing nothing
+    return { ...TEXT.en, ...(TEXT[this.lang()] || {}) };
   }
 
   // Where the board is, for app.js's click-through test: the overlay is click-through everywhere but
@@ -309,6 +344,7 @@ export class Board {
     this.startBtn.textContent = t.start;
     this.pickBtn.textContent = t.pick;
     this.ws.textContent = this.workspace || t.pickFirst;
+    this.renderFiles();
 
     if (!running) {
       this.nowLabel.textContent = t.now;
@@ -317,6 +353,7 @@ export class Board {
       this.stepper.replaceChildren();
       this.stepsList.replaceChildren();
       this.log.replaceChildren();
+      this.report.hidden = true;
       return;
     }
 
@@ -364,6 +401,14 @@ export class Board {
       return li;
     }));
 
+    // her report, once there is one: the paragraph she tells you, in her own voice, in place of the
+    // log — that is the thing you were waiting for, so it gets the room
+    this.reportLabel.textContent = t.report;
+    const finished = s.status !== 'running';
+    const spoken = s.summary || (finished ? (s.error || '') : '');
+    this.report.hidden = !finished || !spoken;
+    this.reportLine.textContent = spoken;
+
     this.stopBtn.textContent = t.stop;
     this.stopBtn.disabled = s.status !== 'running';
     this.folderBtn.textContent = t.folder;
@@ -376,6 +421,72 @@ export class Board {
     return ({ running: t.running, done: t.done, failed: t.failed, stopped: t.stopped })[status] || status;
   }
 
+  // ---- what you hand her --------------------------------------------------------------------------
+
+  async attach() {
+    const list = await this.host.attachPick?.();
+    if (Array.isArray(list) && list.length) this.addAttachments(list);
+  }
+
+  async fromClipboard() {
+    const list = await this.host.attachClipboard?.();
+    if (Array.isArray(list) && list.length) this.addAttachments(list);
+    else this.flash(this.t.clipboardEmpty);
+  }
+
+  // Files dropped on the board: Electron gives each File a real path, and main reads it
+  async dropped(files) {
+    const paths = [...(files || [])].map((file) => file.path).filter(Boolean);
+    if (!paths.length) return;
+    const list = await this.host.attachPaths?.(paths);
+    if (Array.isArray(list) && list.length) this.addAttachments(list);
+  }
+
+  addAttachments(list) {
+    for (const item of list) {
+      if (!item || !item.name) continue;
+      // the same file twice is one file: name and size is enough to tell them apart here
+      if (this.attachments.some((a) => a.name === item.name && a.bytes === item.bytes)) continue;
+      this.attachments.push(item);
+    }
+    this.renderFiles();
+  }
+
+  removeAttachment(name) {
+    this.attachments = this.attachments.filter((a) => a.name !== name);
+    this.renderFiles();
+  }
+
+  flash(text) {
+    this.filesHint.textContent = text;
+    clearTimeout(this.hintTimer);
+    this.hintTimer = setTimeout(() => { this.filesHint.textContent = this.t.dropHint; }, 3200);
+  }
+
+  // The chips, one per thing handed over: a name, what it is, and a way to take it back off.
+  renderFiles() {
+    const t = this.t;
+    this.attBtn.textContent = t.files;
+    this.clipBtn.textContent = t.clipboard;
+    this.filesHint.textContent = this.filesHint.dataset.text || t.dropHint;
+    this.chips.replaceChildren(...this.attachments.map((item) => {
+      const li = el('li', 'board__file');
+      li.dataset.kind = item.kind;
+      li.append(el('span', 'board__file-name', item.name));
+      if (item.kind === 'image') li.append(el('span', 'board__file-kind', 'picture'));
+      const x = el('button', 'board__file-x', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', `${t.remove} ${item.name}`);
+      x.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.removeAttachment(item.name);
+      });
+      li.append(x);
+      return li;
+    }));
+    this.filesWrap.hidden = this.mode !== 'order';
+  }
+
   submit() {
     const goal = this.goalInput.value.trim();
     if (!goal) {
@@ -383,7 +494,11 @@ export class Board {
       return;
     }
     this.goalInput.value = '';
-    this.onStart?.(goal, this.workspace);
+    // the attachments go with this order, not the next one
+    const attachments = this.attachments.slice();
+    this.attachments = [];
+    this.renderFiles();
+    this.onStart?.(goal, this.workspace, attachments);
   }
 
   async pick() {

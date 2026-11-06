@@ -21,6 +21,7 @@
     "check:tools": "node scripts/check-tools.js",
     "test": "node --test tests/agent.test.js tests/board.test.js tests/hooks.test.js",
     "smoke": "node scripts/smoke.js",
+    "try": "node scripts/try-work.js",
     "test:hooks": "node --test tests/hooks.test.js",
     "dist": "electron-builder --win"
   },

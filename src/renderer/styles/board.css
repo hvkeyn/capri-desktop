@@ -426,6 +426,115 @@
   color: var(--paper-3);
 }
 
+/* ---- what you hand her -------------------------------------------- */
+
+.board__files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0 0;
+}
+
+.board__files-hint {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--paper-3);
+}
+
+/* one chip per thing handed over: its name, what it is, and a way to take it off */
+.board__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-basis: 100%;
+}
+
+.board__chips:empty {
+  display: none;
+}
+
+.board__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 2px 2px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--cyan);
+  background: var(--ink-2);
+  font-size: 10px;
+  color: var(--paper-2);
+}
+
+.board__file[data-kind='image'] {
+  border-left-color: var(--yellow);
+}
+
+.board__file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board__file-kind {
+  flex: none;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--paper-3);
+  text-transform: uppercase;
+}
+
+.board__file-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--paper-3);
+  font: 400 14px var(--font-mono);
+  cursor: pointer;
+}
+
+.board__file-x:hover { color: var(--red); }
+.board__file-x:focus-visible { outline: 2px solid var(--cyan); outline-offset: -4px; }
+
+/* the whole board is a drop target, and says so while a file is over it */
+.board.is-dropping .board__frame {
+  border-color: var(--cyan);
+}
+
+.board.is-dropping .board__files-hint {
+  color: var(--cyan);
+}
+
+/* ---- her report ---------------------------------------------------- */
+
+.board__report {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--cyan);
+  background: oklch(0.215 0.01 100 / 0.7);
+}
+
+.board__report-line {
+  margin: 0;
+  font: 400 12px / 1.45 var(--font-mono);
+  color: var(--paper);
+  white-space: pre-wrap;
+  max-height: 26vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-3) transparent;
+}
+
 /* ---- nothing moves if the machine says so ------------------------- */
 
 @media (prefers-reduced-motion: reduce) {

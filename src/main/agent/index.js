@@ -32,12 +32,13 @@ function judgeMessages({ input, output, better }) {
 }
 
 class Agent {
-  constructor({ base, ask, judge = null, emit = () => {}, autonomy = () => 'guard', clock = () => Date.now() }) {
+  constructor({ base, ask, judge = null, emit = () => {}, autonomy = () => 'guard', narrator = null, clock = () => Date.now() }) {
     this.base = base;
     this.ask = ask;
     this.judge = judge;
     this.emit = emit;
     this.autonomy = autonomy;
+    this.narrator = narrator; // () => ({ name, persona }): who reports, from the character on the desktop
     this.clock = clock;
     this.runner = null;
     this.evolver = null;
@@ -87,9 +88,10 @@ class Agent {
 
   // A work order. Returns the first snapshot; the run continues in the background and every change
   // comes out of `emit` as a full state, which is what the board draws.
-  startWork({ goal, workspace }) {
+  startWork({ goal, workspace, attachments = [] }) {
     if (this.runner && this.plan?.status === 'running') return { ok: false, error: 'a work order is already running' };
     const root = path.resolve(String(workspace || '').trim() || guard.defaultWorkspace());
+    const narrator = typeof this.narrator === 'function' ? this.narrator() : this.narrator;
     this.runner = new Runner({
       ask: (req) => this.ask(req),
       // the runner writes through her storage, not to a path of its own
@@ -100,9 +102,10 @@ class Agent {
       emit: (state) => { this.plan = state; this.emit(state); },
       autonomy: this.autonomyLevel,
       clock: this.clock,
+      narrator,
     });
-    this.plan = this.runner.start({ goal: String(goal || '').trim() || 'What they asked for', workspace: root });
-    this.observe({ kind: 'work', text: `Work order started: ${this.plan.goal}`, meta: { id: this.plan.id, workspace: root } });
+    this.plan = this.runner.start({ goal: String(goal || '').trim() || 'What they asked for', workspace: root, attachments, narrator });
+    this.observe({ kind: 'work', text: `Work order started: ${this.plan.goal}`, meta: { id: this.plan.id, workspace: root, attachments: attachments.length } });
     return { ok: true, plan: this.plan };
   }
 

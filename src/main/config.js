@@ -43,7 +43,7 @@ const DEFAULTS = {
   watchScreen: false, // she looks at your screen now and then and says something about it (look.js)
   lookAsked: false,  // she told you what looking means (where the picture goes) and you said yes
   workspace: '',     // the folder a work order runs in ('' : ~/Capri Workspace, src/main/agent/guard.js)
-  autonomy: 'guard', // what a work order may run: 'guard' (a project's own tools) or 'trusted' (anything but the destructive ones)
+  autonomy: 'full',  // what a work order may run: 'guard' (a project's own tools), 'trusted' (anything but the destructive ones) or 'full' (a shell too, like the harness)
 };
 
 let cache = null;

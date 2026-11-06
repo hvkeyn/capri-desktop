@@ -10,9 +10,9 @@
 //   - a command is run without a shell, as an argv list, so `&&`, `|`, `>` and `%USERPROFILE%` are
 //     never interpreted by anything; the program itself is checked against the autonomy level.
 //
-// Two levels. 'guard' (the default) lets her run the tools of a project — node, npm, git, python and
-// their friends — and refuses anything else. 'trusted' (her menu) lets her run any program except the
-// ones that wipe a disk, rewrite the machine's settings or launder a command through another shell.
+// The level is hers to pick in the menu (see the three below): what changes is which programs may run,
+// never the folder rule and never the argv rule. One level up from 'trusted' is 'full', which runs a
+// shell as well — the same powers the harness driving this desktop has.
 
 const path = require('node:path');
 const os = require('node:os');
@@ -35,6 +35,16 @@ function resolve(root, rel = '.') {
   return { ok: true, path: full };
 }
 
+// Three levels of what may run, picked in her menu:
+//
+//   guard   a project's own tools (node, npm, git, python, cargo…): a work order that builds something
+//   trusted anything but the ones that wipe a disk, rewrite the machine's settings or take ownership
+//   full    everything the harness itself may run, shells included (pwsh -Command "npm test | tee log"):
+//           what you want when she has to drive a machine rather than a repo
+//
+// The catastrophic set is refused at every level: a work order is not going to format a disk.
+const LEVELS = ['guard', 'trusted', 'full'];
+
 // What she may run in guard mode: the tools a project is made of. Nothing that opens a shell of its
 // own (a shell would take any command after it), nothing that installs a service or edits the registry.
 const GUARD = new Set([
@@ -48,15 +58,27 @@ const GUARD = new Set([
   'rg', 'findstr', 'wc', 'head', 'tail', 'tar', 'unzip', 'zip',
 ]);
 
-// Never, at any level: these wipe a disk, change how the machine boots, or run a command by proxy.
-const DENY = new Set([
+// Never, at any level: these wipe a disk, change how the machine boots, or edit the machine's own
+// settings. A work order that needs one of them needs you.
+const CATASTROPHIC = new Set([
   'format', 'diskpart', 'bcdedit', 'bootrec', 'cipher', 'vssadmin', 'wbadmin', 'sfc',
-  'shutdown', 'restart', 'logoff', 'taskkill', 'reg', 'regedit', 'sc', 'sc.exe', 'netsh',
-  'takeown', 'icacls', 'cacls', 'attrib', 'schtasks', 'wmic',
-  'powershell', 'powershell.exe', 'pwsh', 'cmd', 'cmd.exe', 'bash', 'sh', 'zsh', 'fish',
-  'wscript', 'cscript', 'mshta', 'certutil', 'bitsadmin', 'rundll32', 'regsvr32', 'installutil',
-  'sudo', 'su', 'doas', 'runas',
+  'reg', 'regedit', 'sc', 'sc.exe', 'netsh', 'schtasks', 'wmic',
+  'takeown', 'icacls', 'cacls', 'attrib', 'shutdown', 'restart', 'logoff', 'taskkill',
 ]);
+
+// A shell of its own: it would take any command after it, so only full access may run one.
+const SHELLS = new Set([
+  'powershell', 'powershell.exe', 'pwsh', 'cmd', 'cmd.exe', 'bash', 'sh', 'zsh', 'fish',
+]);
+
+// Things that launder a command through another program, or install a service: full access only.
+const TRUSTED_DENY = new Set([
+  'wscript', 'cscript', 'mshta', 'certutil', 'bitsadmin', 'rundll32', 'regsvr32', 'installutil',
+  'sudo', 'su', 'doas', 'runas', 'mount', 'umount', 'systemctl', 'launchctl',
+]);
+
+// The old name, kept for anything that still reads it: what no work order runs, at any level.
+const DENY = new Set([...CATASTROPHIC, ...TRUSTED_DENY]);
 
 // Arguments that would hand the machine over even through a tool we allow: a print to a device, a
 // path that escapes Windows' own name resolution, a recursive delete of a root.
@@ -109,22 +131,30 @@ function checkCommand(text, { autonomy = 'guard' } = {}) {
   if (!parsed.ok) return parsed;
   const { argv } = parsed;
   const bin = binName(argv[0]);
-  if (DENY.has(bin)) return { ok: false, reason: `"${bin}" is never run by a work order` };
+  const level = LEVELS.includes(autonomy) ? autonomy : 'guard';
+  if (CATASTROPHIC.has(bin)) return { ok: false, reason: `"${bin}" is never run by a work order, at any level` };
+  if (TRUSTED_DENY.has(bin) && level !== 'full') {
+    return { ok: false, reason: `"${bin}" needs full access (her menu › Work › What she may run)` };
+  }
+  if (SHELLS.has(bin) && level !== 'full') {
+    return { ok: false, reason: `"${bin}" is a shell; only full access may run a shell` };
+  }
   for (const arg of argv.slice(1)) {
     if (DENY_ARGS.some((re) => re.test(arg))) return { ok: false, reason: `argument "${arg}" is not allowed` };
   }
-  if (autonomy !== 'trusted' && !GUARD.has(bin)) {
+  if (level === 'guard' && !GUARD.has(bin)) {
     return { ok: false, reason: `"${bin}" is not one of the tools a work order may run (guard mode)` };
   }
-  if (autonomy !== 'trusted' && argv.length > 1 && /^-{1,2}(mount|install|service)/i.test(argv[1])) {
+  if (level !== 'full' && argv.length > 1 && /^-{1,2}(mount|install|service)/i.test(argv[1])) {
     return { ok: false, reason: 'installing something is a click of yours, not a step of a work order' };
   }
-  return { ok: true, argv, bin };
+  return { ok: true, argv, bin, level };
 }
 
 // A command line as it's shown to you: quoted where it needs to be.
 const show = (argv) => argv.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ');
 
 module.exports = {
-  WIN, GUARD, DENY, defaultWorkspace, within, resolve, parseCommand, checkCommand, show, words,
+  WIN, LEVELS, GUARD, DENY, CATASTROPHIC, SHELLS, TRUSTED_DENY,
+  defaultWorkspace, within, resolve, parseCommand, checkCommand, show, words,
 };

@@ -17,6 +17,7 @@ const fsx = require('./fsx');
 const exec = require('./exec');
 const spec = require('./spec');
 const prompts = require('./prompts');
+const attach = require('./attach');
 const { Plan } = require('./plan');
 
 const TOOL_ROUNDS = 8; // one task may take this many model turns before it is called stuck
@@ -128,19 +129,22 @@ const stripFence = (text) => {
 const tokens = (text) => Math.ceil(String(text || '').length / 4);
 
 class Runner {
-  constructor({ ask, store, emit = () => {}, autonomy = 'guard', clock = () => Date.now(), maxToolRounds = TOOL_ROUNDS }) {
+  constructor({ ask, store, emit = () => {}, autonomy = 'guard', clock = () => Date.now(), maxToolRounds = TOOL_ROUNDS, narrator = null }) {
     this.ask = ask;
     this.store = store;
     this.emit = emit;
     this.autonomy = autonomy;
     this.clock = clock;
     this.maxToolRounds = maxToolRounds;
+    this.narrator = narrator; // who is on the desktop tonight: { name, persona } (skin.json)
     this.abort = new AbortController();
     this.plan = null;
     this.dir = null;
     this.specText = '';
     this.planText = '';
     this.tasksText = '';
+    this.context = ''; // what was handed over, as the prompt reads it
+    this.attachments = [];
     this.spent = 0; // estimated tokens of model calls, for the report
     this.completion = null;
   }
@@ -151,8 +155,11 @@ class Runner {
 
   // Starts the work order and returns at once with the plan's first snapshot: the board opens on it
   // while the rest happens behind it. `completion` resolves when the last phase is over.
-  start({ goal, workspace }) {
+  start({ goal, workspace, attachments = [], narrator = null }) {
     this.plan = new Plan({ id: `work-${this.clock()}`, goal, workspace: path.resolve(workspace || guard.defaultWorkspace()) });
+    this.narrator = narrator || this.narrator;
+    this.attachments = Array.isArray(attachments) ? attachments : [];
+    this.plan.give(this.attachments);
     this.completion = this.run().catch((err) => this.finishWithError(err));
     return this.snapshot();
   }
@@ -182,15 +189,24 @@ class Runner {
     const constitution = spec.readConstitution(workspace);
     const feature = spec.feature(workspace, goal);
     this.dir = feature.dir;
+    this.where = path.relative(workspace, this.dir).split(path.sep).join('/'); // 'specs/001-…', as read_file sees it
     this.plan.id = feature.id;
     this.plan.slug = feature.id;
     this.notes = prompts.workNotes(prompts.bundled());
+    // what you handed over becomes a block in the prompt, a copy in the feature folder and a note on
+    // the board; a picture with no vision pass is named as one rather than silently dropped
+    if (this.attachments.length) {
+      this.context = attach.prepare(this.dir, this.attachments, workspace).context;
+      this.plan.note(`${this.attachments.length} handed over`, 'note');
+    }
     this.push();
 
     // 1. the spec
     this.plan.setPhase('spec').note('writing the spec', 'note');
     this.push();
-    this.specText = stripFence(await this.tell(prompts.specMessages({ goal, constitution, workspace })));
+    this.specText = stripFence(await this.tell(prompts.specMessages({
+      goal, constitution, workspace, narrator: this.narrator, context: this.context, attachments: this.attachments, where: this.where,
+    })));
     spec.write(this.dir, 'spec.md', `${this.specText}\n`);
     this.plan.note('spec.md written', 'file');
     this.push();
@@ -199,7 +215,9 @@ class Runner {
     // 2. the plan
     this.plan.setPhase('plan').note('writing the plan', 'note');
     this.push();
-    this.planText = stripFence(await this.tell(prompts.planMessages({ goal, spec: this.specText, constitution, workspace })));
+    this.planText = stripFence(await this.tell(prompts.planMessages({
+      goal, spec: this.specText, constitution, workspace, narrator: this.narrator, context: this.context, attachments: this.attachments, where: this.where,
+    })));
     spec.write(this.dir, 'plan.md', `${this.planText}\n`);
     this.plan.note('plan.md written', 'file');
     this.push();
@@ -208,7 +226,9 @@ class Runner {
     // 3. the tasks
     this.plan.setPhase('tasks').note('breaking it into steps', 'note');
     this.push();
-    this.tasksText = stripFence(await this.tell(prompts.tasksMessages({ goal, spec: this.specText, plan: this.planText })));
+    this.tasksText = stripFence(await this.tell(prompts.tasksMessages({
+      goal, spec: this.specText, plan: this.planText, narrator: this.narrator, attachments: this.attachments, where: this.where,
+    })));
     spec.write(this.dir, 'tasks.md', `${this.tasksText}\n`);
     const parsed = spec.parseTasks(this.tasksText);
     this.plan.addSteps(parsed.tasks);
@@ -262,6 +282,7 @@ class Runner {
         : '';
       const messages = prompts.stepMessages({
         task: step, spec: this.specText, plan: this.planText, notes: this.notes, log, autonomy: this.autonomy, nudge,
+        narrator: this.narrator, attachments: this.attachments, where: this.where,
       });
       const res = await this.turn(messages, TOOLS);
       if (res.text) log.push(res.text.slice(0, 400));
@@ -289,17 +310,18 @@ class Runner {
       if (step.status !== 'running') break;
     }
     if (step.status === 'running') {
-      // out of rounds: one last, different attempt at the same task
-      const res = await this.turn(prompts.retryMessages({ task: step, error: log.slice(-4).join('\n') || 'no result', notes: this.notes }), TOOLS);
-      if (!res.toolCalls?.length && step.status === 'running') {
-        this.plan.fail(step.id, 'ran out of turns without finishing');
-      } else {
-        for (const call of res.toolCalls || []) {
-          await this.use(call, step);
-          if (step.status !== 'running') break;
-        }
-        if (step.status === 'running') this.plan.fail(step.id, 'ran out of turns without finishing');
+      // Out of rounds, or a model that keeps reading instead of deciding. The last turn is not "do more":
+      // update_plan is the only tool on the table, so the answer can only be done or failed — and the
+      // board gets one either way, instead of a step that hangs at running forever.
+      const decision = await this.turn(
+        prompts.decideMessages({ task: step, notes: this.notes, log, narrator: this.narrator }),
+        [TOOLS.find((tool) => tool.function.name === 'update_plan')],
+      );
+      for (const call of decision.toolCalls || []) {
+        await this.use(call, step);
+        if (step.status !== 'running') break;
       }
+      if (step.status === 'running') this.plan.fail(step.id, 'ran out of turns without deciding');
     }
     if (step.status === 'done') spec.tick(this.dir, step.id);
     this.plan.note(`${step.id} ${step.status}`, step.status === 'done' ? 'note' : 'error');
@@ -376,13 +398,13 @@ class Runner {
     this.push();
     try {
       const text = await this.tell(prompts.reportMessages({
-        goal: this.plan.goal, spec: this.specText, tasks: this.tasksText,
+        goal: this.plan.goal, spec: this.specText, tasks: this.tasksText, narrator: this.narrator,
         results: this.plan.steps.map((s) => ({ id: s.id, title: s.title, status: s.status, note: s.note })),
       }));
       const [file, ...rest] = text.split(/\n-{3,}\s*\n/);
       spec.write(this.dir, 'report.md', `${String(file || '').trim()}\n`);
       const spoken = rest.join('\n').trim();
-      if (spoken) this.plan.summary = spoken.slice(0, 600);
+      if (spoken) this.plan.summary = spoken.slice(0, 1600); // the report has to end on a sentence, not a cut
       this.plan.note('report.md written', 'file');
     } catch (err) {
       this.plan.note(`no report: ${err.message}`, 'error');

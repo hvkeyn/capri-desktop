@@ -290,14 +290,17 @@ async function boot() {
     panel,
     lang: () => brain.lang || 'en',
   });
-  board.onStart = (goal, workspace) => {
+  board.onStart = (goal, workspace, attachments) => {
     panel.say({ kind: 'work', line: goal, tag: 'WORK ORDER', hold: 4000 });
-    host.workStart({ goal, workspace }).then((res) => {
+    host.workStart({ goal, workspace, attachments: attachments || [] }).then((res) => {
       if (res?.ok && res.plan) board.update(res.plan);
       else if (res?.error) panel.say({ kind: 'error', line: res.error, hold: 7000 });
     });
   };
   board.onStop = () => host.workStop();
+  // a file dropped anywhere but the board is not the browser's business: the overlay never navigates
+  window.addEventListener('dragover', (event) => event.preventDefault());
+  window.addEventListener('drop', (event) => event.preventDefault());
   board.onPick = () => host.pickFolder();
   // the folder she worked in last time is where the next work order starts
   board.workspace = config.workspace || null;

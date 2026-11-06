@@ -46,6 +46,10 @@ contextBridge.exposeInMainWorld('host', {
   workStop: () => ipcRenderer.invoke('work:stop'),
   workState: () => ipcRenderer.invoke('work:state'),
   pickFolder: () => ipcRenderer.invoke('work:pick'),
+  // what you hand her: files from a picker, paths from a drop, the clipboard (files and text)
+  attachPick: () => ipcRenderer.invoke('attach:pick'),
+  attachPaths: (paths) => ipcRenderer.invoke('attach:paths', paths),
+  attachClipboard: () => ipcRenderer.invoke('attach:clipboard'),
   openFolder: (dir) => ipcRenderer.invoke('work:open', dir),
   openHarness: () => ipcRenderer.invoke('harness:open'),
   onWorkState: on('work:state'),

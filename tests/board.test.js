@@ -131,16 +131,28 @@ test('the board draws a work order: five phases, the step she is on, its meter',
   assert.deepEqual(tickers.at(-1), { verb: 'RUNS', target: 'npm test', error: false });
 
   // a finished order: the chip says so, Stop goes quiet, and she celebrates once
-  board.update(fakeOrder({ status: 'done', phase: 'report', endedAt: Date.now(), elapsedMs: 30000 }));
+  board.update(fakeOrder({ status: 'done', phase: 'report', endedAt: Date.now(), elapsedMs: 30000, summary: 'Done, choom.' }));
   assert.equal(board.chip.textContent, 'ГОТОВО');
   assert.equal(board.stopBtn.disabled, true);
   assert.deepEqual(acts.at(-1), ['victory', 0]);
   assert.ok(said.length >= 1, 'she says it is done');
+  // her report is on the board, in her words, and stays there
+  assert.equal(board.report.hidden, false);
+  assert.equal(board.reportLine.textContent, 'Done, choom.');
 
   // a failure is a failure, not a blank board
   board.update(fakeOrder({ status: 'failed', phase: 'build', error: 'T002: npm test failed' }));
   assert.equal(board.chip.textContent, 'СБОЙ');
   assert.deepEqual(acts.at(-1), ['flinch', 0]);
+
+  // what you hand her: one chip per thing, and a way to take it back off
+  board.showOrder('C:\\workspace\\site');
+  board.addAttachments([{ name: 'notes.txt', kind: 'text', bytes: 24 }, { name: 'shot.png', kind: 'image', bytes: 300 }]);
+  assert.equal(board.chips.children.length, 2);
+  assert.equal(board.chips.children[1].dataset.kind, 'image');
+  board.removeAttachment('notes.txt');
+  assert.equal(board.chips.children.length, 1);
+  assert.equal(board.chips.children[0].dataset.kind, 'image');
 
   board.hide();
   clearInterval(board.timer); // the clock the board keeps while it's open
@@ -162,12 +174,19 @@ test('the order form takes a sentence and a folder, and hands them on', async (t
   const root = node('aside');
   const handed = [];
   const board = new Board({ board: root, host: { focusOverlay: () => {} }, capri: {}, panel: {}, lang: () => 'en' });
-  board.onStart = (goal, workspace) => handed.push({ goal, workspace });
+  board.onStart = (goal, workspace, attachments) => handed.push({ goal, workspace, attachments });
   board.showOrder('C:\\workspace\\site');
   assert.equal(board.goalInput.focused, true);
+  board.addAttachments([{ name: 'notes.txt', kind: 'text', bytes: 24 }]);
   board.goalInput.value = '  make the header sticky  ';
   board.submit();
-  assert.deepEqual(handed, [{ goal: 'make the header sticky', workspace: 'C:\\workspace\\site' }]);
+  assert.deepEqual(handed, [{
+    goal: 'make the header sticky',
+    workspace: 'C:\\workspace\\site',
+    attachments: [{ name: 'notes.txt', kind: 'text', bytes: 24 }],
+  }]);
   assert.equal(board.goalInput.value, '');
+  // the attachments went with that order, not the next one
+  assert.equal(board.chips.children.length, 0);
   clearInterval(board.timer);
 });

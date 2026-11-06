@@ -32,17 +32,27 @@ Everything lands on disk as it goes: `.specify/memory/constitution.md`, and
 `specs/NNN-slug/{spec.md,plan.md,tasks.md,state.json,report.md}` — a folder she worked in reads like one
 a person worked in with spec-kit.
 
-- **What she may run** is in the same menu. `guard` (the default) is a project's own tools — node, npm,
-  git, python, cargo — and nothing that opens a shell; `trusted` is anything but the destructive ones
-  (no disk formatting, no registry, no `powershell`). No command ever goes through a shell: it's argv,
-  with `shell: false`, so `&&`, `|` and `%VAR%` are never interpreted.
+- **What she may run** is in the same menu: **full** (the default — anything the harness itself may run,
+  a shell included), **trusted** (anything but the destructive ones), **guard** (a project's own tools:
+  node, npm, git, python, cargo). Every level still refuses the things that wipe a disk or rewrite the
+  machine's settings, and no command ever goes through a shell by accident: it's argv, with
+  `shell: false`, so `&&`, `|` and `%VAR%` are never interpreted.
+- **What you hand her** goes in at the top of the board: **Files…**, the **clipboard** (the files on it
+  and its text), or a **drop** of files onto the board. Text is read into the prompt and copied into
+  `specs/NNN-slug/attachments/`; a picture is described by the model if it has eyes, and named plainly
+  if it doesn't.
 - **Files stay inside the folder you gave her.** Every path is resolved and checked against it.
+- **The report is hers**, in the voice of whoever is on the desktop: a work order by Johnny Silverhand
+  ends with Johnny's paragraph, not a changelog.
 - **Work › Learn from me** is one round of her improving the words that make her her — her standing
   notes, how she works — from the moments you corrected her, with a critic, a noise floor, a cost rule
   and a backup of every accepted round. That's [RRSI](https://arxiv.org/abs/2609.24972) at desktop
   scale.
 
 [The harness](docs/agent.md) · [Evolving her harness](docs/evolve.md) · [The interface pass](docs/interface.md)
+
+From a terminal, without the window: `npm run try -- "make hello.txt that says nova" C:\scratch` — a real
+work order on a real folder, printed phase by phase, ending with her report.
 
 ## What she does
 

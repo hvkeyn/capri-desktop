@@ -25,6 +25,7 @@ const characters = require('./characters');
 const launch = require('./launch');
 const files = require('./files');
 const { Agent } = require('./agent');
+const attach = require('./agent/attach');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -67,9 +68,92 @@ function getAgent() {
       ask: askModel,
       emit: sendToOverlay,
       autonomy: () => config.load().autonomy,
+      narrator: characterVoice,
     }).ensure();
   }
   return agent;
+}
+
+// What you hand her: files from the picker or a drop, and whatever is on the clipboard — its files (the
+// FileNameW list Windows puts there) or its text. Nothing is read twice: a text file is already text by
+// the time this returns, a picture waits for the vision pass at the start of the work order.
+const ATTACH_MAX = 20;
+
+async function attachmentsFromPaths(paths = []) {
+  const files = (paths || []).slice(0, ATTACH_MAX);
+  const out = [];
+  for (const one of attach.readPaths(files)) {
+    if (one.kind === 'skipped') {
+      out.push({ kind: 'text', name: one.name, text: `[could not be read: ${one.error}]`, bytes: 0 });
+    } else {
+      out.push(one);
+    }
+  }
+  return out;
+}
+
+// The clipboard, as attachments: the files it holds, then its text (a copied message is context too).
+function attachmentsFromClipboard() {
+  const out = [];
+  try {
+    const buf = clipboard.readBuffer('FileNameW');
+    if (buf && buf.length) {
+      const paths = buf.toString('ucs2').split('\0').filter((s) => s.trim());
+      out.push(...attach.readPaths([...new Set(paths)].slice(0, ATTACH_MAX)).filter((f) => f.kind !== 'skipped'));
+    }
+  } catch {
+    // no file list on the clipboard: text only
+  }
+  try {
+    const text = clipboard.readText();
+    const one = text ? attach.fromText(text) : null;
+    if (one) out.push(one);
+  } catch {
+    // no clipboard at all
+  }
+  return out;
+}
+
+// Pictures, for the model behind her: a work order about a screenshot needs the screenshot read, not
+// "a picture was attached". Asked once, at the start, with the goal as the question.
+const DESCRIBE_SYSTEM = 'You read a picture for someone who is about to act on it. Say everything in it that could matter, '
+  + 'transcribe any text exactly, name the app or site if it is recognisable, and leave out opinion. '
+  + 'Answer in the language of the task. Nothing else: no preamble.';
+
+async function describePicture(item, goal) {
+  const cfg = config.load();
+  if (cfg.provider === 'claude') return { ...item, note: 'Claude Code has no eyes: this picture was not read' };
+  if (!chatModels?.length) await refreshModels();
+  const model = pickModel(cfg);
+  if (!model) return { ...item, note: 'no model to look at the picture' };
+  if (cfg.provider === 'ollama' && !(await ollama.canSee(model))) return { ...item, note: `"${model}" cannot see pictures` };
+  let base64;
+  try {
+    base64 = fs.readFileSync(item.path).toString('base64');
+  } catch (err) {
+    return { ...item, note: `unreadable: ${err.message}` };
+  }
+  const ask = `What is in this picture? It is attached to a task: "${String(goal).slice(0, 300)}". `;
+  const user = cfg.provider === 'ollama'
+    ? { role: 'user', content: ask, images: [base64] }
+    : { role: 'user', content: [{ type: 'text', text: ask }, { type: 'image_url', image_url: { url: `data:${item.mime};base64,${base64}` } }] };
+  const messages = [{ role: 'system', content: DESCRIBE_SYSTEM }, user];
+  try {
+    const text = await llm.chat(cfg.provider, llmConfig(cfg), { model, messages }, () => {}, AbortSignal.timeout(120000));
+    return { ...item, description: String(text || '').trim().slice(0, 4000) };
+  } catch (err) {
+    return { ...item, note: `the model could not read it: ${err.message}` };
+  }
+}
+
+async function prepareAttachments(list, goal) {
+  const out = [];
+  for (const item of Array.isArray(list) ? list.slice(0, ATTACH_MAX) : []) {
+    if (!item || typeof item !== 'object') continue;
+    if (item.kind === 'image' && item.path && !item.description) out.push(await describePicture(item, goal));
+    else out.push(item);
+  }
+  return out;
 }
 
 // One turn for the harness: the tools on the table, streamed nowhere (a work order isn't chat), and a
@@ -454,8 +538,9 @@ function rebuildTray() {
         {
           label: t.autonomy,
           submenu: [
-            { label: t.autonomyGuard, type: 'radio', checked: cfg.autonomy !== 'trusted', click: () => updateConfig({ autonomy: 'guard' }) },
+            { label: t.autonomyGuard, type: 'radio', checked: cfg.autonomy !== 'trusted' && cfg.autonomy !== 'full', click: () => updateConfig({ autonomy: 'guard' }) },
             { label: t.autonomyTrusted, type: 'radio', checked: cfg.autonomy === 'trusted', click: () => updateConfig({ autonomy: 'trusted' }) },
+            { label: t.autonomyFull, type: 'radio', checked: cfg.autonomy === 'full', click: () => updateConfig({ autonomy: 'full' }) },
           ],
         },
         { type: 'separator' },
@@ -930,6 +1015,14 @@ function characterName() {
   return skin?.name || skin?.label || 'Capri';
 }
 
+// Who reports a work order: the character's own persona when it has one (skin.json), otherwise hers.
+// A job done by Johnny Silverhand is reported by Johnny Silverhand, in his own words.
+function characterVoice() {
+  const skin = characters.get(config.load().character, characterDirs());
+  const persona = Array.isArray(skin?.persona) ? skin.persona.filter((line) => typeof line === 'string') : [];
+  return { name: skin?.name || skin?.label || 'Capri', persona };
+}
+
 const renameIn = (text, name) => text.replace(/\bCapri\b/g, name).replace(/Капри/g, name);
 
 // A character that isn't her names itself in the menu, and gets "him" instead of "her" if he's a he
@@ -1031,13 +1124,27 @@ function registerIpc() {
   ipcMain.on('chat:stop', (_e, id) => chats.get(id)?.abort());
   // A work order (src/main/agent): the board asks, main starts it, and every change comes back on
   // `work:state` as the whole state, so the board never has to reconstruct anything.
-  ipcMain.handle('work:start', async (_e, { goal, workspace } = {}) => {
+  ipcMain.handle('work:start', async (_e, { goal, workspace, attachments } = {}) => {
     try {
-      return getAgent().startWork({ goal, workspace: workspace || config.load().workspace });
+      const handed = await prepareAttachments(attachments, goal || '');
+      return getAgent().startWork({ goal, workspace: workspace || config.load().workspace, attachments: handed });
     } catch (err) {
       return { ok: false, error: err.message };
     }
   });
+  // what you hand over before the work starts: a picker, a drop (the renderer sends the paths), and the
+  // clipboard — its files and its text
+  ipcMain.handle('attach:pick', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Files for her',
+      properties: ['openFile', 'multiSelections'],
+      defaultPath: config.load().workspace || app.getPath('home'),
+    });
+    if (canceled || !filePaths.length) return [];
+    return attachmentsFromPaths(filePaths);
+  });
+  ipcMain.handle('attach:paths', (_e, paths) => attachmentsFromPaths(Array.isArray(paths) ? paths : []));
+  ipcMain.handle('attach:clipboard', () => attachmentsFromClipboard());
   ipcMain.handle('work:stop', () => {
     const state = getAgent().stopWork();
     return state || getAgent().lastPlan();
