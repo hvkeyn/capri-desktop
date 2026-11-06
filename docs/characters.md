@@ -70,6 +70,21 @@ the switch can be tried, and so the folder shows the shape of a real one. For th
 cut-out of him — from a screenshot you have the rights to, or your own art — into
 `%APPDATA%\capri-desktop\characters\johnny\full.png` and keep or edit the `skin.json` beside it.
 
+## From a 3D model (a Unity `.char`)
+
+A character can come as a Unity asset bundle — a `.char` from a game like Desktop Girlfriend NEO. That is
+a skinned 3D model with its own textures, not a figure, so it needs one step first:
+
+```bash
+python tools/export-char.py my-character.char out/
+# out/model.obj (one group per part) + out/textures/*.png
+```
+
+Then render **one front view**, T-pose, transparent: 240 × 420 or bigger (it can be cropped later). Blender
+or any real renderer handles that OBJ; `tools/render-obj.py` gives a rough unlit preview if you only want
+a look at the geometry — it is not good enough to ship. Put the render at `characters/<id>/full.png` with a
+`skin.json` beside it, and it's a character.
+
 ## Text stays hers
 
 Her name in the panels, her lines, her voice: those are Capri's and are not part of a character yet. A

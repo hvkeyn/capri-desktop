@@ -3,6 +3,7 @@
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
+const { execFile } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const {
   app, BrowserWindow, Tray, Menu, ipcMain, screen, protocol, net, shell, globalShortcut, nativeImage,
@@ -296,7 +297,7 @@ function resolveLang(setting) {
 // What the overlay gets: `lang` is the resolved one, `langSetting` what the user picked.
 function rendererConfig() {
   const { apiKeys, ...cfg } = config.load(); // the keys stay here: the overlay only learns which ones are set
-  return { ...cfg, keys: Object.keys(apiKeys || {}), assistant: activeAssistant().id, lang: resolveLang(cfg.lang), langSetting: cfg.lang, floorGap: overlayArea().gap };
+  return { ...cfg, keys: Object.keys(apiKeys || {}), assistant: activeAssistant().id, lang: resolveLang(cfg.lang), langSetting: cfg.lang, floorGap: overlayArea().gap, startedAtLogin };
 }
 
 // Your own characters (characters.js): the folder you drop them in, and picking one (her pictures are
@@ -315,6 +316,7 @@ function pickCharacter(id) {
 }
 
 function updateConfig(patch) {
+  if ('autostart' in patch) registerAutostart(patch.autostart); // her Run entry follows the setting
   config.save(patch);
   if ('rest' in patch) {
     fitOverlay(); // the taskbar in her window or not
@@ -529,8 +531,8 @@ function rebuildTray() {
     {
       label: t.startup,
       type: 'checkbox',
-      checked: app.getLoginItemSettings(loginItemOptions()).openAtLogin,
-      click: (item) => app.setLoginItemSettings({ ...loginItemOptions(), openAtLogin: item.checked }),
+      checked: Boolean(cfg.autostart),
+      click: (item) => updateConfig({ autostart: item.checked }),
     },
     // her hooks, while she watches Claude Code
     ...(cfg.claude ? [
@@ -547,10 +549,24 @@ function rebuildTray() {
   trayMenu = menu;
 }
 
-// Run from a clone (`npm start`), electron.exe alone would open the default Electron app at login:
-// it needs the project folder as argument.
-function loginItemOptions() {
-  return app.isPackaged ? {} : { path: process.execPath, args: [ROOT] };
+// Starting with Windows: an entry of her own in the user's Run key. It works the same for the installer,
+// for a copy you run from a folder and for the portable exe (which moves every time), and it is what
+// her menu's checkbox reads. Started that way she skips her intro (`--autostart`): a login isn't a show.
+const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
+const RUN_VALUE = 'Capri';
+const startedAtLogin = process.argv.includes('--autostart');
+
+const autostartExe = () => process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+
+function registerAutostart(on) {
+  if (process.platform !== 'win32') {
+    app.setLoginItemSettings({ openAtLogin: Boolean(on), path: autostartExe(), args: ['--autostart'] });
+    return;
+  }
+  const args = on
+    ? ['add', RUN_KEY, '/v', RUN_VALUE, '/t', 'REG_SZ', '/d', `"${autostartExe()}" --autostart`, '/f']
+    : ['delete', RUN_KEY, '/v', RUN_VALUE, '/f'];
+  execFile('reg.exe', args, { windowsHide: true }, () => {});
 }
 
 // From the tray, she says how it went; from her welcome panel (quiet), the panel does.
@@ -1133,6 +1149,7 @@ function main() {
 
   app.whenReady().then(() => {
     if (!['codex', 'claude'].includes(config.load().assistant)) config.save({ assistant: activeAssistant().id });
+    registerAutostart(Boolean(config.load().autostart)); // set once, it stays in step with her setting
     serveProtocol();
     registerIpc();
     createOverlay();

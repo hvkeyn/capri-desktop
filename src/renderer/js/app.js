@@ -821,9 +821,9 @@ async function boot() {
   });
 
   // entrance: her face big in the corner says hi, then she dives down to her spot
-  // (put away last time: she starts in her biochip)
+  // (put away last time: she starts in her biochip; started with Windows: no show, she's just there)
   if (config.visible === false) capri.stowNow();
-  else if (intro) await capri.intro(capri.spot('post'));
+  else if (intro && !config.startedAtLogin) await capri.intro(capri.spot('post'));
   else await capri.materialize(capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she
   // says so and asks whether to move anyway (her menu › Animations changes it later).

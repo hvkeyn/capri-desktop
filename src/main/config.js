@@ -17,6 +17,7 @@ const DEFAULTS = {
   assistant: 'auto', // the coding assistant she watches: 'claude' or 'codex' ('auto': whichever has her hooks)
   linked: false,     // a Claude Code event has reached her at least once
   character: 'capri', // who lives on your desktop: 'capri', or a skin id (characters.js)
+  autostart: false,  // her entry in Windows' Run key: she comes up with the machine (her menu)
   chatModel: 'deepseek-flash', // the model she talks with (null: the provider's first one)
   provider: 'deepseek', // who answers her chat: a key of llm.js PROVIDERS
   apiKeys: {},       // { openai: 'sk-...' }, else the provider's env variable
