@@ -78,7 +78,7 @@ npm install
 npm run dist
 ```
 
-`npm run dist` (electron-builder) writes `Capri-Setup-0.5.1.exe` to `dist\`: the same installer as upstream,
+`npm run dist` (electron-builder) writes `Capri-Setup-<version>.exe` to `dist\`: the same installer as upstream,
 with her defaults pointed at DeepSeek. The installer isn't signed, so Windows SmartScreen may ask for
 **More info** › **Run anyway**.
 

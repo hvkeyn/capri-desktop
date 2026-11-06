@@ -1,7 +1,7 @@
 """Builds transparent animation loops for the Johnny skin from the clean seated pose.
 
 No room, no green screen: a fitted pose breathes, slumps or leans, and small procedural props do the
-work — a cigarette with rising smoke, a guitar with a strumming hand. Every frame is transparent and
+work вЂ” a cigarette with rising smoke, a guitar with a strumming hand. Every frame is transparent and
 already in the 240x420 rig, so the app only swaps textures.
 
 usage: python tools/build-motion.py <skin-dir> <out-dir>
@@ -56,75 +56,43 @@ def body_frame(pose, phase, slump=0.0, breathe=1.0):
     return sheet
 
 
-def cigarette(draw, phase):
-    breath = math.sin(phase * 2.2)
-    mouth = (128, 150)
-    tip = (139, 144 + round(breath))
-    draw.line([mouth, tip], fill=(235, 230, 215, 255), width=2)
-    draw.ellipse((tip[0] - 2, tip[1] - 2, tip[0] + 2, tip[1] + 2), fill=(255, 120, 40, 255))
-    draw.ellipse((tip[0] - 1, tip[1] - 1, tip[0] + 1, tip[1] + 1), fill=(255, 230, 160, 255))
-
-
-def smoke_puffs(layer, phase):
+def ember(layer, phase, tip=(128, 132)):
     draw = ImageDraw.Draw(layer)
-    for i in range(3):
-        t = (phase / math.tau + i / 3.0) % 1.0
-        x = 138 + t * 30 + math.sin(t * 6.2) * 6
-        y = 146 - t * 66
-        radius = 3 + t * 11
-        alpha = int(95 * (1.0 - t))
-        if alpha <= 2:
-            continue
-        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(210, 215, 220, alpha))
-    return layer.filter(ImageFilter.GaussianBlur(1.4))
+    pulse = 0.6 + 0.4 * math.sin(phase * 3)
+    draw.ellipse((tip[0] - 3, tip[1] - 3, tip[0] + 3, tip[1] + 3), fill=(255, 96, 28, int(180 * pulse)))
+    draw.ellipse((tip[0] - 1, tip[1] - 1, tip[0] + 1, tip[1] + 1), fill=(255, 231, 170, 255))
 
 
-def guitar(layer, phase):
+def smoke_puffs(layer, phase, tip=(128, 132)):
+    """Two thin wisps off the cigarette tip, overlapping into a stream, not bubbles."""
     draw = ImageDraw.Draw(layer)
-    neck_end = (48, 196)
-    # two bouts and a waist: an acoustic guitar, not a drum
-    lower = (110, 276, 184, 344)
-    upper = (122, 240, 172, 292)
-    draw.ellipse(upper, fill=(139, 78, 38, 255), outline=(225, 156, 82, 255), width=2)
-    draw.ellipse(lower, fill=(139, 78, 38, 255), outline=(225, 156, 82, 255), width=2)
-    draw.line([(147, 262), neck_end], fill=(64, 38, 24, 255), width=11)
-    draw.line([(147, 262), neck_end], fill=(128, 78, 42, 255), width=6)
-    for t in (0.22, 0.40, 0.58, 0.76):
-        x = 147 + (neck_end[0] - 147) * t
-        y = 262 + (neck_end[1] - 262) * t
-        draw.line([(x - 4, y - 1), (x + 5, y + 2)], fill=(215, 185, 135, 230), width=1)
-    draw.ellipse((136, 296, 158, 318), fill=(27, 20, 17, 255))
-    draw.ellipse((140, 300, 154, 314), fill=(12, 10, 9, 255))
-    draw.line([(111, 332), (178, 332)], fill=(236, 199, 146, 255), width=2)
-    # strum: the hand passes across the strings twice in a bar
-    t = (math.sin(phase * 2) + 1) / 2
-    hand_x = 123 + t * 36
-    draw.ellipse((hand_x - 9, 291, hand_x + 9, 311), fill=(93, 60, 41, 235))
-    draw.ellipse((hand_x - 6, 293, hand_x + 6, 307), fill=(156, 107, 74, 235))
-    flash = max(0.0, math.sin(phase * 2))
-    if flash > 0.5:
-        draw.line([(124, 280), (170, 330)], fill=(243, 228, 176, int(150 * flash)), width=2)
-    return layer.filter(ImageFilter.GaussianBlur(0.2))
+    for stream in range(2):
+        for i in range(10):
+            t = (phase / math.tau + i / 10.0 + stream * 0.5) % 1.0
+            x = tip[0] + 2 + t * 30 + math.sin(t * 7.2 + stream * 2) * 6
+            y = tip[1] - 2 - t * 84
+            radius = 1.6 + t * 6.2
+            alpha = int((66 + stream * 16) * (1.0 - t) ** 0.8)
+            if alpha <= 3:
+                continue
+            draw.ellipse((x - radius, y - radius * 0.8, x + radius, y + radius * 0.8), fill=(220, 225, 231, alpha))
+            draw.ellipse((x - radius * 0.35, y - radius * 0.3, x + radius * 0.35, y + radius * 0.3), fill=(242, 245, 249, alpha))
+    return layer.filter(ImageFilter.GaussianBlur(2.2))
 
 
 def main(skin_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     seated = Image.open(os.path.join(skin_dir, "poses", "crouch.png")).convert("RGBA")
     seated = fit(seated, 250)
+    smoking = clean_alpha(Image.open(os.path.join(skin_dir, "poses", "smoke.png")).convert("RGBA"))
     loops = {}
     for i in range(24):
         phase = i / 24 * math.tau
-        smoke = body_frame(seated, phase)
+        smoke = body_frame(smoking, phase, breathe=0.6)
         prop = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        cigarette(ImageDraw.Draw(prop), phase)
+        ember(prop, phase)
         smoke.alpha_composite(smoke_puffs(prop, phase))
         loops.setdefault("smoke", []).append(smoke)
-
-        guitar_frame = body_frame(seated, phase * 2)
-        guitar_prop = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        guitar(guitar_prop, phase)
-        guitar_frame.alpha_composite(guitar_prop)
-        loops.setdefault("guitar", []).append(guitar_frame)
 
         sad = body_frame(seated, phase * 0.35, slump=5.0, breathe=0.5)
         loops.setdefault("sad", []).append(sad)

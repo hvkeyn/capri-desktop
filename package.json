@@ -1,6 +1,6 @@
 {
   "name": "capri-desktop",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Capri, the Project Capricorn construct, living on your desktop and narrating what Claude Code is doing.",
   "author": "mochiiwuff",
   "repository": "github:mochiiwuff/capri-desktop",
@@ -19,6 +19,8 @@
     "check:llm": "node scripts/check-llm.js",
     "check:deepseek": "node scripts/check-deepseek.js",
     "check:tools": "node scripts/check-tools.js",
+    "test": "node --test tests/agent.test.js tests/board.test.js tests/hooks.test.js",
+    "smoke": "node scripts/smoke.js",
     "test:hooks": "node --test tests/hooks.test.js",
     "dist": "electron-builder --win"
   },
@@ -47,6 +49,7 @@
     "files": [
       "src/**",
       "assets/**",
+      "harness/**",
       "hooks/**",
       "scripts/**",
       "package.json",

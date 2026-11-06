@@ -43,7 +43,6 @@
     "idle": [
       "smoke",
       "sad",
-      "guitar",
       "idle"
     ],
     "work": "crossed",
@@ -111,10 +110,6 @@
   "animations": {
     "smoke": {
       "dir": "motions/smoke",
-      "fps": 12
-    },
-    "guitar": {
-      "dir": "motions/guitar",
       "fps": 12
     },
     "sad": {
