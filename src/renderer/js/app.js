@@ -246,7 +246,12 @@ async function boot() {
   const chat = new Chat({ capri, panel, voice, host, brain });
   // who's on the desktop: their words, their name in her panels, their projection (characters.js)
   chat.skin = skin;
-  if (skin?.name) document.title = skin.name;
+  if (skin?.name) {
+    document.title = skin.name;
+    const who = document.querySelector('.panel__who'); // the word in her panels' corner, "/// CAPRI"
+    if (who) who.textContent = skin.name;
+    document.getElementById('sprite')?.setAttribute('aria-label', skin.name);
+  }
   brain.onTalk = () => chat.start();
   // Getting her chat going with buttons (setup.js): Ollama and a model, a key, or an address
   const setup = new Setup({ guide, panel, host, brain, capri, voice });
