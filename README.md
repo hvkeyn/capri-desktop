@@ -5,9 +5,11 @@
 > **This fork** starts on **DeepSeek** instead of a local Ollama model: her chat, her answers and what she
 > reads off your screen go to `https://api.deepseek.com`, with the model `deepseek-flash`. It also lets her
 > AI **look at your PC** (hardware, load, disks, battery, open apps, files by name) through read-only tools,
-> so she can answer about your machine instead of saying she can't see it. Nothing else changes: she still
-> watches Claude Code, Codex and Antigravity, and every action that changes something keeps its button. See
-> [docs/deepseek.md](docs/deepseek.md) for the key, the models, the tools and how to build it.
+> so she can answer about your machine instead of saying she can't see it, and it lets you **pick who lives
+> on your desktop**: right-click her › **Character**, with a `johnny` placeholder skin and a folder of your
+> own pictures. Nothing else changes: she still watches Claude Code, Codex and Antigravity, and every action
+> that changes something keeps its button. See [docs/deepseek.md](docs/deepseek.md) for the key, the models
+> and the tools, and [docs/characters.md](docs/characters.md) for characters.
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
 and tells you what your coding AI is up to: **Claude Code**, **Codex** or **Antigravity**. She teleports,

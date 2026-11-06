@@ -20,6 +20,8 @@ contextBridge.exposeInMainWorld('host', {
   screens: () => ipcRenderer.invoke('screens:list'),
   moveScreen: (id) => ipcRenderer.invoke('screens:move', id),
   getConfig: () => ipcRenderer.invoke('config:get'),
+  characterSkin: (id) => ipcRenderer.invoke('characters:skin', id), // the pictures of who's on the desktop
+  characters: () => ipcRenderer.invoke('characters:list'),
   setConfig: (patch) => ipcRenderer.invoke('config:set', patch),
   listSounds: () => ipcRenderer.invoke('sounds:list'),
   hooksStatus: () => ipcRenderer.invoke('hooks:status'),

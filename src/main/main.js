@@ -20,6 +20,7 @@ const setup = require('./setup');
 const apps = require('./apps');
 const system = require('./system');
 const tools = require('./tools');
+const characters = require('./characters');
 const launch = require('./launch');
 const files = require('./files');
 const { ASSISTANTS, assistant } = require('./assistants');
@@ -53,6 +54,9 @@ let cloud = { at: 0, account: null, free: [] };
 const chats = new Map(); // id -> AbortController of an answer being streamed
 
 const userSoundsDir = () => path.join(app.getPath('userData'), 'sounds');
+// Your own characters (characters.js): a folder each, kept when the app updates
+const charactersDir = () => path.join(app.getPath('userData'), 'characters');
+const characterDirs = () => ({ userDir: charactersDir(), assetsDir: path.join(ROOT, 'assets', 'characters') });
 
 // Her memory of your chats, across restarts: { history: [{ role, content }], claude: Claude Code's session }
 const memoryFile = () => path.join(app.getPath('userData'), 'memory.json');
@@ -77,12 +81,21 @@ function forgetChats() {
 }
 
 // capri://app/...        -> files of this repo
+// capri://app/characters/... -> the characters you dropped in (characters.js), served as if they were
+//                           inside the app: same origin, so her shader may use them as a texture
 // capri://usersounds/... -> the user's own sound overrides
 function serveProtocol() {
   protocol.handle('capri', (request) => {
     const url = new URL(request.url);
-    const base = url.host === 'usersounds' ? userSoundsDir() : ROOT;
-    const target = path.resolve(base, '.' + decodeURIComponent(url.pathname));
+    let base = ROOT;
+    let pathname = decodeURIComponent(url.pathname);
+    if (url.host === 'usersounds') base = userSoundsDir();
+    else if (url.host === 'characters') base = charactersDir();
+    else if (pathname.startsWith('/characters/')) {
+      base = charactersDir();
+      pathname = pathname.slice('/characters'.length);
+    }
+    const target = path.resolve(base, '.' + pathname);
     if (target !== base && !target.startsWith(base + path.sep)) {
       return new Response('forbidden', { status: 403 });
     }
@@ -286,6 +299,21 @@ function rendererConfig() {
   return { ...cfg, keys: Object.keys(apiKeys || {}), assistant: activeAssistant().id, lang: resolveLang(cfg.lang), langSetting: cfg.lang, floorGap: overlayArea().gap };
 }
 
+// Your own characters (characters.js): the folder you drop them in, and picking one (her pictures are
+// loaded once, so changing who's there reloads her window: she introduces herself again).
+function openCharactersFolder() {
+  fs.mkdirSync(charactersDir(), { recursive: true });
+  shell.openPath(charactersDir());
+  return true;
+}
+
+function pickCharacter(id) {
+  if ((config.load().character || 'capri') === id) return;
+  updateConfig({ character: id });
+  overlay?.webContents.reload();
+  rebuildTray();
+}
+
 function updateConfig(patch) {
   config.save(patch);
   if ('rest' in patch) {
@@ -341,6 +369,20 @@ function rebuildTray() {
         : [{ label: t.noReminders, enabled: false }],
     },
     { label: t.custom, click: () => sendCommand('customize') },
+    {
+      // who lives on your desktop (characters.js): her, or a skin you dropped in
+      label: t.character,
+      submenu: [
+        ...characters.list(characterDirs()).map((c) => ({
+          label: c.label,
+          type: 'radio',
+          checked: (cfg.character || 'capri') === c.id,
+          click: () => pickCharacter(c.id),
+        })),
+        { type: 'separator' },
+        { label: t.characterFolder, click: () => openCharactersFolder() },
+      ],
+    },
     { label: cfg.visible ? t.hide : t.show, accelerator: 'Ctrl+Alt+C', click: () => toggleVisible() },
     { type: 'separator' },
     {
@@ -760,6 +802,10 @@ function registerIpc() {
   ipcMain.handle('config:get', () => rendererConfig());
   ipcMain.handle('hooks:status', () => activeHooks().status());
   ipcMain.handle('config:set', (_e, patch) => updateConfig(patch));
+  // who lives on your desktop (characters.js): the list for her menu, and the pictures of the one picked
+  ipcMain.handle('characters:list', () => characters.list(characterDirs()));
+  ipcMain.handle('characters:skin', (_e, id) => characters.get(String(id || ''), characterDirs()));
+  ipcMain.handle('characters:folder', () => openCharactersFolder());
   ipcMain.handle('demo:window', (_e, open) => demoWindow(open));
   // right-clicking her: the same menu as the tray icon (which Windows often hides behind the ^ by the clock)
   ipcMain.on('menu:open', () => trayMenu?.popup({ window: overlay }));

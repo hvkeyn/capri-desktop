@@ -1,7 +1,7 @@
 import { Capri } from './capri.js';
 import { FxLayer, GRAB_FRAMES } from './fx.js';
 import { Chip, Mask } from './chip.js';
-import { Panel } from './panel.js';
+import { Panel, FACES } from './panel.js';
 import { Voice } from './voice.js';
 import { Brain } from './brain.js';
 import { Guide } from './guide.js';
@@ -38,15 +38,20 @@ const SNOOZE_MS = 10 * 60 * 1000;
 const mine = (cfg) => ({ userName: cfg.userName || '', persona: cfg.persona || '', myLines: cfg.myLines || [], memories: cfg.memories || [] });
 
 async function boot() {
-  const [config, image, intro, ...cutins] = await Promise.all([
-    host.getConfig(),
-    loadImage('../../assets/capri/capri-full.png'),
+  const config = await host.getConfig();
+  // Who's on your desktop: her own pictures, or a character you dropped in (characters.js). A
+  // character brings its figure and as many of her close-ups as it has; the rest stays hers.
+  const skin = config.character && config.character !== 'capri'
+    ? await host.characterSkin(config.character).catch(() => null)
+    : null;
+  const [image, intro, ...cutins] = await Promise.all([
+    loadImage(skin?.sprite || '../../assets/capri/capri-full.png'),
     // her intro: her close-up grabbing the screen, and its drawings with her mouth and arm moving
-    Promise.all(GRAB_FRAMES.map((name) => loadImage(`../../assets/capri/intro-${name}.webp`).catch(() => null)))
+    skin ? null : Promise.all(GRAB_FRAMES.map((name) => loadImage(`../../assets/capri/intro-${name}.webp`).catch(() => null)))
       // decoded now, not the first time each one shows up (a hitch right on "hi", on the wave)
       .then((cels) => Promise.all(cels.map((cel) => cel && createImageBitmap(cel))))
       .then((cels) => (cels[0] ? Object.fromEntries(GRAB_FRAMES.map((name, i) => [name, cels[i]])) : null)),
-    ...CUTINS.map((name) => loadImage(`../../assets/capri/cutin-${name}.png`)),
+    ...CUTINS.map((name) => loadImage(skin?.cutins?.[name] || `../../assets/capri/cutin-${name}.png`)),
     document.fonts.load('600 16px "Chakra Petch"'),
     document.fonts.load('400 11px "JetBrains Mono"'),
   ]);
@@ -84,6 +89,8 @@ async function boot() {
     panel: document.getElementById('panel'),
     ticker: document.getElementById('ticker'),
     labels: linesFor(config.lang, config.assistant),
+    // her faces: the character's own where it has them, hers everywhere else
+    faces: Object.fromEntries(Object.keys(FACES).map((name) => [name, skin?.faces?.[name] || `../../assets/capri/${FACES[name]}`])),
   });
 
   const capri = new Capri({

@@ -23,10 +23,12 @@ const DECODE_STEP_MS = 28;
 const COUNT_MS = 700; // her report's numbers counting up
 
 export class Panel {
-  constructor({ panel, ticker, labels }) {
+  constructor({ panel, ticker, labels, faces = null }) {
     this.el = panel;
     this.tickerEl = ticker;
     this.labels = labels;
+    // the pictures of her faces, by name (app.js: the character's own, hers where it has none)
+    this.faces = faces || Object.fromEntries(Object.entries(FACES).map(([name, file]) => [name, FACE_DIR + file]));
     this.line = panel.querySelector('.panel__line');
     this.stopStream(); // her chat answer, decoding in (stream)
     this.streamTo = [];
@@ -175,7 +177,7 @@ export class Panel {
 
   // Change her expression; the swap glitches across a couple of drawings.
   setFace(name) {
-    const src = FACE_DIR + (FACES[name] || FACES.grin);
+    const src = this.faces[name] || this.faces.grin;
     if (this.portrait.getAttribute('src') === src) return;
     this.portrait.setAttribute('src', src);
     if (reducedMotion.matches) return;
