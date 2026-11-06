@@ -50,5 +50,19 @@
              },
     "lines":  {
                   "ru":  "lines/ru.json"
+              },
+    "intro":  {
+                  "frames":  [
+                                 "intro/01.png",
+                                 "intro/02.png",
+                                 "intro/03.png",
+                                 "intro/04.png",
+                                 "intro/05.png",
+                                 "intro/06.png",
+                                 "intro/07.png"
+                             ],
+                  "closeupFrom":  2,
+                  "frameMs":  620,
+                  "line":  "Проснись уже, самурай. Время сжечь этот город."
               }
 }

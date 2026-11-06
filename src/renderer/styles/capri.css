@@ -996,3 +996,44 @@ html[data-motion='reduced'] .panel[data-kind='alert'] .panel__state {
 html[data-motion='reduced'] .arrival {
   transition-duration: 200ms;
 }
+
+/* A character's intro, frame by frame (skin.json's "intro"): it walks up, close-ups, and a glitch
+   right before it folds into the little avatar */
+.intro-shot {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 41;
+  opacity: 0;
+  transform: translate(-50%, 0) scale(1);
+  filter: drop-shadow(0 0 26px rgba(53, 224, 255, 0.5));
+  transition: opacity 220ms ease-out, transform 900ms cubic-bezier(0.16, 0.9, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.intro-shot.is-far {
+  height: 58vh;
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.intro-shot.is-near {
+  height: 98vh;
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1.02);
+}
+
+.intro-shot.is-glitch {
+  animation: intro-glitch 140ms steps(2, end) infinite;
+}
+
+@keyframes intro-glitch {
+  0% { filter: drop-shadow(6px 0 0 rgba(255, 40, 90, 0.55)) drop-shadow(-6px 0 0 rgba(53, 224, 255, 0.55)); transform: translate(-50%, 0) scale(1.02); }
+  50% { filter: drop-shadow(-9px 0 0 rgba(255, 40, 90, 0.5)) drop-shadow(9px 0 0 rgba(53, 224, 255, 0.6)); transform: translate(calc(-50% + 4px), -2px) scale(1.03); }
+  100% { filter: drop-shadow(3px 0 0 rgba(255, 40, 90, 0.4)) drop-shadow(-3px 0 0 rgba(53, 224, 255, 0.45)); transform: translate(-50%, 0) scale(1.02); }
+}
+
+html[data-motion='reduced'] .intro-shot {
+  transition-duration: 120ms;
+}

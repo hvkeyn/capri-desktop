@@ -27,11 +27,15 @@ function loadImage(src) {
   });
 }
 
-// A character's entrance (a skin, not her own art): it comes down over the whole screen, hangs there
-// a moment looking at it, flickering like a projection, then folds itself into the little avatar.
-async function skinArrival(capri, skin) {
+// A character's entrance. If it brought an intro (skin.json's "intro"): frame by frame — it walks up,
+// leans in, the close-ups, the glitch — and then it folds into the little avatar. Otherwise its figure
+// comes down over the whole screen and does the same.
+async function skinArrival(capri, skin, panel) {
   const avatar = document.getElementById('capri');
   if (reducedMotion.matches) return capri.materialize(capri.spot('post'));
+  const intro = skin?.intro;
+  if (intro?.frames?.length) return playIntro(capri, skin, intro, avatar, panel);
+
   const big = document.createElement('img');
   big.className = 'arrival';
   big.src = skin.sprite;
@@ -53,6 +57,35 @@ async function skinArrival(capri, skin) {
   await capri.materialize(capri.spot('post'));
   await sleep(260);
   big.remove();
+}
+
+// The storyboard entrance: its own frames, big on screen, then its line, then the avatar
+async function playIntro(capri, skin, intro, avatar, panel) {
+  const shot = document.createElement('img');
+  shot.className = 'intro-shot';
+  shot.alt = '';
+  if (avatar) avatar.style.visibility = 'hidden';
+  document.body.appendChild(shot);
+  const frameMs = intro.frameMs || 620;
+  for (let i = 0; i < intro.frames.length; i++) {
+    const last = i === intro.frames.length - 1;
+    const near = i >= (intro.closeupFrom ?? intro.frames.length - 1);
+    shot.className = `intro-shot ${near ? 'is-near' : 'is-far'}${last ? ' is-glitch' : ''}`;
+    shot.src = intro.frames[i];
+    await new Promise((resolve) => {
+      if (shot.complete) return resolve();
+      shot.onload = resolve;
+      shot.onerror = resolve;
+    });
+    await sleep(last ? frameMs + 260 : frameMs);
+  }
+  if (avatar) avatar.style.visibility = '';
+  await capri.materialize(capri.spot('post'));
+  await sleep(240);
+  shot.remove();
+  if (intro.line) {
+    panel?.say({ kind: 'info', face: 'smug', line: intro.line, hold: 7000 });
+  }
 }
 
 // A character with several drawings can move through them by itself (skin.json's "auto"): one while
@@ -947,7 +980,7 @@ async function boot() {
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip; started with Windows: no show, she's just there)
   if (config.visible === false) capri.stowNow();
-  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin);
+  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin, panel);
   else if (intro && !config.startedAtLogin) await capri.intro(capri.spot('post'));
   else await capri.materialize(capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she

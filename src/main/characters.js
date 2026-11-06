@@ -35,6 +35,21 @@ function jsonFile(dir, name) {
   }
 }
 
+// The storyboard it walks in with: frames, where the close-ups start, and the line it says at the end
+function introOf(base, raw) {
+  if (!raw || !Array.isArray(raw.frames)) return null;
+  const frames = raw.frames.map((file) => picture(base, file)).filter(Boolean);
+  if (!frames.length) return null;
+  const closeupFrom = Number(raw.closeupFrom);
+  const frameMs = Number(raw.frameMs);
+  return {
+    frames,
+    closeupFrom: Number.isFinite(closeupFrom) ? Math.max(0, Math.min(frames.length - 1, closeupFrom)) : Math.max(0, frames.length - 1),
+    frameMs: Number.isFinite(frameMs) && frameMs > 80 ? Math.min(3000, frameMs) : 620,
+    line: typeof raw.line === 'string' ? raw.line.trim().slice(0, 200) : '',
+  };
+}
+
 // { id, label, name, badge, persona, holo, ... } from a folder, or null when it isn't one
 function read(dir, base) {
   let raw;
@@ -77,6 +92,7 @@ function read(dir, base) {
     lines: Object.fromEntries(Object.entries(raw.lines || {})
       .map(([lang, file]) => [lang, jsonFile(dir, file)])
       .filter(([, value]) => value)),
+    intro: introOf(base, raw.intro),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
