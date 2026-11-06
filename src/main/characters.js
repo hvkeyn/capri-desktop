@@ -13,9 +13,12 @@ const ID = /^[a-z0-9][a-z0-9._-]{0,31}$/i;
 const IMAGE = /\.(png|webp|jpe?g)$/i;
 const BUILTIN = { id: 'capri', label: 'Capri' };
 
-// A file name from skin.json, made into a URL under `base`; null when it's not a plain image name.
+// A file name from skin.json, made into a URL under `base`; null when it isn't a plain image path
+// (one folder deep is fine: "poses/smoke.png").
 function picture(base, name) {
-  return typeof name === 'string' && IMAGE.test(name) && !/[\\/]/.test(name) ? base + name : null;
+  if (typeof name !== 'string' || !IMAGE.test(name)) return null;
+  if (name.includes('\\') || name.startsWith('/') || name.includes('..')) return null;
+  return base + name;
 }
 
 const map = (base, files) => Object.fromEntries(Object.entries(files || {})
@@ -48,6 +51,8 @@ function read(dir, base) {
     sprite: url,
     faces: map(base, raw.faces),
     cutins: map(base, raw.cutins),
+    // other drawings of the same character, one per pose ("crossed", "smoke"…): her menu switches them
+    poses: map(base, raw.poses),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,

@@ -138,6 +138,8 @@ async function boot() {
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
+  // the drawing it starts in: one of its poses, if that's what was picked last time
+  if (skin?.poses && config.pose && skin.poses[config.pose]) capri.setPose(skin.poses[config.pose]);
   // a character can ask to be drawn bigger or smaller than her own art (skin.json's "scale")
   capri.setScale((config.scale || 0.6) * (skin?.scale || 1));
 
@@ -828,6 +830,9 @@ async function boot() {
       case 'intro': // her intro again, as when she starts (still: as with Windows' animations off)
         panel.hide();
         await capri.intro(capri.spot('post'), cmd.still ? { still: true } : {});
+        break;
+      case 'skinPose': // another drawing of the character (skin.json's "poses", her menu)
+        if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.name || '' }).catch(() => {});
         break;
       case 'pose':
         capri.debug = cmd.params || null;

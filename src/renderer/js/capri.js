@@ -482,6 +482,22 @@ export class Capri {
     this.holoUntil = Math.max(this.holoUntil, performance.now() + ms);
   }
 
+  // Another drawing of the same character (skin.json's "poses"): the picture swaps under her rig
+  async setPose(url) {
+    if (!url) return false;
+    const img = new Image();
+    const loaded = new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+    img.src = url;
+    await (img.decode ? img.decode().catch(() => loaded) : loaded);
+    if (!img.naturalWidth) return false;
+    this.sprite.setImage(img);
+    this.holoBurst(340); // a projection stutters when it changes
+    return true;
+  }
+
   // Pick the drawing: the stance's cycle underneath, the current act on top.
   animate(now) {
     const p = this.p;

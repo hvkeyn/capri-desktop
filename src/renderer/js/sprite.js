@@ -405,6 +405,7 @@ export class SpriteRenderer {
     for (const name of UNIFORMS) this.u[name] = gl.getUniformLocation(prog, name);
 
     const tex = gl.createTexture();
+    this.tex = tex;
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.image);
@@ -418,6 +419,15 @@ export class SpriteRenderer {
     gl.uniform1f(this.u.uPad, SPRITE.pad);
     gl.uniform2f(this.u.uView, SPRITE.width + SPRITE.pad * 2, SPRITE.height + SPRITE.pad * 2);
     gl.clearColor(0, 0, 0, 0);
+  }
+
+  // Another drawing of the same character (a pose): the texture swaps, the rig stays
+  setImage(image) {
+    this.image = image;
+    const { gl } = this;
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
   }
 
   // css size of the canvas for a given sprite scale

@@ -310,9 +310,32 @@ function openCharactersFolder() {
 
 function pickCharacter(id) {
   if ((config.load().character || 'capri') === id) return;
-  updateConfig({ character: id });
+  updateConfig({ character: id, pose: '' }); // a pose belongs to one character
   overlay?.webContents.reload();
   rebuildTray();
+}
+
+// A character can come with several drawings of itself (skin.json's "poses"): the ones to switch by,
+// under the character in her menu. Names are the file's; the labels are just nicer to read.
+const POSE_LABELS = {
+  crossed: 'Arms crossed', smoke: 'Smoking', crouch: 'Crouching', pistol: 'Pistol drawn',
+  idle: 'Standing', sit: 'Sitting', angry: 'Angry', laugh: 'Laughing',
+};
+
+function posesMenu(cfg) {
+  const skin = characters.get(cfg.character, characterDirs());
+  const poses = Object.entries(skin?.poses || {});
+  if (!poses.length) return [];
+  const pretty = (name) => POSE_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
+  return [
+    { type: 'separator' },
+    ...[['', skin.sprite], ...poses].map(([name, url]) => ({
+      label: name ? pretty(name) : 'Default',
+      type: 'radio',
+      checked: (cfg.pose || '') === name,
+      click: () => sendCommand('skinPose', { name, url }),
+    })),
+  ];
 }
 
 function updateConfig(patch) {
@@ -381,6 +404,7 @@ function rebuildTray() {
           checked: (cfg.character || 'capri') === c.id,
           click: () => pickCharacter(c.id),
         })),
+        ...posesMenu(cfg),
         { type: 'separator' },
         { label: t.characterFolder, click: () => openCharactersFolder() },
       ],
