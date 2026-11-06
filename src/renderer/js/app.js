@@ -91,12 +91,14 @@ async function playIntro(capri, skin, intro, avatar, panel) {
   const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
 
   let front = 0;
+  const geometry = intro.cover ? 'is-cover' : null;
   for (let i = 0; i < intro.frames.length; i++) {
     const layer = layers[front];
     const other = layers[1 - front];
     await load(other, intro.frames[i]);
-    other.className = `intro-shot ${i >= closeupFrom ? 'is-near' : 'is-far'} is-front`;
-    layer.className = `intro-shot ${i >= closeupFrom ? 'is-near' : 'is-far'}`;
+    const shape = geometry || (i >= closeupFrom ? 'is-near' : 'is-far');
+    other.className = `intro-shot ${shape} is-front`;
+    layer.className = `intro-shot ${shape}`;
     front = 1 - front;
 
     const text = captionsAt.get(i);
@@ -110,7 +112,7 @@ async function playIntro(capri, skin, intro, avatar, panel) {
   }
 
   // the last frame comes apart: slices, colour split, and the avatar shows up in the middle of it
-  layers[1 - front].classList.add('is-dissolving');
+  if (intro.dissolve) layers[1 - front].classList.add('is-dissolving');
   caption.classList.add('is-fading');
   if (avatar) avatar.style.visibility = '';
   await sleep(240);

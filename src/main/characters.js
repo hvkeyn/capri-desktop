@@ -57,6 +57,10 @@ function introOf(base, raw) {
     frameMs: Number.isFinite(frameMs) && frameMs > 80 ? Math.min(3000, frameMs) : 460,
     durations: durations.length === frames.length ? durations : [],
     captions,
+    // frames that are full pictures (a room behind him) fill the screen; transparent ones float
+    cover: raw.cover === true,
+    // a sheet that dissolves by itself doesn't need the app's dissolve on top of it
+    dissolve: raw.dissolve !== false,
     line: typeof raw.line === 'string' ? raw.line.trim().slice(0, 200) : '',
   };
 }

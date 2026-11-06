@@ -48,6 +48,13 @@ characters/
   `hello`, `prompt`, `working` (`{count}`), `done`, `permission`, `error` (`{tool}`), `idle`, `thinking`,
   `chat.hello`, `pet`, `thrown`, `pc` (`{level}`, `{cpu}`) and so on. Anything in it that says "Capri" is
   renamed to the character's name too.
+- `intro` (optional) is how it comes in — frames, played once at start:
+  `{"frames": ["intro/01.png", "…"], "closeupFrom": 6, "durations": [230, 220, …],
+    "captions": [{"from": 6, "text": "WAKE UP"}, {"from": 9, "text": "WE HAVE A CITY TO BURN"}],
+    "cover": true, "dissolve": false, "line": "…"}`.
+  Frames cross-fade; `cover` fills the screen with whole pictures (a room behind them) instead of floating
+  a cut-out; `dissolve: false` switches off the app's own dissolving exit for a sheet that already
+  dissolves; `captions` are the yellow slabs; `line` is what it says once it's the little avatar.
 
 Two places are read, yours first:
 

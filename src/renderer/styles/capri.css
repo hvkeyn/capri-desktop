@@ -1100,3 +1100,15 @@ html[data-motion='reduced'] .intro-shot {
   60% { opacity: 0.55; transform: translate(calc(-50% - 11px), 4px) scale(1.01) skewX(-2deg); filter: contrast(1.6) saturate(2) hue-rotate(14deg); }
   100% { opacity: 0; transform: translate(-50%, -2vh) scale(0.9); filter: blur(4px) contrast(1.2); }
 }
+
+/* an intro whose frames are whole pictures (a room behind him): it fills the screen, no glow */
+.intro-shot.is-cover {
+  inset: 0;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  transform: none;
+  filter: none;
+  object-fit: cover;
+}

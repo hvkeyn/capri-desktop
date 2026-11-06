@@ -59,29 +59,52 @@
                                  "intro/04.png",
                                  "intro/05.png",
                                  "intro/06.png",
-                                 "intro/07.png"
+                                 "intro/07.png",
+                                 "intro/08.png",
+                                 "intro/09.png",
+                                 "intro/10.png",
+                                 "intro/11.png",
+                                 "intro/12.png",
+                                 "intro/13.png",
+                                 "intro/14.png",
+                                 "intro/15.png",
+                                 "intro/16.png",
+                                 "intro/17.png",
+                                 "intro/18.png"
                              ],
-                  "closeupFrom":  2,
-                  "frameMs":  620,
-                  "line":  "РџСЂРѕСЃРЅРёСЃСЊ СѓР¶Рµ, СЃР°РјСѓСЂР°Р№. Р’СЂРµРјСЏ СЃР¶РµС‡СЊ СЌС‚РѕС‚ РіРѕСЂРѕРґ.",
+                  "closeupFrom":  6,
+                  "cover":  true,
+                  "dissolve":  false,
                   "durations":  [
+                                    230,
+                                    220,
+                                    220,
+                                    260,
+                                    260,
+                                    280,
+                                    360,
+                                    360,
+                                    360,
                                     340,
+                                    340,
+                                    360,
+                                    220,
+                                    200,
+                                    200,
+                                    240,
                                     300,
-                                    420,
-                                    380,
-                                    420,
-                                    520,
-                                    560
+                                    340
                                 ],
                   "captions":  [
                                    {
-                                       "from":  2,
+                                       "from":  6,
                                        "text":  "ПРОСНИСЬ УЖЕ, САМУРАЙ"
                                    },
                                    {
-                                       "from":  4,
+                                       "from":  9,
                                        "text":  "ВРЕМЯ СЖЕЧЬ ЭТОТ ГОРОД"
                                    }
-                               ]
+                               ],
+                  "line":  "Проснись уже, самурай. Время сжечь этот город."
               }
 }
