@@ -55,6 +55,65 @@ async function skinArrival(capri, skin) {
   big.remove();
 }
 
+// A character with several drawings can move through them by itself (skin.json's "auto"): one while
+// the assistant works, one when it's done, and a couple that take turns while nothing is going on.
+// Picking one from her menu stops it for this run: then it's yours, not its.
+function startPoseDirector({ capri, skin }) {
+  const poses = skin?.poses || {};
+  const auto = skin?.auto || {};
+  const urls = Object.fromEntries(Object.entries(poses));
+  const idleNames = (auto.idle || []).filter((name) => urls[name]);
+  const workName = (auto.work || []).find((name) => urls[name]) || null;
+  const doneName = (auto.done || []).find((name) => urls[name]) || null;
+  if (!idleNames.length && !workName && !doneName) return null;
+
+  let timer = 0;
+  let current = skin.sprite;
+  let working = false;
+  let stopped = false;
+
+  const show = async (url) => {
+    if (!url || url === current) return;
+    current = url;
+    await capri.setPose(url);
+  };
+  // what it drifts through while nothing happens: its own drawings, and the plain one between them
+  const idlePool = [...idleNames.map((name) => urls[name]), skin.sprite];
+  const backToIdle = () => {
+    clearTimeout(timer);
+    if (stopped) return;
+    timer = setTimeout(async () => {
+      if (!stopped && !working) {
+        const pick = idlePool[Math.floor(Math.random() * idlePool.length)];
+        await show(pick);
+      }
+      backToIdle();
+    }, 25000 + Math.random() * 30000);
+  };
+
+  backToIdle();
+  return {
+    stop() {
+      stopped = true;
+      clearTimeout(timer);
+    },
+    async onEvent(evt) {
+      if (stopped) return;
+      const name = evt?.hook_event_name;
+      if (name === 'UserPromptSubmit' || name === 'PreToolUse') {
+        working = true;
+        if (workName) await show(urls[workName]);
+      } else if (name === 'Stop' || name === 'StopFailure' || name === 'SessionEnd') {
+        working = false;
+        if (doneName) await show(urls[doneName]);
+        setTimeout(() => {
+          if (!stopped && !working) show(skin.sprite);
+        }, 8000);
+        backToIdle();
+      }
+    },
+  };
+}
 // close-ups of her for the cut-ins, frames of the show (tools/build-cutins.py)
 const CUTINS = ['grin', 'laugh', 'eyes', 'many', 'look'];
 const WATCH_MS = 2000; // how often she checks the pointer still reaches her
@@ -145,6 +204,9 @@ async function boot() {
 
   const mission = new Mission();
   const brain = new Brain({ capri, panel, voice, host, mission, lang: config.lang, assistant: config.assistant });
+  // it changes its own poses as the day goes (skin.json's "auto"); picking one by hand stops that
+  // until the next start, so it doesn't fight you
+  const poseDirector = startPoseDirector({ capri, skin });
   // her name over the panels: a character's own when it isn't her (linesFor hands back the shared object)
   if (skin?.label) {
     brain.t.badge = skin.label.toUpperCase();
@@ -588,9 +650,12 @@ async function boot() {
   };
 
   // what's in here, for --dev scripts (debug route `eval`)
-  window.dev = { capri, brain, panel, chat, guide, fx, voice, bond, jealousy, reminders, look, pc, setup, screens: () => screens };
+  window.dev = { capri, brain, panel, chat, guide, fx, voice, bond, jealousy, reminders, look, pc, setup, poseDirector, screens: () => screens };
 
-  host.onClaudeEvent((evt) => brain.handle(evt));
+  host.onClaudeEvent((evt) => {
+    poseDirector?.onEvent(evt);
+    brain.handle(evt);
+  });
   host.onWindows((data) => {
     capri.setWindows(data);
     brain.onWindows(data);
@@ -832,7 +897,8 @@ async function boot() {
         await capri.intro(capri.spot('post'), cmd.still ? { still: true } : {});
         break;
       case 'skinPose': // another drawing of the character (skin.json's "poses", her menu)
-        if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.name || '' }).catch(() => {});
+        poseDirector?.stop(); // picked by hand: it stays there
+        if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.pose || '' }).catch(() => {});
         break;
       case 'skinSequence': // a few drawings played once (skin.json's "sequences": the glasses come off)
         await capri.playSequence(cmd.urls, cmd.fps || 8);

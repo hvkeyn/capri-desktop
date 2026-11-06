@@ -59,6 +59,10 @@ function read(dir, base) {
     sequences: Object.fromEntries(Object.entries(raw.sequences || {})
       .map(([name, list]) => [name, (Array.isArray(list) ? list : []).map((file) => picture(base, file)).filter(Boolean)])
       .filter(([, list]) => list.length > 1)),
+    // which poses it takes by itself: { idle: ["smoke", "crouch"], work: "crossed", done: "pistol" }
+    auto: Object.fromEntries(Object.entries(raw.auto || {})
+      .map(([role, value]) => [role, (Array.isArray(value) ? value : [value]).filter((n) => typeof n === 'string')])
+      .filter(([, list]) => list.length)),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,

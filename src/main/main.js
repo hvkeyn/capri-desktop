@@ -330,13 +330,14 @@ function posesMenu(cfg, skin) {
       label: name ? pretty(name) : t_default(lang),
       type: 'radio',
       checked: (cfg.pose || '') === name,
-      click: () => sendCommand('skinPose', { name, url }),
+      // "pose", not "name": the name of the command is "name" too, and it would be overwritten
+      click: () => sendCommand('skinPose', { pose: name, url }),
     })),
     ...(sequences.length ? [
       { type: 'separator' },
       ...sequences.map(([name, urls]) => ({
         label: pretty(name),
-        click: () => sendCommand('skinSequence', { name, urls, fps: 7 }),
+        click: () => sendCommand('skinSequence', { sequence: name, urls, fps: 7 }),
       })),
     ] : []),
   ];
