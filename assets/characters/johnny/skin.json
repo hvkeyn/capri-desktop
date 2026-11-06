@@ -1,14 +1,15 @@
 {
-  "label": "Johnny (placeholder)",
-  "sprite": "full.png",
-  "faces": {
-    "calm": "face.png",
-    "aside": "face.png",
-    "smug": "face.png",
-    "wide": "face.png",
-    "look": "face.png",
-    "laugh": "face.png",
-    "many": "face.png",
-    "grin": "face.png"
-  }
+    "label":  "Johnny Silverhand",
+    "sprite":  "full.png",
+    "scale":  1.15,
+    "faces":  {
+                  "calm":  "face.png",
+                  "aside":  "face.png",
+                  "smug":  "face.png",
+                  "wide":  "face.png",
+                  "look":  "face.png",
+                  "laugh":  "face.png",
+                  "many":  "face.png",
+                  "grin":  "face.png"
+              }
 }

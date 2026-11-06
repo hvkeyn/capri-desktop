@@ -35,6 +35,7 @@ function read(dir, base) {
   const url = picture(base, sprite);
   if (!url || !fs.existsSync(path.join(dir, sprite))) return null;
   const scale = Number(raw.scale);
+  const grade = Number(raw.grade);
   return {
     label: String(raw.label || '').trim().slice(0, 40),
     base,
@@ -42,6 +43,8 @@ function read(dir, base) {
     faces: map(base, raw.faces),
     cutins: map(base, raw.cutins),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
+    // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
+    grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
   };
 }
 

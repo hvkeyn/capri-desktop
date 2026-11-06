@@ -104,10 +104,18 @@ async function boot() {
   capri.possessWindows = config.possess;
   capri.restOn = config.rest || 'corner';
   capri.setView(innerWidth, innerHeight, innerHeight - floorGap);
-  capri.setScale(config.scale);
+  // a character keeps its own colours: her colour grade belongs to her own art
+  capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
+  // a character can ask to be drawn bigger or smaller than her own art (skin.json's "scale")
+  capri.setScale((config.scale || 0.6) * (skin?.scale || 1));
 
   const mission = new Mission();
   const brain = new Brain({ capri, panel, voice, host, mission, lang: config.lang, assistant: config.assistant });
+  // her name over the panels: a character's own when it isn't her (linesFor hands back the shared object)
+  if (skin?.label) {
+    brain.t.badge = skin.label.toUpperCase();
+    if (brain.t.chat) brain.t.chat.badge = skin.label.toUpperCase();
+  }
 
   // Click-through everywhere except on her body, the panel and her biochip.
   let interactive = false;

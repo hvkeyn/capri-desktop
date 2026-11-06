@@ -96,6 +96,9 @@ export class Capri {
       glitch: 0, glitchSeed: 0, split: 0, collapse: 0, dissolve: 0, sparkle: 1, grade: 1,
       sil: INK, silAmount: 0, misreg: [-2.6, 2.2], alpha: 1,
     };
+    // her shader pulls pinks and greens toward her palette: a character's own art keeps its colours
+    // (app.js: 1 for her, the skin's "grade" or 0 for anyone else)
+    this.skinGrade = 1;
     this.bob = 0;
     this.tilt = 0;
     this.sx = 1;
@@ -462,6 +465,7 @@ export class Capri {
   drawFrame(now = performance.now()) {
     this.lastDraw = now;
     this.animate(now);
+    this.p.grade = this.skinGrade ?? 1; // her own colour grade only for her own art
     this.sprite.draw(this.p);
     this.place();
   }
