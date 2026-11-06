@@ -49,6 +49,7 @@ uniform float uAlpha;
 uniform float uPx; // sprite pixels per screen pixel
 uniform float uHolo; // 0: her own art; 1: a projection (cyan, scanlines, flicker)
 uniform float uTime; // seconds, for the projection's flicker
+uniform float uFlat; // 1: a character's own art — no rig, just the drawing
 
 // landmarks, in sprite pixels (capri-full.png is 240x420, see tools/build-sprite.py)
 const vec2 NECK = vec2(118.0, 152.0);   // the head tilts around this
@@ -230,6 +231,7 @@ vec2 bend(vec2 q) {
 }
 
 vec4 rig(vec2 q) {
+  if (uFlat > 0.5) return cel(q); // someone else's art: no arms, mane or knees to bend
   vec2 qL = armLeft(q);
   vec2 qR = armRight(q);
   vec4 l = armL(qL) > 0.0 ? cel(qL) : vec4(0.0);
@@ -346,7 +348,7 @@ const UNIFORMS = [
   'uView', 'uPad', 'uTex', 'uSize', 'uSeed', 'uBoil', 'uHair', 'uHead', 'uMane', 'uArmL', 'uArmR', 'uLongL', 'uLongR',
   'uSit', 'uBend', 'uKickL', 'uKickR',
   'uSmear', 'uEcho', 'uGlitch', 'uGlitchSeed',
-  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uAlpha', 'uPx', 'uHolo', 'uTime',
+  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uAlpha', 'uPx', 'uHolo', 'uTime', 'uFlat',
 ];
 
 export const SPRITE = {
@@ -485,6 +487,7 @@ export class SpriteRenderer {
     gl.uniform1f(u.uAlpha, s.alpha);
     gl.uniform1f(u.uHolo, s.holo || 0);
     gl.uniform1f(u.uTime, s.time || 0);
+    gl.uniform1f(u.uFlat, s.flat || 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }

@@ -35,6 +35,31 @@ function jsonFile(dir, name) {
   }
 }
 
+// A loop of drawings, listed in a folder ("motions/smoke") or given frame by frame
+function animationOf(base, dir, raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  let frames = [];
+  if (typeof raw.dir === 'string' && !raw.dir.includes('..') && !raw.dir.startsWith('/')) {
+    const folder = path.join(dir, raw.dir);
+    try {
+      frames = fs.readdirSync(folder)
+        .filter((name) => IMAGE.test(name))
+        .sort()
+        .map((name) => `${base}${raw.dir}/${name}`);
+    } catch {
+      frames = [];
+    }
+  } else if (Array.isArray(raw.frames)) {
+    frames = raw.frames.map((file) => picture(base, file)).filter(Boolean);
+  }
+  if (frames.length < 2) return null;
+  const fps = Number(raw.fps);
+  return {
+    frames,
+    fps: Number.isFinite(fps) ? Math.min(30, Math.max(1, fps)) : 12,
+  };
+}
+
 // The storyboard it walks in with: frames, where the close-ups start, how long each stays, and the
 // captions in the corner of the screen
 function introOf(base, raw) {
@@ -108,11 +133,17 @@ function read(dir, base) {
       .map(([lang, file]) => [lang, jsonFile(dir, file)])
       .filter(([, value]) => value)),
     intro: introOf(base, raw.intro),
+    // loops that play by themselves: smoking, sadness, guitar, idle breathing
+    animations: Object.fromEntries(Object.entries(raw.animations || {})
+      .map(([name, value]) => [name, animationOf(base, dir, value)])
+      .filter(([, value]) => value)),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
     // a projection, like the relic's: cyan, translucent, scanlines (sprite.js)
     holo: Number.isFinite(holo) ? Math.min(1, Math.max(0, holo)) : (raw.holo === true ? 1 : null),
+    // art that isn't hers: no rig deformation (its own animation already moves it)
+    flat: raw.flat === true,
   };
 }
 

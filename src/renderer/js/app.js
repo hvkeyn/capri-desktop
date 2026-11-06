@@ -2,6 +2,7 @@ import { Capri } from './capri.js';
 import { FxLayer, GRAB_FRAMES } from './fx.js';
 import { Chip, Mask } from './chip.js';
 import { Panel, FACES } from './panel.js';
+import { Board } from './board.js';
 import { Voice } from './voice.js';
 import { Brain } from './brain.js';
 import { Guide } from './guide.js';
@@ -127,35 +128,34 @@ async function playIntro(capri, skin, intro, avatar, panel) {
 // Picking one from her menu stops it for this run: then it's yours, not its.
 function startPoseDirector({ capri, skin }) {
   const poses = skin?.poses || {};
+  const animations = skin?.animations || {};
   const auto = skin?.auto || {};
-  const urls = Object.fromEntries(Object.entries(poses));
-  const idleNames = (auto.idle || []).filter((name) => urls[name]);
-  const workName = (auto.work || []).find((name) => urls[name]) || null;
-  const doneName = (auto.done || []).find((name) => urls[name]) || null;
+  const known = (name) => Boolean(animations[name] || poses[name]);
+  const idleNames = (auto.idle || []).filter(known);
+  const workName = (auto.work || []).find(known) || null;
+  const doneName = (auto.done || []).find(known) || null;
   if (!idleNames.length && !workName && !doneName) return null;
 
   let timer = 0;
-  let current = skin.sprite;
+  let current = '';
   let working = false;
   let stopped = false;
 
-  const show = async (url) => {
-    if (!url || url === current) return;
-    current = url;
-    await capri.setPose(url);
+  const show = async (name) => {
+    if (!name || name === current) return;
+    current = name;
+    if (animations[name]) await capri.startLoop(animations[name].frames, animations[name].fps);
+    else await capri.setPose(poses[name] || skin.sprite);
   };
-  // what it drifts through while nothing happens: its own drawings, and the plain one between them
-  const idlePool = [...idleNames.map((name) => urls[name]), skin.sprite];
+  // what it drifts through while nothing happens: loops and the plain drawing between them
+  const idlePool = [...idleNames, ''];
   const backToIdle = () => {
     clearTimeout(timer);
     if (stopped) return;
     timer = setTimeout(async () => {
-      if (!stopped && !working) {
-        const pick = idlePool[Math.floor(Math.random() * idlePool.length)];
-        await show(pick);
-      }
+      if (!stopped && !working) await show(idlePool[Math.floor(Math.random() * idlePool.length)]);
       backToIdle();
-    }, 25000 + Math.random() * 30000);
+    }, 18000 + Math.random() * 18000);
   };
 
   backToIdle();
@@ -169,12 +169,12 @@ function startPoseDirector({ capri, skin }) {
       const name = evt?.hook_event_name;
       if (name === 'UserPromptSubmit' || name === 'PreToolUse') {
         working = true;
-        if (workName) await show(urls[workName]);
+        if (workName) await show(workName);
       } else if (name === 'Stop' || name === 'StopFailure' || name === 'SessionEnd') {
         working = false;
-        if (doneName) await show(urls[doneName]);
+        if (doneName) await show(doneName);
         setTimeout(() => {
-          if (!stopped && !working) show(skin.sprite);
+          if (!stopped && !working) show(idlePool[0] || '');
         }, 8000);
         backToIdle();
       }
@@ -264,10 +264,15 @@ async function boot() {
   capri.setView(innerWidth, innerHeight, innerHeight - floorGap);
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
+  capri.skinFlat = Boolean(skin?.flat);
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
   // the drawing it starts in: one of its poses, if that's what was picked last time
   if (skin?.poses && config.pose && skin.poses[config.pose]) capri.setPose(skin.poses[config.pose]);
+  if (skin?.animations && config.motion && skin.animations[config.motion]) {
+    const motion = skin.animations[config.motion];
+    capri.startLoop(motion.frames, motion.fps);
+  }
   // a character can ask to be drawn bigger or smaller than her own art (skin.json's "scale")
   capri.setScale((config.scale || 0.6) * (skin?.scale || 1));
 
@@ -276,6 +281,40 @@ async function boot() {
   // it changes its own poses as the day goes (skin.json's "auto"); picking one by hand stops that
   // until the next start, so it doesn't fight you
   const poseDirector = startPoseDirector({ capri, skin });
+  // the board of a work order (board.js): a sentence and a folder go in, the five phases and the steps
+  // come back, and she acts out the phase she is in while she works
+  const board = new Board({
+    board: document.getElementById('board'),
+    host,
+    capri,
+    panel,
+    lang: () => brain.lang || 'en',
+  });
+  board.onStart = (goal, workspace) => {
+    panel.say({ kind: 'work', line: goal, tag: 'WORK ORDER', hold: 4000 });
+    host.workStart({ goal, workspace }).then((res) => {
+      if (res?.ok && res.plan) board.update(res.plan);
+      else if (res?.error) panel.say({ kind: 'error', line: res.error, hold: 7000 });
+    });
+  };
+  board.onStop = () => host.workStop();
+  board.onPick = () => host.pickFolder();
+  // the folder she worked in last time is where the next work order starts
+  board.workspace = config.workspace || null;
+  host.onWorkState((state) => board.update(state));
+  // while a round of her improving her own harness runs, she says what it found; the summary is the
+  // part worth keeping, so it's the part with a hold on it
+  host.onEvolve((event) => {
+    if (event.stage === 'start') {
+      panel.say({ kind: 'work', line: `EVOLVE R${event.round} · ${event.cases}`, tag: 'HARNESS', hold: 4000 });
+    } else if (event.stage === 'done') {
+      const line = event.accepted
+        ? `+${(event.delta ?? 0).toFixed(2)} · ${event.proposal || 'kept'}`
+        : event.reason || 'nothing worth keeping';
+      panel.say({ kind: event.accepted ? 'done' : 'info', line, tag: 'HARNESS', hold: 9000 });
+    }
+  });
+
   // her name over the panels: a character's own when it isn't her (linesFor hands back the shared object)
   if (skin?.label) {
     brain.t.badge = skin.label.toUpperCase();
@@ -296,8 +335,9 @@ async function boot() {
     if (!mouse) return setInteractive(false);
     const r = panel.rect();
     const onPanel = r && mouse.x >= r.left && mouse.x <= r.right && mouse.y >= r.top && mouse.y <= r.bottom;
-    document.body.style.cursor = onChip() ? 'pointer' : '';
-    return setInteractive(Boolean(onPanel || capri.hit(mouse.x, mouse.y) || onChip()));
+    const onBoard = board.contains(mouse.x, mouse.y);
+    document.body.style.cursor = onChip() || onBoard ? 'pointer' : '';
+    return setInteractive(Boolean(onPanel || onBoard || capri.hit(mouse.x, mouse.y) || onChip()));
   };
   // Her biochip: her eyes on it follow the pointer over it, and she comes out when you click it
   // (only then, so the pointer passing through that corner doesn't call her back).
@@ -922,6 +962,25 @@ async function boot() {
       case 'chat': // "Talk to her" in her menu
         chat.start();
         break;
+      case 'work': // "Give her work" in her menu: the board, with a sentence to type and a folder to pick
+        if (capri.stowed) {
+          host.setConfig({ visible: true });
+          await capri.unstow();
+        }
+        capri.wake();
+        board.showOrder();
+        break;
+      case 'workState': // the tray or the menu again: the last work order, as it stands
+        host.workState().then((state) => state && board.update(state));
+        break;
+      case 'evolve': // "Learn from me": a round of her editing her own harness
+        host.evolveStart().then((res) => {
+          if (!res?.ok) panel.say({ kind: 'info', line: res?.error || 'nothing to learn from yet', tag: 'HARNESS', hold: 7000 });
+        });
+        break;
+      case 'openHarness': // the folder evolve.js edits
+        host.openHarness();
+        break;
       case 'report': // "Mission report" in her menu
         if (capri.stowed) {
           host.setConfig({ visible: true });
@@ -967,7 +1026,16 @@ async function boot() {
         break;
       case 'skinPose': // another drawing of the character (skin.json's "poses", her menu)
         poseDirector?.stop(); // picked by hand: it stays there
-        if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.pose || '' }).catch(() => {});
+        if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.pose || '', motion: '' }).catch(() => {});
+        break;
+      case 'skinAnimation': // a loop (skin.json's "animations"): smoking, guitar, sadness, idle
+        poseDirector?.stop();
+        if (skin?.animations?.[cmd.animation]) {
+          const motion = skin.animations[cmd.animation];
+          if (await capri.startLoop(motion.frames, motion.fps)) {
+            host.setConfig({ motion: cmd.animation, pose: '' }).catch(() => {});
+          }
+        }
         break;
       case 'skinSequence': // a few drawings played once (skin.json's "sequences": the glasses come off)
         await capri.playSequence(cmd.urls, cmd.fps || 8);
@@ -1041,6 +1109,9 @@ async function boot() {
     });
   }
   const hooks = await host.hooksStatus();
+  // the pieces of her, for the smoke test (scripts/smoke.js) and for a look from the devtools console:
+  // the board is otherwise only reachable through her menu
+  window.__capri = { capri, panel, brain, chat, board, mission };
   // her welcome: the first time, or while she's meant to watch Claude Code and isn't plugged into it
   if (!config.welcomed || (config.claude && !hooks.installed)) guide.welcome();
   else panel.say({ kind: 'info', line: brain.onlineLine(), hold: 4000 });

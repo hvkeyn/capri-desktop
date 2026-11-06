@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, TRAY_M, POSE_LABELS, LANGS } = require('./labels');
+const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -24,6 +24,7 @@ const tools = require('./tools');
 const characters = require('./characters');
 const launch = require('./launch');
 const files = require('./files');
+const { Agent } = require('./agent');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -53,6 +54,39 @@ let chatErrorCode = null; // 'nokey' or 'nourl': what her setup should ask for
 // Ollama's cloud, as last seen: your account ({ name } or { signin }) and the models free with it
 let cloud = { at: 0, account: null, free: [] };
 const chats = new Map(); // id -> AbortController of an answer being streamed
+
+// Her working half (src/main/agent): the harness on disk, one work order at a time, and the rounds
+// where she edits her own harness. Built on first use, so a start without an AI model costs nothing.
+let agent = null;
+const agentBase = () => path.join(app.getPath('userData'), 'agent');
+const sendToOverlay = (event) => overlay?.webContents.send(event.kind === 'evolve' ? 'evolve:event' : 'work:state', event);
+function getAgent() {
+  if (!agent) {
+    agent = new Agent({
+      base: agentBase(),
+      ask: askModel,
+      emit: sendToOverlay,
+      autonomy: () => config.load().autonomy,
+    }).ensure();
+  }
+  return agent;
+}
+
+// One turn for the harness: the tools on the table, streamed nowhere (a work order isn't chat), and a
+// refusal from the provider thrown rather than swallowed, so the phase that failed says why.
+async function askModel({ messages, tools = [], signal }) {
+  const cfg = config.load(true);
+  if (!chatModels?.length) await refreshModels();
+  const model = pickModel(cfg);
+  if (!model) throw Object.assign(new Error('no AI model to work with (set one up in her menu)'), { code: 'noai' });
+  const request = { model, messages };
+  if (tools.length) {
+    const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { ...request, tools }, () => {}, signal);
+    return { text: res.text || '', toolCalls: res.toolCalls || [] };
+  }
+  const text = await llm.chat(cfg.provider, llmConfig(cfg), request, () => {}, signal);
+  return { text: text || '', toolCalls: [] };
+}
 
 const userSoundsDir = () => path.join(app.getPath('userData'), 'sounds');
 // Your own characters (characters.js): a folder each, kept when the app updates
@@ -320,7 +354,8 @@ function pickCharacter(id) {
 function posesMenu(cfg, skin) {
   const poses = Object.entries(skin?.poses || {});
   const sequences = Object.entries(skin?.sequences || {});
-  if (!poses.length && !sequences.length) return [];
+  const animations = Object.entries(skin?.animations || {});
+  if (!poses.length && !sequences.length && !animations.length) return [];
   const lang = resolveLang(cfg.lang);
   const labels = POSE_LABELS[lang] || POSE_LABELS.en;
   const pretty = (name) => labels[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -329,10 +364,19 @@ function posesMenu(cfg, skin) {
     ...[['', skin.sprite], ...poses].map(([name, url]) => ({
       label: name ? pretty(name) : t_default(lang),
       type: 'radio',
-      checked: (cfg.pose || '') === name,
+      checked: (cfg.pose || '') === name && !cfg.motion,
       // "pose", not "name": the name of the command is "name" too, and it would be overwritten
       click: () => sendCommand('skinPose', { pose: name, url }),
     })),
+    ...(animations.length ? [
+      { type: 'separator' },
+      ...animations.map(([name]) => ({
+        label: pretty(name),
+        type: 'radio',
+        checked: cfg.motion === name,
+        click: () => sendCommand('skinAnimation', { animation: name }),
+      })),
+    ] : []),
     ...(sequences.length ? [
       { type: 'separator' },
       ...sequences.map(([name, urls]) => ({
@@ -366,7 +410,8 @@ function rebuildTray() {
   const cfg = config.load();
   const hookState = activeHooks().status();
   const watched = activeAssistant();
-  const t = Object.fromEntries(Object.entries(TRAY[resolveLang(cfg.lang)]).map(([key, value]) =>
+  const lang = resolveLang(cfg.lang);
+  const t = Object.fromEntries(Object.entries({ ...TRAY[lang], ...(WORK[lang] || WORK.en) }).map(([key, value]) =>
     [key, typeof value === 'string' && watched.id !== 'claude' ? value.replaceAll('Claude Code', watched.name) : value]));
   // who's on the desktop: their name in the menu, and his wording when he's a he
   const skin = characters.get(cfg.character, characterDirs());
@@ -393,12 +438,31 @@ function rebuildTray() {
     { label: t.teleport, click: () => sendCommand('teleport') },
     // her dream is the satellite; a character with a cigarette in his storyboards just lights up
     skin?.poses?.smoke
-      ? { label: t.lightUp, click: () => sendCommand('skinPose', { name: 'smoke', url: skin.poses.smoke }) }
+      ? { label: t.lightUp, click: () => sendCommand('skinAnimation', { animation: 'smoke' }) }
       : { label: t.satellite, click: () => sendCommand('satellite') },
     { label: t.demo, click: playDemo },
     { label: t.help, click: () => sendCommand('welcome') },
     ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
     { label: t.talk, click: () => sendCommand('chat') },
+    {
+      // the working half: a work order in a folder of yours, and the rounds where she learns from you
+      label: t.work,
+      submenu: [
+        { label: t.giveWork, click: () => sendCommand('work') },
+        { label: t.workState, click: () => sendCommand('workState') },
+        { type: 'separator' },
+        {
+          label: t.autonomy,
+          submenu: [
+            { label: t.autonomyGuard, type: 'radio', checked: cfg.autonomy !== 'trusted', click: () => updateConfig({ autonomy: 'guard' }) },
+            { label: t.autonomyTrusted, type: 'radio', checked: cfg.autonomy === 'trusted', click: () => updateConfig({ autonomy: 'trusted' }) },
+          ],
+        },
+        { type: 'separator' },
+        { label: t.learn, click: () => sendCommand('evolve') },
+        { label: t.harnessFolder, click: () => shell.openPath(getAgent().harnessDir) },
+      ],
+    },
     { label: t.lookNow, click: () => sendCommand('look') },
     {
       label: t.reminders,
@@ -708,6 +772,39 @@ async function chatWithTools(cfg, model, messages, send, signal) {
   return text; // still asking for tools after that many rounds: what it said is the answer
 }
 
+// Her standing notes, from the harness evolve.js edits, at the end of the system prompt where a model
+// weighs them most — and only when there is something there to weigh.
+function withStandingNotes(messages) {
+  const turns = messages.map((m) => ({ ...m }));
+  let note = '';
+  try {
+    note = getAgent().personaNote();
+  } catch {
+    // no harness yet: her own persona stands alone
+  }
+  if (!note) return turns;
+  if (turns[0]?.role === 'system' && typeof turns[0].content === 'string') {
+    turns[0].content += note;
+  } else {
+    turns.unshift({ role: 'system', content: note.trim() });
+  }
+  return turns;
+}
+
+// What you said, kept for evolve.js: a correction arrives with the question it corrected, anything
+// else on its own. It stays in her own storage; nothing here is sent anywhere.
+function rememberChat(turns, answer) {
+  try {
+    const said = (turns || []).filter((m) => m.role === 'user' && typeof m.content === 'string');
+    const last = said.at(-1);
+    if (!last) return;
+    const before = said.at(-2);
+    getAgent().observeChat({ message: last.content, previous: before?.content || '', answer: String(answer || '') });
+  } catch {
+    // no storage, no learning: the chat goes on either way
+  }
+}
+
 // Her chat's answer: with the tools when her AI can take them, plainly when the server doesn't know
 // them, and the usual move to another model when this one is busy or gone.
 async function chatAnswer(cfg, messages, send, signal, streamed) {
@@ -920,7 +1017,9 @@ function registerIpc() {
         overlay?.webContents.send('chat:delta', { id, text });
       };
       const cfg = config.load();
-      const text = await chatAnswer(cfg, messages, send, abort.signal, () => streamed);
+      const turns = withStandingNotes(Array.isArray(messages) ? messages : []);
+      const text = await chatAnswer(cfg, turns, send, abort.signal, () => streamed);
+      rememberChat(turns, text);
       if (cfg.provider === 'claude') saveMemory({ claude: llm.claudeMemory() });
       return { ok: true, text };
     } catch (err) {
@@ -930,6 +1029,34 @@ function registerIpc() {
     }
   });
   ipcMain.on('chat:stop', (_e, id) => chats.get(id)?.abort());
+  // A work order (src/main/agent): the board asks, main starts it, and every change comes back on
+  // `work:state` as the whole state, so the board never has to reconstruct anything.
+  ipcMain.handle('work:start', async (_e, { goal, workspace } = {}) => {
+    try {
+      return getAgent().startWork({ goal, workspace: workspace || config.load().workspace });
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('work:stop', () => {
+    const state = getAgent().stopWork();
+    return state || getAgent().lastPlan();
+  });
+  ipcMain.handle('work:state', () => getAgent().plan || getAgent().lastPlan());
+  ipcMain.handle('work:pick', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: config.load().workspace || app.getPath('home'),
+    });
+    if (canceled || !filePaths[0]) return null;
+    updateConfig({ workspace: filePaths[0] });
+    return filePaths[0];
+  });
+  ipcMain.handle('work:open', (_e, dir) => shell.openPath(String(dir || config.load().workspace || app.getPath('home'))));
+  ipcMain.handle('harness:open', () => shell.openPath(getAgent().harnessDir));
+  // her improving her own harness, from what she has been corrected on
+  ipcMain.handle('evolve:start', () => getAgent().evolve());
+  ipcMain.on('agent:observe', (_e, entry) => getAgent().observe(entry || {}));
   // she looks at your screen (look.js): the picture first, then what her AI says about it
   ipcMain.handle('look:snap', async () => {
     try {

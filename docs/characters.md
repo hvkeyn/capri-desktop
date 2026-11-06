@@ -48,6 +48,11 @@ characters/
   `hello`, `prompt`, `working` (`{count}`), `done`, `permission`, `error` (`{tool}`), `idle`, `thinking`,
   `chat.hello`, `pet`, `thrown`, `pc` (`{level}`, `{cpu}`) and so on. Anything in it that says "Capri" is
   renamed to the character's name too.
+- `animations` (optional) are loops played by the app as real animation — `{"smoke": {"dir": "motions/smoke", "fps": 12}}`
+  (or `"frames": [...]` instead of a folder). A loop is texture-swapped under the character, so it stays
+  smooth; the menu lists them, and `auto.idle` can name them for the idle rotation.
+- `flat` (`true`, optional) turns her rig off for art that isn't drawn for it: no mane flare, no arm
+  reaching, no knee bends — just the character's own frames. Use it for a skin with real animation.
 - `intro` (optional) is how it comes in — frames, played once at start:
   `{"frames": ["intro/01.png", "…"], "closeupFrom": 6, "durations": [230, 220, …],
     "captions": [{"from": 6, "text": "WAKE UP"}, {"from": 9, "text": "WE HAVE A CITY TO BURN"}],

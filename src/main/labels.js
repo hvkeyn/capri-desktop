@@ -168,27 +168,67 @@ const POSE_LABELS = {
     crossed: 'Bras croisés', smoke: 'Avec une cigarette', crouch: 'Accroupi', pistol: 'Pistolet sorti',
     back: 'De dos', glasses1: 'Avec ses lunettes', glasses2: 'Retire ses lunettes', glasses3: 'Sans lunettes',
     noglasses: 'Sans lunettes', holo: 'Hologramme', glasses: 'Retirer ses lunettes',
+    sad: 'Tristesse, assis', guitar: 'Jouer de la guitare', idle: 'Respiration',
   },
   en: {
     crossed: 'Arms crossed', smoke: 'Smoking', crouch: 'Crouching', pistol: 'Pistol drawn',
     back: 'From behind', glasses1: 'With his sunglasses', glasses2: 'Taking them off', glasses3: 'No sunglasses',
     noglasses: 'No sunglasses', holo: 'Hologram', glasses: 'Take off his sunglasses',
+    sad: 'Sad, sitting', guitar: 'Play the guitar', idle: 'Breathing',
   },
   es: {
     crossed: 'Brazos cruzados', smoke: 'Con un cigarro', crouch: 'Agachado', pistol: 'Pistola en mano',
     back: 'De espaldas', glasses1: 'Con gafas', glasses2: 'Se quita las gafas', glasses3: 'Sin gafas',
     noglasses: 'Sin gafas', holo: 'Holograma', glasses: 'Quitarse las gafas',
+    sad: 'Triste, sentado', guitar: 'Tocar la guitarra', idle: 'Respiración',
   },
   pt: {
     crossed: 'Braços cruzados', smoke: 'Com um cigarro', crouch: 'Agachado', pistol: 'Pistola na mão',
     back: 'De costas', glasses1: 'Com óculos', glasses2: 'Tirando os óculos', glasses3: 'Sem óculos',
     noglasses: 'Sem óculos', holo: 'Holograma', glasses: 'Tirar os óculos',
+    sad: 'Triste, sentado', guitar: 'Tocar violão', idle: 'Respiração',
   },
   ru: {
     crossed: 'Руки скрещены', smoke: 'С сигаретой', crouch: 'На корточках', pistol: 'С пистолетом',
     back: 'Со спины', glasses1: 'В очках', glasses2: 'Снимает очки', glasses3: 'Без очков',
     noglasses: 'Без очков', holo: 'Голограмма', glasses: 'Снять очки',
+    sad: 'Грусть, сидя', guitar: 'Играть на гитаре', idle: 'Дыхание',
   },
 };
 
-module.exports = { TRAY, TRAY_M, POSE_LABELS, LANGS: Object.keys(TRAY) };
+// The work half of her menu: a work order, what she may run inside its folder, and the round where she
+// learns from you. Kept apart from TRAY so the older menus read the same as they always did.
+const WORK = {
+  en: {
+    work: 'Work', giveWork: 'Give her work…', workState: 'The work order',
+    autonomy: 'What she may run', autonomyGuard: 'Project tools (node, git, python…)',
+    autonomyTrusted: 'Anything but the destructive ones',
+    learn: 'Learn from me', harnessFolder: 'Open her harness folder…',
+  },
+  fr: {
+    work: 'Travail', giveWork: 'Donne-lui du travail…', workState: 'La commande en cours',
+    autonomy: 'Ce qu\'elle peut lancer', autonomyGuard: 'Les outils du projet (node, git, python…)',
+    autonomyTrusted: 'Tout sauf le destructeur',
+    learn: 'Apprends de moi', harnessFolder: 'Ouvrir le dossier de ses prompts…',
+  },
+  es: {
+    work: 'Trabajo', giveWork: 'Dale trabajo…', workState: 'El encargo',
+    autonomy: 'Qué puede ejecutar', autonomyGuard: 'Herramientas del proyecto (node, git, python…)',
+    autonomyTrusted: 'Todo menos lo destructivo',
+    learn: 'Aprende de mí', harnessFolder: 'Abrir la carpeta de sus prompts…',
+  },
+  pt: {
+    work: 'Trabalho', giveWork: 'Dá-lhe trabalho…', workState: 'A ordem em curso',
+    autonomy: 'O que ela pode correr', autonomyGuard: 'Ferramentas do projeto (node, git, python…)',
+    autonomyTrusted: 'Tudo menos o destrutivo',
+    learn: 'Aprende comigo', harnessFolder: 'Abrir a pasta dos seus prompts…',
+  },
+  ru: {
+    work: 'Работа', giveWork: 'Дай ей работу…', workState: 'Текущая работа',
+    autonomy: 'Что ей можно запускать', autonomyGuard: 'Инструменты проекта (node, git, python…)',
+    autonomyTrusted: 'Всё, кроме разрушительного',
+    learn: 'Поучись у меня', harnessFolder: 'Открыть папку её промптов…',
+  },
+};
+
+module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, LANGS: Object.keys(TRAY) };

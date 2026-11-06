@@ -100,7 +100,10 @@ export class Capri {
     // (app.js: 1 for her, the skin's "grade" or 0 for anyone else)
     this.skinGrade = 1;
     this.skinHolo = 0; // how strongly a character wears the projection look *while it appears or goes*
+    this.skinFlat = false; // art that isn't hers: no rig deformation, only its own animation
     this.holoUntil = 0; // until when (performance.now) that moment lasts
+    this.loopId = 0;    // bumped to stop an animation loop (startLoop, setPose, playSequence)
+    this.loopTimer = 0;
     this.bob = 0;
     this.tilt = 0;
     this.sx = 1;
@@ -468,10 +471,19 @@ export class Capri {
     this.lastDraw = now;
     this.animate(now);
     this.p.grade = this.skinGrade ?? 1; // her own colour grade only for her own art
+    if (this.skinFlat) {
+      // a character's own art doesn't have her shoulders, mane or knees: the rig would tear it apart
+      const p = this.p;
+      p.head = 0; p.mane = 0; p.hair = 0;
+      p.armL = 0; p.armR = 0; p.longL = 1; p.longR = 1;
+      p.sit = 0; p.bend = 0; p.kickL = 0; p.kickR = 0;
+      p.sparkle = 0; p.boil = 0;
+    }
     // the projection look: solid, full colour, except for a moment after a teleport or a materialisation
     const left = this.holoUntil - now;
     this.p.holo = left > 0 && this.skinHolo ? Math.min(1, this.skinHolo * Math.min(1, 0.35 + left / 260)) : 0;
     this.p.time = now / 1000;
+    this.p.flat = this.skinFlat ? 1 : 0;
     this.sprite.draw(this.p);
     this.place();
   }
@@ -493,6 +505,7 @@ export class Capri {
   }
 
   async setPose(url) {
+    this.stopLoop(); // a still drawing replaces any loop
     if (!url) return false;
     const img = await this.loadPicture(url);
     if (!img || !img.naturalWidth) return false;
@@ -503,6 +516,7 @@ export class Capri {
 
   // A few drawings of the same character, played once (skin.json's "sequences"): glasses come off…
   async playSequence(urls, fps = 8) {
+    this.stopLoop();
     if (!Array.isArray(urls) || urls.length < 2) return false;
     const back = this.sprite.image;
     const frames = [];
@@ -517,6 +531,36 @@ export class Capri {
     }
     if (back) this.sprite.setImage(back);
     return true;
+  }
+
+  // A loop of drawings (skin.json's "animations"): smoking, guitar, sadness, idle breathing.
+  // Returns false when it can't play; a newer loop, a pose or a sequence replaces it cleanly.
+  async startLoop(urls, fps = 12) {
+    if (!Array.isArray(urls) || urls.length < 2) return false;
+    const id = ++this.loopId;
+    clearInterval(this.loopTimer);
+    const frames = [];
+    for (const url of urls) frames.push(await this.loadPicture(url));
+    if (id !== this.loopId) return false;
+    const usable = frames.filter((frame) => frame && frame.naturalWidth);
+    if (usable.length < 2) return false;
+    let index = 0;
+    const step = Math.max(30, Math.round(1000 / fps));
+    const tick = () => {
+      if (id !== this.loopId) return;
+      this.sprite.setImage(usable[index]);
+      index = (index + 1) % usable.length;
+    };
+    tick();
+    this.loopTimer = setInterval(tick, step);
+    this.holoBurst(300);
+    return true;
+  }
+
+  stopLoop() {
+    this.loopId += 1;
+    clearInterval(this.loopTimer);
+    this.loopTimer = 0;
   }
 
   // Pick the drawing: the stance's cycle underneath, the current act on top.
