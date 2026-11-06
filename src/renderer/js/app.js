@@ -13,7 +13,7 @@ import { Bond, Jealousy } from './bond.js';
 import { Reminders, clock } from './reminders.js';
 import { Look } from './look.js';
 import { Pc } from './pc.js';
-import { linesFor } from './lines.js';
+import { linesFor, setCharacterName } from './lines.js';
 import { pick, fmt, sleep, reducedMotion } from './util.js';
 
 const host = window.host;
@@ -72,6 +72,8 @@ async function boot() {
   const skin = config.character && config.character !== 'capri'
     ? await host.characterSkin(config.character).catch(() => null)
     : null;
+  // her name inside every line: a character's own, so no "Capri online" while someone else is there
+  setCharacterName(skin?.name || null);
   const [image, intro, ...cutins] = await Promise.all([
     loadImage(skin?.sprite || '../../assets/capri/capri-full.png'),
     // her intro: her close-up grabbing the screen, and its drawings with her mouth and arm moving

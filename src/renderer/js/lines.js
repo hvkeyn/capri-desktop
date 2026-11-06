@@ -1953,9 +1953,43 @@ const OTHERS = {
   },
 };
 const converted = new Map();
+const named = new Map();
+
+// A character that isn't her: her name inside the lines becomes theirs, so "Capri online. Hi, Max."
+// reads "Johnny Silverhand online. Hi, Max." (app.js sets it from the skin; null is her own).
+let characterName = null;
+
+export function setCharacterName(name) {
+  const next = String(name || '').trim() || null;
+  if (next === characterName) return;
+  characterName = next;
+  named.clear(); // renamed copies belong to the previous name
+}
+
+function renamed(value) {
+  if (typeof value === 'string') return value.replace(/\bCapri\b/g, characterName).replace(/Капри/g, characterName);
+  if (Array.isArray(value)) return value.map(renamed);
+  if (typeof value === 'function') {
+    return (...args) => {
+      const out = value(...args);
+      return typeof out === 'string' ? renamed(out) : out;
+    };
+  }
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, renamed(v)]));
+  return value;
+}
+
 export function linesFor(lang, assistant = 'claude') {
   const base = LINES[lang] || LINES.fr;
   const other = OTHERS[assistant];
+  const lines = linesOf(base, other, lang, assistant);
+  if (!characterName) return lines;
+  const key = `${characterName}:${assistant}:${lang}`;
+  if (!named.has(key)) named.set(key, renamed(lines));
+  return named.get(key);
+}
+
+function linesOf(base, other, lang, assistant) {
   if (!other) return base;
   const key = `${assistant}:${lang}`;
   if (converted.has(key)) return converted.get(key);
