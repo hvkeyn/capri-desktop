@@ -2,6 +2,11 @@
 
 # Capri
 
+> **This fork** starts on **DeepSeek** instead of a local Ollama model: her chat, her answers and what she
+> reads off your screen go to `https://api.deepseek.com`, with the model `deepseek-flash`. Nothing else
+> changes: she still watches Claude Code, Codex and Antigravity. See [docs/deepseek.md](docs/deepseek.md)
+> for the key, the models and how to build it.
+
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
 and tells you what your coding AI is up to: **Claude Code**, **Codex** or **Antigravity**. She teleports,
 glitches, comments on every action, comes to find you when it needs your permission, and loses it when the job is done.
