@@ -299,6 +299,7 @@ export class Chat {
     this.history = await host.chatMemory().catch(() => this.history); // "forget" in her menu may have emptied it
     this.cold = status.warmup && !this.warm;
     this.agent = Boolean(status.agent); // Claude Code answers, as her, and really works in your project
+    this.pcTools = Boolean(status.tools); // her AI can look at their PC (main.js, tools.js): read-only
     this.listApps();
     const shortModel = status.model.replace(/:latest$/, '').replace(/^models\//, ''); // Ollama's tag, Gemini's prefix
     const tiny = status.provider === 'ollama' && TINY.test(status.model) && this.onBetterModel;
@@ -991,7 +992,13 @@ export class Chat {
       if (soon.length) lines.push(`Reminders you're keeping for them: ${soon.map((r) => `${clock(r.at, this.brain.lang)}${r.text ? ` (${r.text})` : ''}`).join('; ')}.`);
     }
     lines.push('Your system also searches the user\'s files when they ask you to find one, searches the web when they ask, takes screenshots, and starts Roblox games by name: what it did shows under your answer, so never make up file names or results.');
-    lines.push('Apart from that, you can\'t see the user\'s screen or files, and you can\'t touch anything else on their PC (settings, files): if asked, say plainly that you can\'t, in character, and don\'t pretend to.');
+    if (this.pcTools) {
+      // her AI really can look (src/main/tools.js): the model is handed those tools with every message
+      lines.push('You also have tools that look at their PC itself: its processor and how hard it works right now, its graphics card, memory, disks, battery, network, Windows, the programs using it hardest, the programs open on it, and files in their home folder by name. When they ask about their machine, about something being slow, about their hardware or about a file, call the right tool first and answer from what it gives you, in your own words.');
+      lines.push('Never say you can\'t see their PC or its files: you can, through those tools. What you still can\'t do is change things on it beyond the tags above (settings, files, closing apps, shutting it down): say so plainly if asked, in character, and don\'t pretend.');
+    } else {
+      lines.push('Apart from that, you can\'t see the user\'s screen or files, and you can\'t touch anything else on their PC (settings, files): if asked, say plainly that you can\'t, in character, and don\'t pretend to.');
+    }
     return lines;
   }
 

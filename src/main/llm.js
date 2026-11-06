@@ -120,6 +120,50 @@ async function openaiChat(p, { model, messages }, onDelta, signal) {
   return text;
 }
 
+// The same stream, with the tools her AI may call (src/main/tools.js): the server can answer with a
+// function to run before it writes anything. { text, toolCalls: [{ id, name, arguments }] }
+async function openaiTools(p, { model, messages, tools }, onDelta, signal) {
+  const res = await fetch(`${p.url}/chat/completions`, {
+    method: 'POST',
+    headers: headers(p.key),
+    body: JSON.stringify({ model, messages, tools, tool_choice: 'auto', stream: true }),
+    signal,
+  });
+  if (!res.ok) throw await failure(res);
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let text = '';
+  const calls = new Map(); // index -> { id, name, arguments }: the arguments arrive in pieces
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      const line = buffer.slice(0, nl).trim();
+      buffer = buffer.slice(nl + 1);
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (data === '[DONE]') return { text, toolCalls: [...calls.values()].filter((c) => c.name) };
+      const msg = JSON.parse(data);
+      if (msg.error) throw new Error(msg.error.message || msg.error);
+      const delta = msg.choices?.[0]?.delta;
+      const piece = delta?.content || '';
+      if (piece) {
+        text += piece;
+        onDelta(piece);
+      }
+      for (const call of delta?.tool_calls || []) {
+        const at = call.index ?? 0;
+        const cur = calls.get(at) || { id: '', name: '', arguments: '' };
+        if (call.id) cur.id = call.id;
+        if (call.function?.name) cur.name = call.function.name;
+        if (call.function?.arguments) cur.arguments += call.function.arguments;
+        calls.set(at, cur);
+      }
+    }
+  }
+  return { text, toolCalls: [...calls.values()].filter((c) => c.name) };
+}
+
 // --- Claude Code ---------------------------------------------------------------------------------
 // The prompt goes in on stdin, never on the command line: the shell (needed for an npm claude.cmd)
 // only ever sees fixed arguments.
@@ -224,4 +268,20 @@ function isLocal(id, cfg, model) {
   return Boolean(PROVIDERS[id].local);
 }
 
-module.exports = { isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, resetClaude, isChatSession, claudeMemory, restoreClaude };
+// Who can be handed tools (src/main/tools.js): the OpenAI-compatible servers, cloud and local. Ollama
+// and Claude Code answer in their own shape, and a tiny local model handed tools mostly answers nonsense.
+const TOOL_PROVIDERS = new Set(['deepseek', 'openai', 'groq', 'gemini', 'mistral', 'openrouter', 'custom', 'lmstudio', 'llamacpp']);
+
+const supportsTools = (id) => TOOL_PROVIDERS.has(id);
+
+// One turn with tools: { text, toolCalls }. A provider that can't take them gets the plain stream.
+async function chatTools(id, cfg, request, onDelta, signal) {
+  const p = endpoint(id, cfg);
+  if (!supportsTools(id) || p.kind) return { text: await chat(id, cfg, request, onDelta, signal), toolCalls: [] };
+  return openaiTools(p, request, onDelta, signal);
+}
+
+module.exports = {
+  isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, chatTools, supportsTools,
+  resetClaude, isChatSession, claudeMemory, restoreClaude,
+};

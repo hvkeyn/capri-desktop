@@ -41,6 +41,36 @@ and checks that a bad key is refused with a message her setup can act on.
 needs. Her menu › **AI model** also offers what the account serves, `deepseek-v4-pro` among them; pick it there
 if you want her longer answers, at a higher price per message.
 
+## What she can see on your PC
+
+This fork also gives her AI **eyes on the machine**, through tools (`src/main/tools.js`, OpenAI-style
+function calling, added in `src/main/llm.js` and `src/main/main.js`). Before she answers a question about
+your PC, DeepSeek can call:
+
+| tool | what it returns |
+|---|---|
+| `system_info` | Windows version and build, processor model and cores and how hard it works right now, graphics card, memory used and total, disk free and total, battery, local IP, the eight programs using the most memory |
+| `open_apps` | the programs open on your desktop right now, with their window titles |
+| `find_files` | files in your home folder by part of their name |
+
+All of it is **read-only**: nothing there changes anything, which is why her AI may call it by itself, with
+no button. Anything that *does* change the PC (open an app, close one, settings, music, shutting down)
+still goes through her chat as before, and keeps its buttons where it had them: an AI that can act on its
+own is exactly what this project avoids.
+
+Tools are offered to the OpenAI-compatible providers (`deepseek`, `openai`, `groq`, `gemini`, `mistral`,
+`openrouter`, `custom`, LM Studio, llama.cpp). Ollama and Claude Code keep their own path, and a server that
+doesn't know tools just gets a plain request instead (the answer is still written, just without her looking).
+
+Check it without starting her:
+
+```bash
+DEEPSEEK_API_KEY=sk-… npm run check:tools
+```
+
+It runs her real loop against this machine: the model is handed the tools, calls `system_info`, and its
+answer has to name the hardware it found.
+
 ## Build it
 
 ```bash

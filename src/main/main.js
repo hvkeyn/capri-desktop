@@ -19,6 +19,7 @@ const ollama = require('./ollama');
 const setup = require('./setup');
 const apps = require('./apps');
 const system = require('./system');
+const tools = require('./tools');
 const launch = require('./launch');
 const files = require('./files');
 const { ASSISTANTS, assistant } = require('./assistants');
@@ -582,6 +583,50 @@ async function signInToOllama() {
   }
 }
 
+// Her answer with the tools of tools.js: her AI may look at the PC (its hardware and how hard it
+// works, what's open on it, files by name) before it writes anything. Read-only, so it needs no
+// click; anything that *changes* the PC is still her chat's own doing, with its buttons.
+const TOOL_ROUNDS = 3;
+
+async function chatWithTools(cfg, model, messages, send, signal) {
+  const turns = [...messages];
+  let text = '';
+  for (let round = 0; round <= TOOL_ROUNDS; round++) {
+    const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { model, messages: turns, tools: tools.TOOLS }, send, signal);
+    text = res.text;
+    if (!res.toolCalls.length) return text;
+    turns.push({
+      role: 'assistant',
+      content: res.text || '',
+      tool_calls: res.toolCalls.map((call) => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.arguments || '{}' } })),
+    });
+    for (const call of res.toolCalls) {
+      let args = {};
+      try { args = JSON.parse(call.arguments || '{}'); } catch { /* no arguments: the tool's own defaults */ }
+      const out = await tools.run(call.name, args).catch((err) => ({ error: err.message }));
+      turns.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out).slice(0, 6000) });
+    }
+  }
+  return text; // still asking for tools after that many rounds: what it said is the answer
+}
+
+// Her chat's answer: with the tools when her AI can take them, plainly when the server doesn't know
+// them, and the usual move to another model when this one is busy or gone.
+async function chatAnswer(cfg, messages, send, signal, streamed) {
+  const model = pickModel(cfg);
+  if (model && llm.supportsTools(cfg.provider)) {
+    try {
+      return await chatWithTools(cfg, model, messages, send, signal);
+    } catch (err) {
+      const plain = ['busy', 'gone', 'signin'].includes(err.code)
+        || err.status === 400 || err.status === 422 || /tool/i.test(err.message || '');
+      if (signal.aborted || streamed() || !plain) throw err;
+      return chatWithFallback(cfg, messages, send, signal, streamed);
+    }
+  }
+  return chatWithFallback(cfg, messages, send, signal, streamed);
+}
+
 // Her answer from the model picked, or from the next one when that one can't: too busy twice in a row
 // (Gemini's "high demand", an Ollama cloud model out of free use), not served anymore (an older model
 // closed to new keys), or signed out of Ollama. A model on this PC first. The model that answered is
@@ -734,7 +779,7 @@ function registerIpc() {
     const model = pickModel();
     llm.warm(provider, model); // loading while you type your first message
     const local = llm.isLocal(provider, cfg, model);
-    return { ok: true, provider, model, agent: provider === 'claude', local, warmup: provider === 'ollama' && local };
+    return { ok: true, provider, model, agent: provider === 'claude', local, warmup: provider === 'ollama' && local, tools: llm.supportsTools(provider) };
   });
   // her answer, streamed to the overlay piece by piece as `chat:delta`
   ipcMain.handle('chat:send', async (_e, { id, messages }) => {
@@ -747,7 +792,7 @@ function registerIpc() {
         overlay?.webContents.send('chat:delta', { id, text });
       };
       const cfg = config.load();
-      const text = await chatWithFallback(cfg, messages, send, abort.signal, () => streamed);
+      const text = await chatAnswer(cfg, messages, send, abort.signal, () => streamed);
       if (cfg.provider === 'claude') saveMemory({ claude: llm.claudeMemory() });
       return { ok: true, text };
     } catch (err) {

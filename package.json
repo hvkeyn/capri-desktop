@@ -18,6 +18,7 @@
     "hooks:agy:uninstall": "node scripts/install-hooks-agy.js --uninstall",
     "check:llm": "node scripts/check-llm.js",
     "check:deepseek": "node scripts/check-deepseek.js",
+    "check:tools": "node scripts/check-tools.js",
     "test:hooks": "node --test tests/hooks.test.js",
     "dist": "electron-builder --win"
   },
