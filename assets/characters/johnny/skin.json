@@ -25,5 +25,6 @@
                   "smoke":  "poses/smoke.png",
                   "crouch":  "poses/crouch.png",
                   "pistol":  "poses/pistol.png"
-              }
+              },
+    "gender":  "m"
 }

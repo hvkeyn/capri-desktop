@@ -7,7 +7,7 @@ const TRAY = {
   fr: {
     name: 'Français',
     online: (port) => `Capri — à l'écoute sur ${port}`,
-    teleport: 'Téléporter', satellite: 'Regarder le satellite', demo: 'Lancer la démo', help: 'Comment ça marche ?',
+    teleport: 'Téléporter', satellite: 'Regarder le satellite', lightUp: 'Allumer une cigarette', demo: 'Lancer la démo', help: 'Comment ça marche ?',
     report: 'Rapport de mission', talk: 'Lui parler', custom: 'La personnaliser…', chatModel: 'Modèle IA', aiSetup: 'Choisir avec elle…', apiKey: 'Clé API ou adresse…', noOllama: 'Ollama introuvable',
     character: 'Personnage', characterFolder: 'Ouvrir le dossier des personnages…',
     rest: 'Quand elle se repose', restCorner: 'Dans son coin', restTaskbar: 'Assise sur la barre des tâches', watch: 'Surveiller', watchNone: 'Rien, juste me tenir compagnie',
@@ -30,7 +30,7 @@ const TRAY = {
   en: {
     name: 'English',
     online: (port) => `Capri — listening on ${port}`,
-    teleport: 'Teleport', satellite: 'Look at the satellite', demo: 'Play demo', help: 'How does it work?',
+    teleport: 'Teleport', satellite: 'Look at the satellite', lightUp: 'Light a cigarette', demo: 'Play demo', help: 'How does it work?',
     report: 'Mission report', talk: 'Talk to her', custom: 'Make her yours…', chatModel: 'AI model', aiSetup: 'Set it up with her…', apiKey: 'API key or address…', noOllama: 'Ollama not found',
     character: 'Character', characterFolder: 'Open the characters folder…',
     rest: 'When she rests', restCorner: 'In her corner', restTaskbar: 'Sitting on the taskbar', watch: 'Watch', watchNone: 'Nothing, just keep me company',
@@ -53,7 +53,7 @@ const TRAY = {
   es: {
     name: 'Español',
     online: (port) => `Capri — escuchando en ${port}`,
-    teleport: 'Teletransportar', satellite: 'Mirar el satélite', demo: 'Ver la demo', help: '¿Cómo funciona?',
+    teleport: 'Teletransportar', satellite: 'Mirar el satélite', lightUp: 'Encender un cigarro', demo: 'Ver la demo', help: '¿Cómo funciona?',
     report: 'Informe de misión', talk: 'Hablar con ella', custom: 'Personalizarla…', chatModel: 'Modelo de IA', aiSetup: 'Elegir con ella…', apiKey: 'Clave API o dirección…', noOllama: 'Ollama no encontrado',
     character: 'Personaje', characterFolder: 'Abrir la carpeta de personajes…',
     rest: 'Cuando descansa', restCorner: 'En su rincón', restTaskbar: 'Sentada en la barra de tareas', watch: 'Vigilar', watchNone: 'Nada, solo hacerme compañía',
@@ -76,7 +76,7 @@ const TRAY = {
   pt: {
     name: 'Português (Brasil)',
     online: (port) => `Capri — ouvindo na porta ${port}`,
-    teleport: 'Teletransportar', satellite: 'Olhar o satélite', demo: 'Ver a demo', help: 'Como funciona?',
+    teleport: 'Teletransportar', satellite: 'Olhar o satélite', lightUp: 'Acender um cigarro', demo: 'Ver a demo', help: 'Como funciona?',
     report: 'Relatório de missão', talk: 'Falar com ela', custom: 'Personalizar…', chatModel: 'Modelo de IA', aiSetup: 'Escolher com ela…', apiKey: 'Chave de API ou endereço…', noOllama: 'Ollama não encontrado',
     character: 'Personagem', characterFolder: 'Abrir a pasta de personagens…',
     rest: 'Quando ela descansa', restCorner: 'No canto dela', restTaskbar: 'Sentada na barra de tarefas', watch: 'Acompanhar', watchNone: 'Nada, só me fazer companhia',
@@ -99,7 +99,7 @@ const TRAY = {
   ru: {
     name: 'Русский',
     online: (port) => `Capri — слушаю порт ${port}`,
-    teleport: 'Телепортироваться', satellite: 'Посмотреть на спутник', demo: 'Запустить демо', help: 'Как это работает?',
+    teleport: 'Телепортироваться', satellite: 'Посмотреть на спутник', lightUp: 'Закурить', demo: 'Запустить демо', help: 'Как это работает?',
     report: 'Отчёт о миссиях', talk: 'Поговорить с ней', custom: 'Настроить её…', chatModel: 'ИИ-модель', aiSetup: 'Выбрать вместе с ней…', apiKey: 'API-ключ или адрес…', noOllama: 'Ollama не найдена',
     character: 'Персонаж', characterFolder: 'Открыть папку персонажей…',
     rest: 'Когда она отдыхает', restCorner: 'В своём углу', restTaskbar: 'Сидит на панели задач', watch: 'Что отслеживать', watchNone: 'Ничего, просто будь рядом',
@@ -121,4 +121,45 @@ const TRAY = {
   },
 };
 
-module.exports = { TRAY, LANGS: Object.keys(TRAY) };
+// A character who isn't her (skin.json's "gender": "m"): the menu calls him "him", not "her".
+// Only the keys that say she/he; everything else is neutral.
+const TRAY_M = {
+  fr: {
+    talk: 'Lui parler', custom: 'Le personnaliser…', aiSetup: 'Choisir avec lui…',
+    rest: 'Quand il se repose', theme: 'Le style de ses fenêtres', show: 'Le ramener',
+    displayGl: 'OpenGL (si son fond est noir)',
+    sync: (percent, stage) => `Vous et lui : ${percent} % · ${stage}`,
+    noReminders: 'Aucun rappel (demande-lui dans son chat)',
+  },
+  en: {
+    talk: 'Talk to him', custom: 'Make him yours…', aiSetup: 'Set it up with him…',
+    rest: 'When he rests', theme: 'His window style', show: 'Bring him back',
+    displayGl: 'OpenGL (if his background is black)',
+    sync: (percent, stage) => `You and him: ${percent} % · ${stage}`,
+    noReminders: 'No reminders (ask in his chat)',
+  },
+  es: {
+    talk: 'Hablar con él', custom: 'Personalizarlo…', aiSetup: 'Elegir con él…',
+    rest: 'Cuando él descansa', theme: 'El estilo de sus ventanas', show: 'Traerlo de vuelta',
+    displayGl: 'OpenGL (si su fondo es negro)',
+    sync: (percent, stage) => `Tú y él: ${percent} % · ${stage}`,
+    noReminders: 'Sin recordatorios (pídeselo en su chat)',
+  },
+  pt: {
+    talk: 'Falar com ele', custom: 'Personalizar…', aiSetup: 'Escolher com ele…',
+    rest: 'Quando ele descansa', theme: 'O estilo das janelas dele', show: 'Trazer ele de volta',
+    displayGl: 'OpenGL (se o fundo dele estiver preto)',
+    sync: (percent, stage) => `Você e ele: ${percent} % · ${stage}`,
+    noReminders: 'Sem lembretes (peça no chat dele)',
+  },
+  ru: {
+    talk: 'Поговорить с ним', custom: 'Настроить его…', aiSetup: 'Выбрать вместе с ним…',
+    rest: 'Когда он отдыхает', theme: 'Стиль его окон', show: 'Вернуть его',
+    displayGl: 'OpenGL (если его фон чёрный)',
+    sync: (percent, stage) => `Вы с ним: ${percent} % · ${stage}`,
+    noReminders: 'Напоминаний нет (попроси в его чате)',
+    small: 'Маленький', medium: 'Средний', large: 'Большой',
+  },
+};
+
+module.exports = { TRAY, TRAY_M, LANGS: Object.keys(TRAY) };

@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, LANGS } = require('./labels');
+const { TRAY, TRAY_M, LANGS } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -358,6 +358,9 @@ function rebuildTray() {
   const watched = activeAssistant();
   const t = Object.fromEntries(Object.entries(TRAY[resolveLang(cfg.lang)]).map(([key, value]) =>
     [key, typeof value === 'string' && watched.id !== 'claude' ? value.replaceAll('Claude Code', watched.name) : value]));
+  // who's on the desktop: their name in the menu, and his wording when he's a he
+  const skin = characters.get(cfg.character, characterDirs());
+  applyCharacterLabels(t, skin);
 
   const screens = displays();
   const current = targetDisplay().id;
@@ -378,7 +381,10 @@ function rebuildTray() {
     { label: t.sync(Math.min(100, Math.floor(xp / 10)), t.stages[stage]), enabled: false },
     { type: 'separator' },
     { label: t.teleport, click: () => sendCommand('teleport') },
-    { label: t.satellite, click: () => sendCommand('satellite') },
+    // her dream is the satellite; a character with a cigarette in his storyboards just lights up
+    skin?.poses?.smoke
+      ? { label: t.lightUp, click: () => sendCommand('skinPose', { name: 'smoke', url: skin.poses.smoke }) }
+      : { label: t.satellite, click: () => sendCommand('satellite') },
     { label: t.demo, click: playDemo },
     { label: t.help, click: () => sendCommand('welcome') },
     ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
@@ -815,6 +821,26 @@ function createTray() {
 function characterName() {
   const skin = characters.get(config.load().character, characterDirs());
   return skin?.name || skin?.label || 'Capri';
+}
+
+const renameIn = (text, name) => text.replace(/\bCapri\b/g, name).replace(/Капри/g, name);
+
+// A character that isn't her names itself in the menu, and gets "him" instead of "her" if he's a he
+function applyCharacterLabels(t, skin) {
+  if (!skin) return t;
+  if (skin.gender === 'm') Object.assign(t, TRAY_M[resolveLang(config.load().lang)] || TRAY_M.en);
+  const name = skin.name || skin.label;
+  if (!name) return t;
+  for (const [key, value] of Object.entries(t)) {
+    if (typeof value === 'string') t[key] = renameIn(value, name);
+    else if (typeof value === 'function') {
+      t[key] = (...args) => {
+        const out = value(...args);
+        return typeof out === 'string' ? renameIn(out, name) : out;
+      };
+    }
+  }
+  return t;
 }
 
 function registerIpc() {

@@ -47,6 +47,8 @@ function read(dir, base) {
     name: String(raw.name || raw.label || '').trim().slice(0, 40),
     badge: String(raw.badge || raw.name || raw.label || '').trim().slice(0, 24).toUpperCase(),
     persona: persona.slice(0, 20),
+    // how her menu calls them: "her" (a she) or "him" (a he)
+    gender: raw.gender === 'm' ? 'm' : 'f',
     base,
     sprite: url,
     faces: map(base, raw.faces),
