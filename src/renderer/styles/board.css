@@ -1,0 +1,445 @@
+/* ------------------------------------------------------------------
+   The work-order board
+
+   Same Night City HUD as her panel: a near-black plate, a 2px outline,
+   one corner cut, labels in mono caps, the data in mono. It is drawn by
+   one rule the rest of her UI didn't have to follow: there is a focal
+   object, and it is what she is doing right now. Everything else steps
+   back from it — small caps, thin lines, quieter ink.
+
+   Sizes are on a 4px grid, every control is at least 44px tall (a
+   fingertip on a touch screen, a careless pointer on a desktop), and
+   nothing here is soft: no gradients, no shadows, hard cuts only.
+------------------------------------------------------------------- */
+
+.board {
+  position: absolute;
+  top: 0;
+  right: clamp(16px, 2.4vw, 40px);
+  z-index: 4;
+  width: clamp(320px, 26vw, 404px);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  transition: opacity 220ms var(--ease-out);
+}
+
+.board[hidden] {
+  display: none;
+}
+
+.board.is-leaving {
+  opacity: 0;
+}
+
+.board__frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 12px;
+  background: oklch(0.155 0.006 100 / 0.96);
+  border: 2px solid var(--yellow);
+  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  animation: board-frame-in 280ms var(--ease-out) both;
+}
+
+/* the cut corner gets its own line, the way cyberpunk.net draws a plate */
+.board__frame::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--cut);
+  height: var(--cut);
+  background: var(--yellow);
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.board__frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, oklch(0.96 0.012 100 / 0.028) 3px 4px);
+  pointer-events: none;
+}
+
+@keyframes board-frame-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- header ------------------------------------------------------ */
+
+.board__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.board__kicker {
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--yellow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board__chip {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--paper-2);
+}
+
+.board__chip[data-state='running'] { color: var(--cyan); border-color: color-mix(in oklch, var(--cyan) 55%, transparent); }
+.board__chip[data-state='done'] { color: var(--yellow); border-color: color-mix(in oklch, var(--yellow) 55%, transparent); }
+.board__chip[data-state='failed'] { color: var(--red); border-color: color-mix(in oklch, var(--red) 55%, transparent); }
+.board__chip[data-state='stopped'] { color: var(--paper-3); }
+
+/* a close button is a target before it is a glyph */
+.board__icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--paper-3);
+  font: 400 14px var(--font-mono);
+  cursor: pointer;
+}
+
+.board__icon:hover { color: var(--paper); }
+.board__icon:focus-visible { outline: 2px solid var(--cyan); outline-offset: -6px; }
+
+/* ---- the order ---------------------------------------------------- */
+
+.board__order {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.board__label,
+.board__steps-title,
+.board__log-title,
+.board__now-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--paper-3);
+  margin: 0;
+}
+
+.board__steps-title,
+.board__log-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.board__steps-title::after,
+.board__log-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.board__input {
+  width: 100%;
+  height: 44px;
+  padding: 0 10px;
+  border: 2px solid var(--line);
+  background: var(--ink-2);
+  color: var(--paper);
+  font: 400 var(--text-line) / 1.2 var(--font-mono);
+}
+
+.board__input::placeholder { color: var(--paper-3); }
+.board__input:focus-visible { outline: 2px solid var(--yellow); outline-offset: 1px; }
+
+.board__target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.board__ws {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  color: var(--paper-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.board__pick {
+  flex: none;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--paper-2);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.board__pick:hover { border-color: var(--paper-3); color: var(--paper); }
+.board__pick:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+
+/* ---- buttons ------------------------------------------------------ */
+
+.board__action {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--paper-3);
+  background: none;
+  color: var(--paper);
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+
+.board__action:hover:not(:disabled) { border-color: var(--paper-2); }
+.board__action:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.board__action:disabled { opacity: 0.45; cursor: default; }
+
+.board__action.is-primary {
+  border-color: var(--yellow);
+  color: var(--ink);
+  background: var(--yellow);
+}
+
+.board__action.is-primary:hover:not(:disabled) { filter: saturate(1.15) brightness(1.06); }
+
+/* ---- the run ------------------------------------------------------ */
+
+.board__run {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.board__goal {
+  margin: 0;
+  font: 700 15px / 1.25 var(--font-display);
+  letter-spacing: 0.01em;
+  color: var(--paper);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* five phases: behind her filled, hers lit, ahead a hairline */
+.board__phases {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board__phase {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.board__phase-dot {
+  height: 3px;
+  background: var(--line);
+  transition: background 240ms var(--ease-out);
+}
+
+.board__phase-label {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--paper-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.board__phase[data-at='done'] .board__phase-dot { background: var(--paper-3); }
+.board__phase[data-at='done'] .board__phase-label { color: var(--paper-3); }
+.board__phase[data-at='now'] .board__phase-dot { background: var(--yellow); }
+.board__phase[data-at='now'] .board__phase-label { color: var(--yellow); }
+
+/* NOW: the one thing on this board that is loud */
+.board__now {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  background: var(--ink-2);
+  border-left: 3px solid var(--yellow);
+}
+
+.board__now-step {
+  margin: 0;
+  font: 700 16px / 1.25 var(--font-display);
+  color: var(--paper);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.board__meter {
+  height: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.board__meter-bar {
+  display: block;
+  height: 100%;
+  background: var(--yellow);
+  transform-origin: left center;
+  transition: transform 600ms var(--ease-out);
+}
+
+.board__count {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--paper-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the steps: a list that gets quieter as it goes */
+.board__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 32vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-3) transparent;
+}
+
+.board__step {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  column-gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid oklch(0.96 0.012 100 / 0.05);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--paper-3);
+}
+
+.board__step-mark { color: var(--paper-3); text-align: center; }
+.board__step-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board__step-note {
+  grid-column: 2;
+  font-size: 10px;
+  color: var(--paper-3);
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.board__step[data-status='running'] { color: var(--paper); }
+.board__step[data-status='running'] .board__step-mark { color: var(--yellow); }
+.board__step[data-status='running'] .board__step-note,
+.board__step[data-status='failed'] .board__step-note { opacity: 1; max-height: 3em; }
+.board__step[data-status='done'] { color: var(--paper-2); }
+.board__step[data-status='done'] .board__step-mark { color: var(--cyan); }
+.board__step[data-status='failed'] { color: var(--red); }
+.board__step[data-status='skipped'] { opacity: 0.5; text-decoration: line-through; }
+
+.board__log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 44px;
+}
+
+.board__log-line {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--paper-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: board-line-in 200ms var(--ease-out) both;
+}
+
+.board__log-line[data-kind='run'] { color: var(--cyan); }
+.board__log-line[data-kind='file'] { color: var(--paper-2); }
+.board__log-line[data-kind='error'] { color: var(--red); }
+
+@keyframes board-line-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.board__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.board__elapsed {
+  flex: 1;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--paper-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.board__empty {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--paper-3);
+}
+
+/* ---- nothing moves if the machine says so ------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .board *,
+  .board__frame::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---- forced colours (high contrast) ------------------------------- */
+
+@media (forced-colors: active) {
+  .board__frame { border-color: CanvasText; }
+  .board__action.is-primary { background: Highlight; color: HighlightText; }
+  .board__now { border-left-color: CanvasText; }
+}

@@ -41,6 +41,19 @@ contextBridge.exposeInMainWorld('host', {
   chatMemory: () => ipcRenderer.invoke('chat:memory'),
   chatRemember: (history) => ipcRenderer.send('chat:remember', history),
   onChatDelta: on('chat:delta'),
+  // a work order (main.js -> agent/runner.js): the board draws what comes back here
+  workStart: (request) => ipcRenderer.invoke('work:start', request),
+  workStop: () => ipcRenderer.invoke('work:stop'),
+  workState: () => ipcRenderer.invoke('work:state'),
+  pickFolder: () => ipcRenderer.invoke('work:pick'),
+  openFolder: (dir) => ipcRenderer.invoke('work:open', dir),
+  openHarness: () => ipcRenderer.invoke('harness:open'),
+  onWorkState: on('work:state'),
+  // her improving her own harness (agent/evolve.js)
+  evolveStart: () => ipcRenderer.invoke('evolve:start'),
+  onEvolve: on('evolve:event'),
+  // what you said to her, and what she answered: observations evolve.js learns from
+  observe: (entry) => ipcRenderer.send('agent:observe', entry),
   lookSnap: () => ipcRenderer.invoke('look:snap'),
   lookSay: (request) => ipcRenderer.invoke('look:say', request),
   lookWhere: () => ipcRenderer.invoke('look:where'),

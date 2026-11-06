@@ -7,8 +7,8 @@
 > AI **look at your PC** (hardware, load, disks, battery, open apps, files by name) through read-only tools,
 > so she can answer about your machine instead of saying she can't see it, and it lets you **pick who lives
 > on your desktop**: right-click her › **Character**, with a `johnny` placeholder skin and a folder of your
-> own pictures. Nothing else changes: she still watches Claude Code, Codex and Antigravity, and every action
-> that changes something keeps its button. See [docs/deepseek.md](docs/deepseek.md) for the key, the models
+> own pictures. She also has a working half now — see [She works](#she-works). Nothing else changes: she
+> still watches Claude Code, Codex and Antigravity, and every action that changes something keeps its button. See [docs/deepseek.md](docs/deepseek.md) for the key, the models
 > and the tools, and [docs/characters.md](docs/characters.md) for characters.
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
@@ -18,6 +18,31 @@ glitches, comments on every action, comes to find you when it needs your permiss
 ![Capri telling you Claude is done](docs/done.png)
 
 ![Teleport, frame by frame](docs/teleport.png)
+
+## She works
+
+**Work › Give her work…** in her menu: name a folder, say a sentence, and she does it — in the order
+[GitHub's spec-kit](https://github.com/github/spec-kit) asks for: a **spec** of what is wanted, a
+**plan** of how, **tasks** small enough to check, then the **build**, one task at a time, with the
+folder's own tools and then the project's own tests. A board beside her shows the five phases, the step
+she is on, the steps still ahead, and what she just did (`PATCHES src/header.css`, `RUNS npm test`); she
+acts out the phase she is in and celebrates when the report lands.
+
+Everything lands on disk as it goes: `.specify/memory/constitution.md`, and
+`specs/NNN-slug/{spec.md,plan.md,tasks.md,state.json,report.md}` — a folder she worked in reads like one
+a person worked in with spec-kit.
+
+- **What she may run** is in the same menu. `guard` (the default) is a project's own tools — node, npm,
+  git, python, cargo — and nothing that opens a shell; `trusted` is anything but the destructive ones
+  (no disk formatting, no registry, no `powershell`). No command ever goes through a shell: it's argv,
+  with `shell: false`, so `&&`, `|` and `%VAR%` are never interpreted.
+- **Files stay inside the folder you gave her.** Every path is resolved and checked against it.
+- **Work › Learn from me** is one round of her improving the words that make her her — her standing
+  notes, how she works — from the moments you corrected her, with a critic, a noise floor, a cost rule
+  and a backup of every accepted round. That's [RRSI](https://arxiv.org/abs/2609.24972) at desktop
+  scale.
+
+[The harness](docs/agent.md) · [Evolving her harness](docs/evolve.md) · [The interface pass](docs/interface.md)
 
 ## What she does
 

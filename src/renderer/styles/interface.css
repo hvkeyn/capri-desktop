@@ -1,0 +1,99 @@
+/* ------------------------------------------------------------------
+   Interface pass
+
+   The pieces of her UI that should behave the same everywhere, and
+   didn't: focus you can see, targets big enough to hit, numbers that
+   don't jiggle, text you can select and read.
+
+   Two references, a rule each:
+   - a real product's controls are big enough to press without aiming
+     (44px on the board, 32px in her panel — a fingertip vs. a pointer);
+   - a state you can't see isn't a state: every focusable thing gets a
+     ring, and every number that changes gets tabular figures.
+------------------------------------------------------------------- */
+
+/* One focus ring for everything that can be tabbed to, so nothing is
+   reachable-but-invisible. :where() keeps it at zero specificity: the
+   panel's own ring still wins where it has one. */
+:where(button, input, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+/* Her panel's controls: a pointer aims better than a fingertip, so 32px,
+   not 44 — but no smaller, and never a 12px glyph in a 12px box. */
+.panel__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.panel__input {
+  min-height: 32px;
+}
+
+.panel__close {
+  min-width: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A number that changes every second must not move the thing next to it. */
+.panel__summary,
+.panel__state,
+.board__elapsed,
+.board__count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Selected text is hers, in her colours. */
+::selection {
+  background: var(--yellow);
+  color: var(--ink);
+}
+
+/* The answer panel scrolls: give it a scrollbar she'd draw, and don't
+   animate the scroll if the machine asks for less motion. */
+.panel__reply {
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-3) transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .panel__reply {
+    scroll-behavior: smooth;
+  }
+}
+
+/* A field you're typing in should say so, even when it isn't focused. */
+.panel__input:focus-visible,
+.board__input:focus-visible {
+  caret-color: var(--yellow);
+}
+
+/* High contrast: her hairlines are the first thing to disappear. */
+@media (prefers-contrast: more) {
+  .panel,
+  .board__frame {
+    border-color: var(--paper);
+  }
+
+  .panel__log,
+  .board__step {
+    border-bottom-color: var(--paper-3);
+  }
+}
+
+/* Forced colours: keep her cut corners and drop the ink, nothing else. */
+@media (forced-colors: active) {
+  .panel__action,
+  .panel__input {
+    border: 1px solid CanvasText;
+  }
+}
