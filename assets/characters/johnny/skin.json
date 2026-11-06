@@ -47,5 +47,8 @@
                           ],
                  "work":  "crossed",
                  "done":  "pistol"
-             }
+             },
+    "lines":  {
+                  "ru":  "lines/ru.json"
+              }
 }

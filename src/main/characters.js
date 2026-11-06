@@ -25,6 +25,16 @@ const map = (base, files) => Object.fromEntries(Object.entries(files || {})
   .map(([name, file]) => [name, picture(base, file)])
   .filter(([, url]) => url));
 
+// A JSON file inside a character's folder (its own lines, per language), or null
+function jsonFile(dir, name) {
+  if (typeof name !== 'string' || name.includes('..') || name.startsWith('/') || name.includes('\\')) return null;
+  try {
+    return JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
 // { id, label, name, badge, persona, holo, ... } from a folder, or null when it isn't one
 function read(dir, base) {
   let raw;
@@ -63,6 +73,10 @@ function read(dir, base) {
     auto: Object.fromEntries(Object.entries(raw.auto || {})
       .map(([role, value]) => [role, (Array.isArray(value) ? value : [value]).filter((n) => typeof n === 'string')])
       .filter(([, list]) => list.length)),
+    // its own words, one file per language: { "ru": "lines/ru.json" } (deep-merged over hers)
+    lines: Object.fromEntries(Object.entries(raw.lines || {})
+      .map(([lang, file]) => [lang, jsonFile(dir, file)])
+      .filter(([, value]) => value)),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,

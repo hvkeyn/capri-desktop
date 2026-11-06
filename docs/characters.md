@@ -43,6 +43,11 @@ characters/
 - `gender` (`"m"` or `"f"`, optional) is how the menu talks about them: "Talk to him" instead of "her".
 - `holo` (0 to 1, optional) makes them flicker like a projection while they appear, vanish or change.
 - `persona` (optional) replaces Capri's own lines in her chat: the character's voice.
+- `lines` (optional) are their own words for everything she says on her own — `{"ru": "lines/ru.json"}`.
+  The file has the same shape as her lines and is deep-merged over them, so a group left out stays hers:
+  `hello`, `prompt`, `working` (`{count}`), `done`, `permission`, `error` (`{tool}`), `idle`, `thinking`,
+  `chat.hello`, `pet`, `thrown`, `pc` (`{level}`, `{cpu}`) and so on. Anything in it that says "Capri" is
+  renamed to the character's name too.
 
 Two places are read, yours first:
 

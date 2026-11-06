@@ -1958,12 +1958,31 @@ const named = new Map();
 // A character that isn't her: her name inside the lines becomes theirs, so "Capri online. Hi, Max."
 // reads "Johnny Silverhand online. Hi, Max." (app.js sets it from the skin; null is her own).
 let characterName = null;
+// And a character can bring its own words: a partial tree deep-merged over hers (skin.json's "lines").
+let characterLines = null;
 
 export function setCharacterName(name) {
   const next = String(name || '').trim() || null;
   if (next === characterName) return;
   characterName = next;
   named.clear(); // renamed copies belong to the previous name
+}
+
+export function setCharacterLines(lines) {
+  const next = lines && typeof lines === 'object' ? lines : null;
+  if (next === characterLines) return;
+  characterLines = next;
+  named.clear();
+}
+
+// Deep merge: objects merge, arrays and everything else replace
+function merged(base, over) {
+  if (!over || typeof over !== 'object' || Array.isArray(over)) return over === undefined ? base : over;
+  const out = base && typeof base === 'object' && !Array.isArray(base) ? { ...base } : {};
+  for (const [key, value] of Object.entries(over)) {
+    out[key] = value && typeof value === 'object' && !Array.isArray(value) ? merged(out[key], value) : value;
+  }
+  return out;
 }
 
 function renamed(value) {
@@ -1983,9 +2002,12 @@ export function linesFor(lang, assistant = 'claude') {
   const base = LINES[lang] || LINES.fr;
   const other = OTHERS[assistant];
   const lines = linesOf(base, other, lang, assistant);
-  if (!characterName) return lines;
-  const key = `${characterName}:${assistant}:${lang}`;
-  if (!named.has(key)) named.set(key, renamed(lines));
+  if (!characterName && !characterLines) return lines;
+  const key = `${characterName || ''}:${assistant}:${lang}`;
+  if (!named.has(key)) {
+    const own = characterLines ? merged(lines, characterLines) : lines;
+    named.set(key, characterName ? renamed(own) : own);
+  }
   return named.get(key);
 }
 
