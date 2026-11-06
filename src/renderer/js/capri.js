@@ -99,6 +99,7 @@ export class Capri {
     // her shader pulls pinks and greens toward her palette: a character's own art keeps its colours
     // (app.js: 1 for her, the skin's "grade" or 0 for anyone else)
     this.skinGrade = 1;
+    this.skinHolo = 0; // 1 when the character is a projection (skin.json's "holo")
     this.bob = 0;
     this.tilt = 0;
     this.sx = 1;
@@ -466,6 +467,8 @@ export class Capri {
     this.lastDraw = now;
     this.animate(now);
     this.p.grade = this.skinGrade ?? 1; // her own colour grade only for her own art
+    this.p.holo = this.skinHolo || 0;   // a projection, for a character that is one
+    this.p.time = now / 1000;
     this.sprite.draw(this.p);
     this.place();
   }

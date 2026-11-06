@@ -782,9 +782,15 @@ async function pickClaudeFolder() {
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   tray = new Tray(icon);
-  tray.setToolTip('Capri');
+  tray.setToolTip(characterName());
   tray.on('click', () => sendCommand('status'));
   rebuildTray();
+}
+
+// Who's on the desktop, by name: hers, or the character's (characters.js)
+function characterName() {
+  const skin = characters.get(config.load().character, characterDirs());
+  return skin?.name || skin?.label || 'Capri';
 }
 
 function registerIpc() {

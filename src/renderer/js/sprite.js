@@ -47,6 +47,8 @@ uniform vec2 uMisreg;
 uniform vec3 uRim;
 uniform float uAlpha;
 uniform float uPx; // sprite pixels per screen pixel
+uniform float uHolo; // 0: her own art; 1: a projection (cyan, scanlines, flicker)
+uniform float uTime; // seconds, for the projection's flicker
 
 // landmarks, in sprite pixels (capri-full.png is 240x420, see tools/build-sprite.py)
 const vec2 NECK = vec2(118.0, 152.0);   // the head tilts around this
@@ -320,6 +322,19 @@ void main() {
   col += uRim * rim;
   a += rim;
 
+  // A projection, like the relic's: cyan, see-through, scanlines, a flicker and the odd slipped band
+  if (uHolo > 0.0) {
+    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 tint = vec3(0.30, 0.86, 1.0);
+    vec3 proj = mix(col, tint, 0.62) * (0.55 + 0.85 * lum);
+    float scan = 0.80 + 0.20 * sin(vPx.y * 4.4);
+    float flick = 0.88 + 0.12 * vnoise(vec2(uTime * 6.5, 3.0));
+    float slip = step(0.982, hash(vec2(floor(vPx.y / 7.0), floor(uTime * 9.0))));
+    proj = mix(proj, tint * 1.5, slip * 0.6);
+    col = mix(col, proj, uHolo) * mix(1.0, scan * flick, uHolo);
+    a = mix(a, min(1.0, a * 0.78), uHolo);
+  }
+
   gl_FragColor = vec4(col, a) * uAlpha;
 }`;
 
@@ -327,7 +342,7 @@ const UNIFORMS = [
   'uView', 'uPad', 'uTex', 'uSize', 'uSeed', 'uBoil', 'uHair', 'uHead', 'uMane', 'uArmL', 'uArmR', 'uLongL', 'uLongR',
   'uSit', 'uBend', 'uKickL', 'uKickR',
   'uSmear', 'uEcho', 'uGlitch', 'uGlitchSeed',
-  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uAlpha', 'uPx',
+  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uAlpha', 'uPx', 'uHolo', 'uTime',
 ];
 
 export const SPRITE = {
@@ -454,6 +469,8 @@ export class SpriteRenderer {
     gl.uniform2f(u.uMisreg, s.misreg[0], s.misreg[1]);
     gl.uniform3f(u.uRim, 0.48, 0.24, 1.0);
     gl.uniform1f(u.uAlpha, s.alpha);
+    gl.uniform1f(u.uHolo, s.holo || 0);
+    gl.uniform1f(u.uTime, s.time || 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }

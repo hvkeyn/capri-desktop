@@ -106,6 +106,8 @@ async function boot() {
   capri.setView(innerWidth, innerHeight, innerHeight - floorGap);
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
+  // and can be a projection, like the relic's (skin.json's "holo")
+  capri.skinHolo = Number(skin?.holo) || 0;
   // a character can ask to be drawn bigger or smaller than her own art (skin.json's "scale")
   capri.setScale((config.scale || 0.6) * (skin?.scale || 1));
 
@@ -242,6 +244,9 @@ async function boot() {
   const guide = new Guide({ capri, panel, voice, host, brain });
   // Talking to her (chat.js): "Talk to her" in her menu, or the button when you click her idle.
   const chat = new Chat({ capri, panel, voice, host, brain });
+  // who's on the desktop: their words, their name in her panels, their projection (characters.js)
+  chat.skin = skin;
+  if (skin?.name) document.title = skin.name;
   brain.onTalk = () => chat.start();
   // Getting her chat going with buttons (setup.js): Ollama and a model, a key, or an address
   const setup = new Setup({ guide, panel, host, brain, capri, voice });

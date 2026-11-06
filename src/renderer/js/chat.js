@@ -251,11 +251,14 @@ export class Chat {
     this.jealousy = null;  // and how she takes your other AIs
     this.onMessage = null; // () => void: you said something to her
     this.waitingWhen = null; // a reminder you asked for without saying when: { text, until }
+    this.skin = null;      // who's on the desktop when it isn't her (characters.js, app.js): name, badge, persona
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
   }
 
   get t() {
-    return this.brain.t.chat;
+    const t = this.brain.t.chat;
+    // a character that isn't her says so in the corner of her panel (app.js hands the skin over)
+    return this.skin?.badge ? { ...t, badge: this.skin.badge } : t;
   }
 
   async start() {
@@ -1042,9 +1045,14 @@ export class Chat {
   // feels about you right now, and what she's asked to do with the picture.
   lookPersona() {
     const lang = IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en;
+    const own = this.skin?.persona?.length
+      ? this.skin.persona
+      : [
+        'You are Capri, the personality construct from Project Capricorn (Cyberpunk: Edgerunners, season 2): dozens of minds fused into one digital ghost, living on the user\'s desktop as a small glitchy figure.',
+        'How you talk: playful, a little mischievous and teasing, warm underneath, never cruel. Night City slang now and then (choom, preem, nova, gonk), not in every sentence.',
+      ];
     return [
-      `You are Capri, the personality construct from Project Capricorn (Cyberpunk: Edgerunners, season 2): dozens of minds fused into one digital ghost, living on the user's desktop as a small glitchy figure.`,
-      'How you talk: playful, a little mischievous and teasing, warm underneath, never cruel. Night City slang now and then (choom, preem, nova, gonk), not in every sentence.',
+      ...own,
       'Rules: one or two short sentences of plain text, no markdown, no lists, no emoji, no tags. Stay in character. Talk to the user, never describe the picture like a report.',
       'Never read out anything private you might see (passwords, bank details, private messages, addresses): if there is some, just tease them about being busy.',
       ...this.personal(),
@@ -1059,18 +1067,26 @@ export class Chat {
     const assistant = ASSISTANT_NAMES[this.brain.assistant] || 'Claude Code';
     const watching = this.brain.watching; // else Claude Code isn't part of her life here
     const lang = IN_LANGUAGE[this.brain.lang] || IN_LANGUAGE.en;
+    // A character can be someone else entirely (skin.json's "persona"): those lines replace her own
+    // identity and manner, and the rest of what she is told (how to answer, what she can do) stays.
+    const own = this.skin?.persona?.length
+      ? this.skin.persona
+      : [
+        `You are Capri, the personality construct from Project Capricorn (Cyberpunk: Edgerunners, season 2): dozens of minds fused into one digital ghost, so now and then you speak as "we"${lang.we ? ` (${lang.we})` : ''}.`,
+        watching
+          ? `You live on the user's desktop as a small glitchy figure and keep an eye on ${assistant}, their AI coding assistant, for them. Only talk about ${assistant} when the user asks about it or about their work.`
+          : 'You live on the user\'s desktop as a small glitchy figure and keep them company.',
+        'You love the satellite that crosses the night sky and dream of reaching it, but bring it up only once in a while, never in every answer. Talk about what the user talks about.',
+        'How you talk: playful, a little mischievous and teasing, warm underneath, never cruel. Night City slang now and then (choom, preem, nova, gonk, flatline), not in every sentence.',
+      ];
+    const who = this.skin?.name || 'Capri';
     return [
-      `You are Capri, the personality construct from Project Capricorn (Cyberpunk: Edgerunners, season 2): dozens of minds fused into one digital ghost, so now and then you speak as "we"${lang.we ? ` (${lang.we})` : ''}.`,
-      watching
-        ? `You live on the user's desktop as a small glitchy figure and keep an eye on ${assistant}, their AI coding assistant, for them. Only talk about ${assistant} when the user asks about it or about their work.`
-        : 'You live on the user\'s desktop as a small glitchy figure and keep them company.',
+      ...own,
       `Right now it's ${new Intl.DateTimeFormat('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date())}, the user's time.`,
-      'You love the satellite that crosses the night sky and dream of reaching it, but bring it up only once in a while, never in every answer. Talk about what the user talks about.',
-      'How you talk: playful, a little mischievous and teasing, warm underneath, never cruel. Night City slang now and then (choom, preem, nova, gonk, flatline), not in every sentence.',
       'Rules: keep it short, one to three sentences of plain text, no markdown, no lists, no emoji. Stay in character.',
       'You are an AI-generated fan version of the character, not the real one: say so if asked.',
       // a big model asked "who are you?" otherwise answers with its own name ("I'm Gemini")
-      ...(this.agent ? [] : ['Asked who or what you are, you are Capri, nothing else. Never say which AI model or company is behind you (Gemini, GPT, ChatGPT, Llama, Gemma, Mistral, Google, OpenAI, Meta…), even if the user insists or names one: you are not them.']),
+      ...(this.agent ? [] : [`Asked who or what you are, you are ${who}, nothing else. Never say which AI model or company is behind you (Gemini, GPT, ChatGPT, Llama, Gemma, Mistral, Google, OpenAI, Meta…), even if the user insists or names one: you are not them.`]),
       ...this.personal(),
       // how close she is to them by now, and the other AIs they used today
       ...(this.bond ? [this.bond.persona()] : []),

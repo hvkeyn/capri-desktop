@@ -22,7 +22,7 @@ const map = (base, files) => Object.fromEntries(Object.entries(files || {})
   .map(([name, file]) => [name, picture(base, file)])
   .filter(([, url]) => url));
 
-// { label, base, sprite, faces, cutins, scale } from a folder, or null when it isn't one
+// { id, label, name, badge, persona, holo, ... } from a folder, or null when it isn't one
 function read(dir, base) {
   let raw;
   try {
@@ -36,8 +36,14 @@ function read(dir, base) {
   if (!url || !fs.existsSync(path.join(dir, sprite))) return null;
   const scale = Number(raw.scale);
   const grade = Number(raw.grade);
+  const holo = Number(raw.holo);
+  const persona = Array.isArray(raw.persona) ? raw.persona.filter((line) => typeof line === 'string') : (typeof raw.persona === 'string' ? [raw.persona] : []);
   return {
     label: String(raw.label || '').trim().slice(0, 40),
+    // who they are to her chat and her panels (a character can be someone else entirely)
+    name: String(raw.name || raw.label || '').trim().slice(0, 40),
+    badge: String(raw.badge || raw.name || raw.label || '').trim().slice(0, 24).toUpperCase(),
+    persona: persona.slice(0, 20),
     base,
     sprite: url,
     faces: map(base, raw.faces),
@@ -45,6 +51,8 @@ function read(dir, base) {
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
+    // a projection, like the relic's: cyan, translucent, scanlines (sprite.js)
+    holo: Number.isFinite(holo) ? Math.min(1, Math.max(0, holo)) : (raw.holo === true ? 1 : null),
   };
 }
 
