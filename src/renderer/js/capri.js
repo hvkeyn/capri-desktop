@@ -483,18 +483,39 @@ export class Capri {
   }
 
   // Another drawing of the same character (skin.json's "poses"): the picture swaps under her rig
+  loadPicture(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
+
   async setPose(url) {
     if (!url) return false;
-    const img = new Image();
-    const loaded = new Promise((resolve) => {
-      img.onload = resolve;
-      img.onerror = resolve;
-    });
-    img.src = url;
-    await (img.decode ? img.decode().catch(() => loaded) : loaded);
-    if (!img.naturalWidth) return false;
+    const img = await this.loadPicture(url);
+    if (!img || !img.naturalWidth) return false;
     this.sprite.setImage(img);
     this.holoBurst(340); // a projection stutters when it changes
+    return true;
+  }
+
+  // A few drawings of the same character, played once (skin.json's "sequences"): glasses come off…
+  async playSequence(urls, fps = 8) {
+    if (!Array.isArray(urls) || urls.length < 2) return false;
+    const back = this.sprite.image;
+    const frames = [];
+    for (const url of urls) frames.push(await this.loadPicture(url));
+    const usable = frames.filter((frame) => frame && frame.naturalWidth);
+    if (usable.length < 2) return false;
+    this.holoBurst(600);
+    const step = Math.max(40, Math.round(1000 / fps));
+    for (const frame of usable) {
+      this.sprite.setImage(frame);
+      await sleep(step);
+    }
+    if (back) this.sprite.setImage(back);
     return true;
   }
 

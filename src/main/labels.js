@@ -162,4 +162,33 @@ const TRAY_M = {
   },
 };
 
-module.exports = { TRAY, TRAY_M, LANGS: Object.keys(TRAY) };
+// What a character's drawings are called in her menu (skin.json's "poses" and "sequences")
+const POSE_LABELS = {
+  fr: {
+    crossed: 'Bras croisés', smoke: 'Avec une cigarette', crouch: 'Accroupi', pistol: 'Pistolet sorti',
+    back: 'De dos', glasses1: 'Avec ses lunettes', glasses2: 'Retire ses lunettes', glasses3: 'Sans lunettes',
+    noglasses: 'Sans lunettes', holo: 'Hologramme', glasses: 'Retirer ses lunettes',
+  },
+  en: {
+    crossed: 'Arms crossed', smoke: 'Smoking', crouch: 'Crouching', pistol: 'Pistol drawn',
+    back: 'From behind', glasses1: 'With his sunglasses', glasses2: 'Taking them off', glasses3: 'No sunglasses',
+    noglasses: 'No sunglasses', holo: 'Hologram', glasses: 'Take off his sunglasses',
+  },
+  es: {
+    crossed: 'Brazos cruzados', smoke: 'Con un cigarro', crouch: 'Agachado', pistol: 'Pistola en mano',
+    back: 'De espaldas', glasses1: 'Con gafas', glasses2: 'Se quita las gafas', glasses3: 'Sin gafas',
+    noglasses: 'Sin gafas', holo: 'Holograma', glasses: 'Quitarse las gafas',
+  },
+  pt: {
+    crossed: 'Braços cruzados', smoke: 'Com um cigarro', crouch: 'Agachado', pistol: 'Pistola na mão',
+    back: 'De costas', glasses1: 'Com óculos', glasses2: 'Tirando os óculos', glasses3: 'Sem óculos',
+    noglasses: 'Sem óculos', holo: 'Holograma', glasses: 'Tirar os óculos',
+  },
+  ru: {
+    crossed: 'Руки скрещены', smoke: 'С сигаретой', crouch: 'На корточках', pistol: 'С пистолетом',
+    back: 'Со спины', glasses1: 'В очках', glasses2: 'Снимает очки', glasses3: 'Без очков',
+    noglasses: 'Без очков', holo: 'Голограмма', glasses: 'Снять очки',
+  },
+};
+
+module.exports = { TRAY, TRAY_M, POSE_LABELS, LANGS: Object.keys(TRAY) };

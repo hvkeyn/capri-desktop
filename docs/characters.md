@@ -35,6 +35,14 @@ characters/
 - `scale` (optional) is how big it starts out, the same 0.6 as her own art.
 - `faces` and `cutins` are optional: a character that has none keeps hers, so her panels and effects
   still work.
+- `poses` (optional) are other drawings of the same figure the menu can switch to, one image each
+  (`"back": "poses/back.png"`).
+- `sequences` (optional) are a few drawings played once, in order, like a flipbook —
+  `"glasses": ["poses/glasses1.png", "poses/glasses2.png", "poses/glasses3.png"]` plays in her menu as
+  **Take off his sunglasses**.
+- `gender` (`"m"` or `"f"`, optional) is how the menu talks about them: "Talk to him" instead of "her".
+- `holo` (0 to 1, optional) makes them flicker like a projection while they appear, vanish or change.
+- `persona` (optional) replaces Capri's own lines in her chat: the character's voice.
 
 Two places are read, yours first:
 

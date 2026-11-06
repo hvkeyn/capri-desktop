@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, TRAY_M, LANGS } = require('./labels');
+const { TRAY, TRAY_M, POSE_LABELS, LANGS } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -317,25 +317,34 @@ function pickCharacter(id) {
 
 // A character can come with several drawings of itself (skin.json's "poses"): the ones to switch by,
 // under the character in her menu. Names are the file's; the labels are just nicer to read.
-const POSE_LABELS = {
-  crossed: 'Arms crossed', smoke: 'Smoking', crouch: 'Crouching', pistol: 'Pistol drawn',
-  idle: 'Standing', sit: 'Sitting', angry: 'Angry', laugh: 'Laughing',
-};
-
-function posesMenu(cfg) {
-  const skin = characters.get(cfg.character, characterDirs());
+function posesMenu(cfg, skin) {
   const poses = Object.entries(skin?.poses || {});
-  if (!poses.length) return [];
-  const pretty = (name) => POSE_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
+  const sequences = Object.entries(skin?.sequences || {});
+  if (!poses.length && !sequences.length) return [];
+  const lang = resolveLang(cfg.lang);
+  const labels = POSE_LABELS[lang] || POSE_LABELS.en;
+  const pretty = (name) => labels[name] || name.charAt(0).toUpperCase() + name.slice(1);
   return [
     { type: 'separator' },
     ...[['', skin.sprite], ...poses].map(([name, url]) => ({
-      label: name ? pretty(name) : 'Default',
+      label: name ? pretty(name) : t_default(lang),
       type: 'radio',
       checked: (cfg.pose || '') === name,
       click: () => sendCommand('skinPose', { name, url }),
     })),
+    ...(sequences.length ? [
+      { type: 'separator' },
+      ...sequences.map(([name, urls]) => ({
+        label: pretty(name),
+        click: () => sendCommand('skinSequence', { name, urls, fps: 7 }),
+      })),
+    ] : []),
   ];
+}
+
+// "Default" in her own words, without another label table
+function t_default(lang) {
+  return { fr: 'D’origine', en: 'Default', es: 'Original', pt: 'Original', ru: 'Как есть' }[lang] || 'Default';
 }
 
 function updateConfig(patch) {
@@ -410,7 +419,7 @@ function rebuildTray() {
           checked: (cfg.character || 'capri') === c.id,
           click: () => pickCharacter(c.id),
         })),
-        ...posesMenu(cfg),
+        ...posesMenu(cfg, skin),
         { type: 'separator' },
         { label: t.characterFolder, click: () => openCharactersFolder() },
       ],

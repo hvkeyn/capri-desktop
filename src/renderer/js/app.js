@@ -834,6 +834,9 @@ async function boot() {
       case 'skinPose': // another drawing of the character (skin.json's "poses", her menu)
         if (await capri.setPose(cmd.url)) host.setConfig({ pose: cmd.name || '' }).catch(() => {});
         break;
+      case 'skinSequence': // a few drawings played once (skin.json's "sequences": the glasses come off)
+        await capri.playSequence(cmd.urls, cmd.fps || 8);
+        break;
       case 'pose':
         capri.debug = cmd.params || null;
         if (cmd.still) capri.nextMove = capri.nextGaze = Infinity; // no wandering off mid-test

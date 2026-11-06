@@ -55,6 +55,10 @@ function read(dir, base) {
     cutins: map(base, raw.cutins),
     // other drawings of the same character, one per pose ("crossed", "smoke"…): her menu switches them
     poses: map(base, raw.poses),
+    // a few drawings played once, as a little animation ("glasses": glasses on → taking them off → off)
+    sequences: Object.fromEntries(Object.entries(raw.sequences || {})
+      .map(([name, list]) => [name, (Array.isArray(list) ? list : []).map((file) => picture(base, file)).filter(Boolean)])
+      .filter(([, list]) => list.length > 1)),
     scale: Number.isFinite(scale) && scale > 0 ? Math.min(2, Math.max(0.2, scale)) : null,
     // her shader's colour grade (pinks to hot red, mask to green) is hers: a skin keeps its own colours
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
