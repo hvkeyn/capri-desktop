@@ -324,14 +324,18 @@ void main() {
 
   // A projection, like the relic's: cyan, see-through, scanlines, a flicker and the odd slipped band
   if (uHolo > 0.0) {
-    float lum = dot(col, vec3(0.299, 0.587, 0.114));
+    // the colour here is premultiplied: tint the figure itself, and keep the empty pixels empty
+    // (colouring them would paint the whole canvas as a lit rectangle)
+    float a0 = max(a, 0.0001);
+    vec3 straight = col / a0;
+    float lum = dot(straight, vec3(0.299, 0.587, 0.114));
     vec3 tint = vec3(0.30, 0.86, 1.0);
-    vec3 proj = mix(col, tint, 0.62) * (0.55 + 0.85 * lum);
+    vec3 proj = mix(straight, tint, 0.62) * (0.55 + 0.85 * lum);
     float scan = 0.80 + 0.20 * sin(vPx.y * 4.4);
     float flick = 0.88 + 0.12 * vnoise(vec2(uTime * 6.5, 3.0));
     float slip = step(0.982, hash(vec2(floor(vPx.y / 7.0), floor(uTime * 9.0))));
     proj = mix(proj, tint * 1.5, slip * 0.6);
-    col = mix(col, proj, uHolo) * mix(1.0, scan * flick, uHolo);
+    col = mix(col, proj * a, uHolo) * mix(1.0, scan * flick, uHolo);
     a = mix(a, min(1.0, a * 0.78), uHolo);
   }
 

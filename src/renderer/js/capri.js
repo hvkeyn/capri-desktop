@@ -1257,6 +1257,7 @@ export class Capri {
     this.perform('flinch');
     if (reducedMotion.matches) return;
     const p = this.p;
+    this.holoBurst(520); // a projection takes a hit badly: it stutters apart
     p.sil = RED;
     p.silAmount = 1;
     this.drawFrame();
