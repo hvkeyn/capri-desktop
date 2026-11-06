@@ -8,27 +8,58 @@ usage: python tools/make-skin.py <figure.png> <out-dir> [name]
 """
 import os
 import sys
+import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 W, H = 240, 420
 MARK = (255, 0, 255)
 
 
+def _components(mask):
+    """Yields (ys, xs) of the 4-connected blobs in a boolean array (small ones only, so BFS is fine)."""
+    seen = np.zeros_like(mask, dtype=bool)
+    ys, xs = np.where(mask)
+    for y0, x0 in zip(ys.tolist(), xs.tolist()):
+        if seen[y0, x0]:
+            continue
+        stack = [(y0, x0)]
+        seen[y0, x0] = True
+        blob = []
+        while stack:
+            y, x = stack.pop()
+            blob.append((y, x))
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < mask.shape[0] and 0 <= nx < mask.shape[1] and mask[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True
+                    stack.append((ny, nx))
+        yield blob
+
+
 def cut_out(img):
-    """Background gone: flood fills from the border over what looks like the background colour."""
+    """Background gone: the outside by a flood fill from the border, plus the gaps it is enclosed in.
+
+    The second half matters where an arm leaves a hole between itself and the body: that white is still
+    background (you see through it), and a border-only fill leaves it behind as a white blob.
+    """
     rgb = img.convert("RGB").copy()
     w, h = rgb.size
     for point in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1), (w // 2, 0), (w // 2, h - 1), (0, h // 2), (w - 1, h // 2)]:
         if rgb.getpixel(point) != MARK:
             ImageDraw.floodfill(rgb, point, MARK, thresh=40)
-    mask = Image.new("L", (w, h), 255)
-    px = rgb.load()
-    mk = mask.load()
-    for y in range(h):
-        for x in range(w):
-            r, g, b = px[x, y]
-            if (r, g, b) == MARK:
-                mk[x, y] = 0
+    arr = np.asarray(rgb).astype(np.int16)
+    outside = (arr[..., 0] == MARK[0]) & (arr[..., 1] == MARK[1]) & (arr[..., 2] == MARK[2])
+
+    pixels = np.asarray(img.convert("RGB")).astype(np.int16)
+    bright = pixels.min(axis=2) >= 238
+    holes = bright & ~outside
+    for blob in _components(holes):
+        if len(blob) < 24:        # a highlight on the metal, not a hole
+            continue
+        ys = [p[0] for p in blob]
+        xs = [p[1] for p in blob]
+        outside[ys, xs] = True
+
+    mask = Image.fromarray(np.where(outside, 0, 255).astype(np.uint8), "L")
     mask = mask.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
     out = img.convert("RGBA")
     out.putalpha(mask)

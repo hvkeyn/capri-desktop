@@ -14,7 +14,7 @@ import { Reminders, clock } from './reminders.js';
 import { Look } from './look.js';
 import { Pc } from './pc.js';
 import { linesFor } from './lines.js';
-import { pick, fmt, reducedMotion } from './util.js';
+import { pick, fmt, sleep, reducedMotion } from './util.js';
 
 const host = window.host;
 
@@ -25,6 +25,34 @@ function loadImage(src) {
     img.onerror = reject;
     img.src = src;
   });
+}
+
+// A character's entrance (a skin, not her own art): it comes down over the whole screen, hangs there
+// a moment looking at it, flickering like a projection, then folds itself into the little avatar.
+async function skinArrival(capri, skin) {
+  const avatar = document.getElementById('capri');
+  if (reducedMotion.matches) return capri.materialize(capri.spot('post'));
+  const big = document.createElement('img');
+  big.className = 'arrival';
+  big.src = skin.sprite;
+  big.alt = '';
+  if (avatar) avatar.style.visibility = 'hidden'; // nothing in the corner until it folds into it
+  document.body.appendChild(big);
+  await new Promise((resolve) => {
+    if (big.complete) return resolve();
+    big.onload = resolve;
+    big.onerror = resolve;
+  });
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  big.classList.add('is-here');     // down it comes
+  await sleep(1250);
+  big.classList.add('is-watching'); // the flicker of something being projected
+  await sleep(900);
+  big.classList.add('is-folding');  // and into the avatar
+  if (avatar) avatar.style.visibility = '';
+  await capri.materialize(capri.spot('post'));
+  await sleep(260);
+  big.remove();
 }
 
 // close-ups of her for the cut-ins, frames of the show (tools/build-cutins.py)
@@ -841,6 +869,7 @@ async function boot() {
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip; started with Windows: no show, she's just there)
   if (config.visible === false) capri.stowNow();
+  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin);
   else if (intro && !config.startedAtLogin) await capri.intro(capri.spot('post'));
   else await capri.materialize(capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she

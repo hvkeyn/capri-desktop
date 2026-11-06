@@ -99,7 +99,8 @@ export class Capri {
     // her shader pulls pinks and greens toward her palette: a character's own art keeps its colours
     // (app.js: 1 for her, the skin's "grade" or 0 for anyone else)
     this.skinGrade = 1;
-    this.skinHolo = 0; // 1 when the character is a projection (skin.json's "holo")
+    this.skinHolo = 0; // how strongly a character wears the projection look *while it appears or goes*
+    this.holoUntil = 0; // until when (performance.now) that moment lasts
     this.bob = 0;
     this.tilt = 0;
     this.sx = 1;
@@ -467,10 +468,18 @@ export class Capri {
     this.lastDraw = now;
     this.animate(now);
     this.p.grade = this.skinGrade ?? 1; // her own colour grade only for her own art
-    this.p.holo = this.skinHolo || 0;   // a projection, for a character that is one
+    // the projection look: solid, full colour, except for a moment after a teleport or a materialisation
+    const left = this.holoUntil - now;
+    this.p.holo = left > 0 && this.skinHolo ? Math.min(1, this.skinHolo * Math.min(1, 0.35 + left / 260)) : 0;
     this.p.time = now / 1000;
     this.sprite.draw(this.p);
     this.place();
+  }
+
+  // Show the projection for a moment (skin.json's "holo"): appearing, vanishing, glitching out
+  holoBurst(ms = 420) {
+    if (!this.skinHolo) return;
+    this.holoUntil = Math.max(this.holoUntil, performance.now() + ms);
   }
 
   // Pick the drawing: the stance's cycle underneath, the current act on top.
@@ -1240,6 +1249,7 @@ export class Capri {
   // Collapse into a line of light and go. Leaves her invisible; the caller puts her somewhere.
   async vanish({ beam = true } = {}) {
     const p = this.p;
+    this.holoBurst(460); // a projection slips out before it's gone
     const s = this.scale;
     const from = { ...this.pos };
     const head = this.head();
@@ -1268,6 +1278,7 @@ export class Capri {
   // Come back at `to`: a column of light down to her, the body unfolding, two impact frames.
   async arrive(to, { face = null, stance = 'stand', perch = null, peekSide = null, dir = 0, fromHead = null, beam = true } = {}) {
     const p = this.p;
+    this.holoBurst(520); // and flickers back into shape where it lands
     const s = this.scale;
     const facing = face ?? (to.x > this.view.w / 2 ? 1 : -1);
     const toHead = this.head(to, facing);
@@ -1345,6 +1356,7 @@ export class Capri {
   async stow() {
     if (this.stowed || this.stowing) return;
     this.stowing = true;
+    this.holoBurst(600); // folding away is a projection switching off
     for (let i = 0; this.busy && i < 30; i++) await sleep(100); // let a move finish
     this.busy = true;
     this.endAct(false);
@@ -1673,6 +1685,7 @@ export class Capri {
   // First appearance: drop in from the top of the screen.
   async materialize(at) {
     const p = this.p;
+    this.holoBurst(700); // switching on: the projection stutters into existence
     this.pos = { ...at };
     this.faceCenter();
     this.setStance('stand');
