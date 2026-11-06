@@ -1014,14 +1014,17 @@ html[data-motion='reduced'] .arrival {
 
 .intro-shot.is-far {
   height: 58vh;
-  opacity: 1;
   transform: translate(-50%, 0) scale(1);
 }
 
 .intro-shot.is-near {
   height: 98vh;
-  opacity: 1;
   transform: translate(-50%, 0) scale(1.02);
+}
+
+/* two layers take turns: the one in front is the frame you see */
+.intro-shot.is-front {
+  opacity: 1;
 }
 
 .intro-shot.is-glitch {
@@ -1036,4 +1039,64 @@ html[data-motion='reduced'] .arrival {
 
 html[data-motion='reduced'] .intro-shot {
   transition-duration: 120ms;
+}
+
+/* The intro's captions: the yellow slab with the beaten-up black type, straight out of a Night City
+   broadcast */
+.intro-stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 41;
+}
+
+.intro-caption {
+  position: fixed;
+  left: 50%;
+  bottom: 11vh;
+  transform: translate(-50%, 8px) skewX(-7deg);
+  padding: 0.12em 0.42em 0.16em;
+  background: #f2f000;
+  color: #0a0a0a;
+  font-family: "Chakra Petch", "Arial Black", sans-serif;
+  font-weight: 700;
+  font-size: clamp(20px, 3.1vw, 50px);
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.45);
+  transition: opacity 90ms steps(2, end), transform 90ms steps(2, end);
+  z-index: 42;
+}
+
+.intro-caption.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0) skewX(-7deg);
+  animation: caption-flicker 220ms steps(2, end) 2;
+}
+
+.intro-caption.is-fading {
+  opacity: 0;
+  transform: translate(-50%, -6px) skewX(-7deg);
+}
+
+@keyframes caption-flicker {
+  0% { transform: translate(-50%, 0) skewX(-7deg); filter: none; }
+  45% { transform: translate(calc(-50% - 5px), 2px) skewX(-6deg); filter: drop-shadow(4px 0 0 rgba(255, 40, 90, 0.75)); }
+  70% { transform: translate(calc(-50% + 3px), -1px) skewX(-8deg); filter: drop-shadow(-4px 0 0 rgba(53, 224, 255, 0.7)); }
+  100% { transform: translate(-50%, 0) skewX(-7deg); filter: none; }
+}
+
+/* the last frame comes apart like bad footage */
+.intro-shot.is-dissolving {
+  animation: intro-dissolve 760ms steps(6, end) forwards;
+}
+
+@keyframes intro-dissolve {
+  0% { opacity: 1; transform: translate(-50%, 0) scale(1.02); filter: none; }
+  30% { opacity: 0.92; transform: translate(calc(-50% + 7px), -3px) scale(1.03) skewX(1.6deg); filter: contrast(1.35) saturate(1.5); }
+  60% { opacity: 0.55; transform: translate(calc(-50% - 11px), 4px) scale(1.01) skewX(-2deg); filter: contrast(1.6) saturate(2) hue-rotate(14deg); }
+  100% { opacity: 0; transform: translate(-50%, -2vh) scale(0.9); filter: blur(4px) contrast(1.2); }
 }

@@ -59,33 +59,65 @@ async function skinArrival(capri, skin, panel) {
   big.remove();
 }
 
-// The storyboard entrance: its own frames, big on screen, then its line, then the avatar
+// The storyboard entrance: its frames cross-fading on screen, its captions, a glitch that dissolves
+// it, and then the avatar. skin.json's "intro": frames, where the close-ups start, durations, captions.
 async function playIntro(capri, skin, intro, avatar, panel) {
-  const shot = document.createElement('img');
-  shot.className = 'intro-shot';
-  shot.alt = '';
+  const stage = document.createElement('div');
+  stage.className = 'intro-stage';
+  const layers = [document.createElement('img'), document.createElement('img')];
+  for (const layer of layers) {
+    layer.className = 'intro-shot';
+    layer.alt = '';
+    stage.appendChild(layer);
+  }
+  const caption = document.createElement('div');
+  caption.className = 'intro-caption';
+  stage.appendChild(caption);
   if (avatar) avatar.style.visibility = 'hidden';
-  document.body.appendChild(shot);
-  const frameMs = intro.frameMs || 620;
+  document.body.appendChild(stage);
+
+  const load = (img, src) => new Promise((resolve) => {
+    if (img.src.endsWith(src)) return resolve();
+    img.onload = resolve;
+    img.onerror = resolve;
+    img.src = src;
+  });
+
+  const closeupFrom = intro.closeupFrom ?? intro.frames.length - 1;
+  const durations = Array.isArray(intro.durations) && intro.durations.length === intro.frames.length
+    ? intro.durations
+    : intro.frames.map((_, i) => (i < closeupFrom ? 320 : intro.frameMs || 460));
+  const captions = (intro.captions || []).filter((c) => c && typeof c.text === 'string');
+  const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
+
+  let front = 0;
   for (let i = 0; i < intro.frames.length; i++) {
-    const last = i === intro.frames.length - 1;
-    const near = i >= (intro.closeupFrom ?? intro.frames.length - 1);
-    shot.className = `intro-shot ${near ? 'is-near' : 'is-far'}${last ? ' is-glitch' : ''}`;
-    shot.src = intro.frames[i];
-    await new Promise((resolve) => {
-      if (shot.complete) return resolve();
-      shot.onload = resolve;
-      shot.onerror = resolve;
-    });
-    await sleep(last ? frameMs + 260 : frameMs);
+    const layer = layers[front];
+    const other = layers[1 - front];
+    await load(other, intro.frames[i]);
+    other.className = `intro-shot ${i >= closeupFrom ? 'is-near' : 'is-far'} is-front`;
+    layer.className = `intro-shot ${i >= closeupFrom ? 'is-near' : 'is-far'}`;
+    front = 1 - front;
+
+    const text = captionsAt.get(i);
+    if (text) {
+      caption.textContent = text;
+      caption.classList.remove('is-on');
+      void caption.offsetWidth; // restart the flicker
+      caption.classList.add('is-on');
+    }
+    await sleep(durations[i]);
   }
+
+  // the last frame comes apart: slices, colour split, and the avatar shows up in the middle of it
+  layers[1 - front].classList.add('is-dissolving');
+  caption.classList.add('is-fading');
   if (avatar) avatar.style.visibility = '';
-  await capri.materialize(capri.spot('post'));
   await sleep(240);
-  shot.remove();
-  if (intro.line) {
-    panel?.say({ kind: 'info', face: 'smug', line: intro.line, hold: 7000 });
-  }
+  await capri.materialize(capri.spot('post'));
+  await sleep(520);
+  stage.remove();
+  if (intro.line) panel?.say({ kind: 'info', face: 'smug', line: intro.line, hold: 7000 });
 }
 
 // A character with several drawings can move through them by itself (skin.json's "auto"): one while

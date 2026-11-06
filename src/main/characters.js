@@ -35,17 +35,28 @@ function jsonFile(dir, name) {
   }
 }
 
-// The storyboard it walks in with: frames, where the close-ups start, and the line it says at the end
+// The storyboard it walks in with: frames, where the close-ups start, how long each stays, and the
+// captions in the corner of the screen
 function introOf(base, raw) {
   if (!raw || !Array.isArray(raw.frames)) return null;
   const frames = raw.frames.map((file) => picture(base, file)).filter(Boolean);
   if (!frames.length) return null;
   const closeupFrom = Number(raw.closeupFrom);
   const frameMs = Number(raw.frameMs);
+  const durations = Array.isArray(raw.durations)
+    ? raw.durations.map((ms) => Math.min(4000, Math.max(80, Number(ms) || 0)))
+    : [];
+  const captions = Array.isArray(raw.captions)
+    ? raw.captions
+      .map((c) => ({ from: Math.max(0, Number(c?.from) || 0), text: String(c?.text || '').trim().slice(0, 90) }))
+      .filter((c) => c.text)
+    : [];
   return {
     frames,
     closeupFrom: Number.isFinite(closeupFrom) ? Math.max(0, Math.min(frames.length - 1, closeupFrom)) : Math.max(0, frames.length - 1),
-    frameMs: Number.isFinite(frameMs) && frameMs > 80 ? Math.min(3000, frameMs) : 620,
+    frameMs: Number.isFinite(frameMs) && frameMs > 80 ? Math.min(3000, frameMs) : 460,
+    durations: durations.length === frames.length ? durations : [],
+    captions,
     line: typeof raw.line === 'string' ? raw.line.trim().slice(0, 200) : '',
   };
 }
