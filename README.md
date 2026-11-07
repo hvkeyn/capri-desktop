@@ -82,8 +82,8 @@ menu), she reads the newest release of this fork on GitHub. The answer is cached
 day's worth of starts is one request, and a failed check doesn't hammer the API either.
 
 If there is a newer version, the panel says so with **Download** and **Later**. The download is the
-portable exe, with a bar; when it's done, **Restart and update** swaps the exe after she has closed and
-starts the new one. Nothing is installed, nothing restarts, and nothing is downloaded until you press it —
+portable exe, with a bar; when it's done, **Restart and update** renames the running exe aside, puts the
+new one in its place and starts again from it. Nothing is installed, nothing restarts, and nothing is downloaded until you press it —
 and never while a work order is still running.
 
 No account, no token, no dependency: [docs/update.md](docs/update.md) has the details, including what it

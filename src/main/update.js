@@ -7,15 +7,13 @@
 //   check()    reads the latest release (cached 12 h: the GitHub API is rate-limited and an update a day
 //              late is not a problem);
 //   download() streams the portable exe next to her own storage, with progress;
-//   apply()    writes a tiny PowerShell helper that waits for this process to end, swaps the exe and
-//              starts it — because a running exe cannot replace itself on Windows.
+//   swap()     replaces the exe at the *next* start: a running exe cannot be replaced, but it can be
+//              renamed, so the old one moves aside, the new one takes its path, and the app relaunches.
 //
 // Nothing here decides *whether* to bother the user: main.js does that, and the panel asks.
 
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
 
 const REPO = 'hvkeyn/capri-desktop';
 const API = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -161,43 +159,44 @@ function portableTarget(env = process.env, execPath = process.execPath) {
   return env.PORTABLE_EXECUTABLE_FILE || execPath || null;
 }
 
-// A helper that outlives this process: wait for it, swap the exe, start it again, delete itself.
-function helperScript({ pid, source, target, helper }) {
-  const quote = (text) => `'${String(text).replace(/'/g, "''")}'`;
-  return [
-    '$ErrorActionPreference = "SilentlyContinue"',
-    `$ProcessId = ${Number(pid) || 0}`,
-    `$Source = ${quote(source)}`,
-    `$Target = ${quote(target)}`,
-    `$Helper = ${quote(helper)}`,
-    'Start-Sleep -Milliseconds 900',
-    // wait for the app to be gone (a minute at most), then try the swap for another minute: a locked
-    // exe releases a moment after the process list says it is gone
-    'for ($i = 0; $i -lt 120; $i++) { if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) { break }; Start-Sleep -Milliseconds 500 }',
-    '$ok = $false',
-    'for ($i = 0; $i -lt 120; $i++) { try { Copy-Item -LiteralPath $Source -Destination $Target -Force -ErrorAction Stop; $ok = $true; break } catch { Start-Sleep -Milliseconds 500 } }',
-    'if ($ok) { Start-Process -FilePath $Target }',
-    'Remove-Item -LiteralPath $Helper -Force -ErrorAction SilentlyContinue',
-    '',
-  ].join('\r\n');
+// A running exe cannot be replaced, but it can be moved: Windows keeps the image mapped while the path
+// frees up. So the update is applied at the *next* start, before the window exists: the old exe is
+// renamed out of the way, the downloaded one is copied into its path, and the app starts again from it.
+// (Tested on this machine against a running exe, not just a file on disk.)
+
+function swap({ file, target = portableTarget(), tries = 4, pause = 300 } = {}) {
+  if (!file || !target) return { ok: false, error: 'nothing to swap' };
+  if (!fs.existsSync(file)) return { ok: false, error: 'the downloaded file is gone' };
+  if (!fs.existsSync(target)) return { ok: false, error: `there is no file at ${target}` };
+  const backup = `${target}.old`;
+  let last = null;
+  // an antivirus or the shell's own copy can hold the exe for a moment: a few tries, not one
+  for (let attempt = 0; attempt < tries; attempt++) {
+    try {
+      fs.rmSync(backup, { force: true });      // a leftover of the update before this one
+      fs.renameSync(target, backup);           // allowed while it runs: the image stays mapped
+      fs.copyFileSync(file, target);
+      return { ok: true, backup };
+    } catch (err) {
+      last = err;
+      // the copy failed after the rename: put the old exe back before the next try
+      try {
+        if (!fs.existsSync(target) && fs.existsSync(backup)) fs.renameSync(backup, target);
+      } catch { /* the error below is the one worth reporting */ }
+      if (attempt + 1 < tries) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, pause);
+    }
+  }
+  return { ok: false, error: last?.message || 'could not replace the exe' };
 }
 
-// Runs the helper detached and returns where it lives, so a caller (or a test) can look at it.
-function apply({ file, target = portableTarget(), pid = process.pid, spawnImpl = spawn, dir = os.tmpdir() } = {}) {
-  if (!file || !target) return { ok: false, error: 'nothing to update' };
-  const helper = path.join(dir, `capri-update-${Date.now()}.ps1`);
+// Called at a start: by then the previous exe is not running, so its backup can go.
+function cleanup(target = portableTarget()) {
+  if (!target) return false;
   try {
-    fs.writeFileSync(helper, helperScript({ pid, source: file, target, helper }), 'utf8');
-    const child = spawnImpl('powershell.exe', ['-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', helper], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-    });
-    child.unref?.();
-    return { ok: true, helper };
-  } catch (err) {
-    return { ok: false, error: err.message || 'could not start the updater' };
+    fs.rmSync(`${target}.old`, { force: true });
+    return true;
+  } catch {
+    return false;
   }
 }
-
-module.exports = { REPO, API, CACHE_MS, version, newer, pickAsset, check, download, apply, portableTarget, helperScript };
+module.exports = { REPO, API, CACHE_MS, version, newer, pickAsset, check, download, swap, cleanup, portableTarget };

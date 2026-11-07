@@ -976,6 +976,10 @@ async function boot() {
         }
         const line = String(cmd.line || '');
         if (!line) break;
+        if (cmd.kind === 'restarting') {
+          panel.say({ kind: 'work', tag: 'UPDATE', line, hold: 5000 });
+          break;
+        }
         const actions = cmd.kind === 'available' || cmd.kind === 'ready' ? (cmd.actions || []) : [];
         panel.say({
           kind: cmd.kind === 'ready' ? 'done' : cmd.kind === 'error' ? 'error' : cmd.kind === 'downloading' ? 'work' : 'info',

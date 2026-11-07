@@ -104,30 +104,35 @@ test('the download streams to a file and reports progress', async (t) => {
   assert.equal(fs.existsSync(`${out.file}.part`), false);
 });
 
-test('applying writes a helper that waits for the app, swaps the exe and starts it', (t) => {
+test('the swap moves the running exe aside and puts the new one in its place', (t) => {
   const dir = scratch(t);
-  let spawned = null;
-  const spawnImpl = (command, args) => {
-    spawned = { command, args };
-    return { unref() {} };
-  };
-  const result = updater.apply({
-    file: 'C:\\updates\\Capri-9.9.9-portable.exe',
-    target: 'C:\\Apps\\Capri.exe',
-    pid: 4242,
-    spawnImpl,
-    dir,
-  });
-  assert.equal(result.ok, true);
-  assert.equal(spawned.command, 'powershell.exe');
-  assert.ok(spawned.args.includes(result.helper));
-  const script = fs.readFileSync(result.helper, 'utf8');
-  assert.match(script, /\$ProcessId = 4242/);
-  assert.match(script, /C:\\Apps\\Capri\.exe/);
-  assert.match(script, /C:\\updates\\Capri-9\.9\.9-portable\.exe/);
-  assert.match(script, /Copy-Item/);
-  assert.match(script, /Start-Process/);
-  assert.match(script, /Remove-Item/);
+  const target = path.join(dir, 'Capri.exe');
+  const fresh = path.join(dir, 'Capri-9.9.9-portable.exe');
+  fs.writeFileSync(target, 'old build');
+  fs.writeFileSync(fresh, 'new build');
+
+  const done = updater.swap({ file: fresh, target });
+  assert.equal(done.ok, true, done.error);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'new build');
+  assert.equal(fs.readFileSync(done.backup, 'utf8'), 'old build');
+
+  // a second update replaces the first one's backup instead of failing on it
+  fs.writeFileSync(fresh, 'newer build');
+  const again = updater.swap({ file: fresh, target });
+  assert.equal(again.ok, true, again.error);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'newer build');
+
+  // at the next start the backup is not running any more, so it goes
+  updater.cleanup(target);
+  assert.equal(fs.existsSync(`${target}.old`), false);
+
+  // nothing to swap is an error that leaves the target alone
+  fs.rmSync(fresh);
+  const missing = updater.swap({ file: fresh, target });
+  assert.equal(missing.ok, false);
+  assert.match(missing.error, /gone/);
+  assert.equal(fs.readFileSync(target, 'utf8'), 'newer build');
+  assert.equal(updater.swap({ file: null, target }).ok, false);
 });
 
 test('the portable exe is the one the user double-clicked, not the temp copy', () => {

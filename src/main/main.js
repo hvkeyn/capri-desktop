@@ -1131,19 +1131,34 @@ async function downloadUpdate() {
   return res;
 }
 
-// Swapping the exe means closing the app: refused while a work order is running, because that work is
-// on disk but not finished, and not from a dev run (there is no portable exe to swap).
+// The swap happens while she is still running — Windows lets a running exe be renamed, just not
+// overwritten — and then she starts again from the new file. One restart, and if the copy fails the old
+// exe is put back where it was, so pressing the button can never leave nothing to launch.
 function applyUpdate() {
+  const t = updateLabels();
   if (!updateState.file) return { ok: false, error: 'nothing downloaded' };
-  if (agent?.plan?.status === 'running') return { ok: false, error: 'a work order is still running' };
-  if (process.defaultApp) return { ok: false, error: 'running from source: update from a release build' };
+  if (agent?.plan?.status === 'running') return { ok: false, error: t.updateBusy };
+  if (process.defaultApp) return { ok: false, error: t.updateFromSource };
   const target = updater.portableTarget();
-  if (!target) return { ok: false, error: 'no exe to replace' };
-  const res = updater.apply({ file: updateState.file, target });
-  if (res.ok) setTimeout(() => app.quit(), 400);
-  return res;
+  if (!target) return { ok: false, error: 'no portable exe to replace' };
+  const swapped = updater.swap({ file: updateState.file, target });
+  if (!swapped.ok) return { ok: false, error: swapped.error };
+  sendCommand('update', { kind: 'restarting', line: t.updateRestarting });
+  setTimeout(() => {
+    app.relaunch();
+    app.exit(0);
+  }, 600);
+  return { ok: true };
 }
 
+// At a start, the exe before this one is not running any more: its backup can go.
+function cleanupOldUpdate() {
+  try {
+    updater.cleanup();
+  } catch {
+    // a leftover that can't be deleted now is deleted at the next start
+  }
+}
 const renameIn = (text, name) => text.replace(/\bCapri\b/g, name).replace(/Капри/g, name);
 
 // A character that isn't her names itself in the menu, and gets "him" instead of "her" if he's a he
@@ -1592,6 +1607,7 @@ function main() {
   if (process.platform === 'win32') app.setAppUserModelId('capri.desktop');
 
   app.whenReady().then(() => {
+    cleanupOldUpdate(); // the exe before this one, if it was updated, is not running any more
     if (!['codex', 'claude'].includes(config.load().assistant)) config.save({ assistant: activeAssistant().id });
     registerAutostart(Boolean(config.load().autostart)); // set once, it stays in step with her setting
     serveProtocol();
