@@ -150,6 +150,7 @@ function read(dir, base) {
     intro: introOf(base, raw.intro),
     guitar: raw.guitar && typeof raw.guitar === 'object' ? {
       image: typeof raw.guitar.image === 'string' && raw.guitar.image ? `${base}${raw.guitar.image}` : '',
+      frames: Array.isArray(raw.guitar.frames) ? raw.guitar.frames.filter((f) => typeof f === 'string').map((f) => `${base}${f}`) : [],
       tracks: Array.isArray(raw.guitar.tracks) ? raw.guitar.tracks.filter((t) => typeof t === 'string').map((t) => `${base}${t}`) : [],
     } : null,
 

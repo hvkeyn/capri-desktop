@@ -240,7 +240,7 @@
   "flat": true,
   "floorOffset": 26,
   "guitar": {
-    "image": "poses/guitar.webp",
+    "image": "guitar/001.webp",
     "tracks": [
       "audio/guitar/01-busker-i-pon-pon-shit.mp3",
       "audio/guitar/02-busker-ii-chippin-in.mp3",
