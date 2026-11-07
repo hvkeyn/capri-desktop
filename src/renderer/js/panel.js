@@ -1,6 +1,7 @@
 // The transmission panel next to Capri, and the one-line ticker she wears while Claude works.
 
 import { clamp, ease, reducedMotion } from './util.js';
+import { paragraphs } from './answer.js';
 
 const NOISE = '▚▞▙▟░▒#%&/\\<>01XZ';
 
@@ -411,7 +412,7 @@ export class Panel {
   // thinking stream (it was her narration before a tool, not her answer).
   clearAnswer() {
     this.stopStream();
-    this.line.textContent = '';
+    this.line.replaceChildren();
     this.line.classList.remove('is-streaming');
     this.place();
   }
@@ -442,7 +443,7 @@ export class Panel {
     const caughtUp = this.streamShown >= chars.length;
     if (caughtUp && this.streamDone) {
       this.stopStream();
-      this.line.textContent = chars.join('');
+      this.renderAnswer(chars.join(''));
       this.line.classList.remove('is-streaming');
       this.glitchLine();
     } else {
@@ -463,6 +464,31 @@ export class Panel {
     this.streamTimer = null;
     this.streamShown = 0;
     this.streamAt = [];
+  }
+
+  // Her answer, marked up: paragraphs from the blank lines, **bold** and code from her own text, and
+  // the numbers that matter in the accent colour — built as nodes, never as HTML.
+  renderAnswer(text) {
+    const parts = paragraphs(text);
+    if (!parts.length) {
+      this.line.textContent = '';
+      return;
+    }
+    this.line.replaceChildren(...parts.map((part) => {
+      const p = document.createElement('p');
+      p.className = 'panel__para';
+      for (const seg of part.segments) {
+        if (seg.type === 'text') {
+          p.append(seg.text);
+          continue;
+        }
+        const node = document.createElement(seg.type === 'b' ? 'b' : seg.type === 'code' ? 'code' : 'span');
+        if (seg.type === 'num') node.className = 'panel__num';
+        node.textContent = seg.text;
+        p.append(node);
+      }
+      return p;
+    }));
   }
 
   // a jolt through her finished answer: split colours, slices knocked sideways

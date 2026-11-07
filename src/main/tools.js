@@ -34,13 +34,13 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'system_info',
-      description: "Look at the user's PC: processor, graphics card, memory, disks, battery, network, Windows itself, or the programs using it hardest. Use it instead of guessing or saying you can't see the machine.",
+      description: "Look at the user's PC: processor, graphics card, memory, disks and what is free, battery, network, Windows itself, the programs using it hardest, the temperatures the machine reports, and the devices it has (displays, sound, USB). Use it instead of guessing or saying you can't see the machine.",
       parameters: {
         type: 'object',
         properties: {
           section: {
             type: 'string',
-            enum: ['all', 'cpu', 'gpu', 'memory', 'disk', 'battery', 'network', 'os', 'processes'],
+            enum: ['all', 'cpu', 'gpu', 'memory', 'disk', 'battery', 'network', 'os', 'processes', 'temperature', 'devices'],
             description: "'all' gives a quick overview.",
           },
         },
@@ -207,6 +207,53 @@ async function processes() {
   return [].concat(json(out) || []).map((p) => ({ name: p.Name, memoryMB: p.MB, cpuSeconds: p.cpuSeconds }));
 }
 
+// The temperatures the machine actually reports. Windows exposes thermal zones through WMI (tenths of a
+// Kelvin, ACPI), and a GeForce card answers nvidia-smi directly. A desktop with none of it says so instead
+// of leaving "temperature" out: "no sensor" is an answer, a missing key is a guess.
+async function temperature() {
+  const out = { cpu: null, gpu: null, sources: [], note: null };
+  if (!WIN) return { ...out, note: `no sensor here (${os.type()})` };
+  const zones = await ps(
+    'Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue '
+    + '| Select-Object -First 4 InstanceName,CurrentTemperature | ConvertTo-Json -Compress',
+    10000,
+  ).catch(() => '');
+  const rows = [].concat(json(zones) || []);
+  const hot = rows.map((r) => Math.round((Number(r.CurrentTemperature) / 10 - 273.15) * 10) / 10).filter((n) => Number.isFinite(n) && n > -40 && n < 150);
+  if (hot.length) {
+    out.cpu = Math.max(...hot);
+    out.sources.push('ACPI thermal zone');
+  }
+  const gpuTemp = await new Promise((resolve) => {
+    execFile('nvidia-smi', ['--query-gpu=temperature.gpu,utilization.gpu', '--format=csv,noheader,nounits'], { windowsHide: true, timeout: 6000 },
+      (err, stdout) => resolve(err ? '' : String(stdout).trim()));
+  }).catch(() => '');
+  const line = String(gpuTemp || '').split('\n')[0].trim();
+  if (line) {
+    const [c, load] = line.split(',').map((v) => Number(String(v).trim()));
+    if (Number.isFinite(c)) {
+      out.gpu = { celsius: c, load: Number.isFinite(load) ? load : null };
+      out.sources.push('nvidia-smi');
+    }
+  }
+  if (out.cpu === null && !out.gpu) out.note = 'this machine reports no temperature to Windows (no ACPI thermal zone, no nvidia-smi); say so, do not guess';
+  return out;
+}
+
+// What is plugged into the box: displays, sound devices, USB hubs. Enough to answer "что за устройства".
+async function devices() {
+  if (!WIN) return { note: `device list is Windows-only (${os.type()})` };
+  const read = async (script) => [].concat(json(await ps(script, 12000).catch(() => '')) || []);
+  const displays = await read('Get-CimInstance Win32_DesktopMonitor | Select-Object -First 6 Name,ScreenWidth,ScreenHeight | ConvertTo-Json -Compress');
+  const sound = await read('Get-CimInstance Win32_SoundDevice | Select-Object -First 6 Name | ConvertTo-Json -Compress');
+  const usb = await read('Get-CimInstance Win32_USBHub | Select-Object -First 8 Name,Status | ConvertTo-Json -Compress');
+  return {
+    displays: displays.map((m) => ({ name: m.Name, width: m.ScreenWidth, height: m.ScreenHeight })),
+    sound: sound.map((s) => s.Name).filter(Boolean),
+    usb: usb.map((u) => ({ name: u.Name, status: u.Status })).filter((u) => u.name),
+  };
+}
+
 async function systemInfo(section = 'all') {
   const want = (part) => section === 'all' || section === part;
   const out = {};
@@ -218,6 +265,8 @@ async function systemInfo(section = 'all') {
   if (want('battery')) out.battery = await battery();
   if (want('network')) out.network = network();
   if (want('processes')) out.processes = await processes();
+  if (want('temperature')) out.temperature = await temperature();
+  if (want('devices')) out.devices = await devices();
   if (!Object.keys(out).length) return { error: `unknown section "${section}"` };
   out.uptimeMinutes = Math.round(os.uptime() / 60);
   return out;
@@ -415,4 +464,4 @@ async function runCommand(command, cwd, ctx = {}) {
   };
 }
 
-module.exports = { TOOLS, run, systemInfo, openApps, findFiles, launchFolder, listFolder, readFileContent, searchInFolder, runCommand };
+module.exports = { TOOLS, run, systemInfo, openApps, findFiles, launchFolder, listFolder, readFileContent, searchInFolder, runCommand, temperature, devices };

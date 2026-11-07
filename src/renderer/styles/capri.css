@@ -1343,3 +1343,32 @@ html[data-motion='reduced'] .intro-shot {
   margin: 10px 0 6px;
   border-left-color: color-mix(in oklch, var(--paper-3) 50%, transparent);
 }
+/* ---- her answer, marked up ------------------------------------------------------------------------
+   Paragraphs from her blank lines; the bold she wrote herself; `code` in the accent; and every number with
+   a unit (50 из 64 ГБ, 62.9 GB, 4 %, 49 °C) lit, because that is what you came to read. */
+
+.panel__line .panel__para {
+  margin: 0 0 0.7em;
+}
+
+.panel__line .panel__para:last-child {
+  margin-bottom: 0;
+}
+
+.panel.is-chat .panel__line b {
+  color: var(--paper);
+  font-weight: 700;
+}
+
+.panel.is-chat .panel__line code {
+  padding: 0 3px;
+  background: oklch(0.27 0.012 100);
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.panel.is-chat .panel__line .panel__num {
+  color: var(--yellow);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
