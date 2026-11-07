@@ -1068,7 +1068,8 @@ html[data-motion='reduced'] .intro-shot {
 .intro-caption {
   position: fixed;
   left: 50%;
-  bottom: 12vh;
+  bottom: 19vh;
+  z-index: 60;
   transform: translate(-50%, 6px);
   padding: 10px 20px 10px 16px;
   background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), oklch(0.16 0.01 100 / 0.88) 34%, oklch(0.16 0.01 100 / 0.88));
