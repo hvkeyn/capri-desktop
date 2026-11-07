@@ -338,14 +338,14 @@ export class Panel {
     const line = String(text ?? '').trim();
     if (!line) return;
     this.thoughts.push({ kind: 'say', text: line });
-    if (this.thoughts.length > 6) this.thoughts.shift();
+    if (this.thoughts.length > 8) this.thoughts.shift();
     this.renderThoughts();
   }
 
   // A tool, starting (pending) or finished (ok/ms): the verb and target come from activity.js.
   act({ verb, target, activity = 'think', ok = null } = {}) {
     this.thoughts.push({ kind: 'act', verb, target, activity, ok, pending: ok === null });
-    if (this.thoughts.length > 6) this.thoughts.shift();
+    if (this.thoughts.length > 8) this.thoughts.shift();
     this.setActivity(ok === false ? 'error' : activity);
     this.renderThoughts();
   }
