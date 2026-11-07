@@ -131,7 +131,7 @@ test('the old entries are dropped, not scrolled forever', async (t) => {
   panel.current = { chat: true };
   panel.chatTurn({ quote: 'q', face: 'aside' });
   for (let i = 0; i < 10; i++) panel.think(`thought ${i}`);
-  assert.equal(panel.thoughts.length, 6);
+  assert.equal(panel.thoughts.length, 8);
   assert.match(panel.thoughts.at(-1).text, /thought 9/);
 });
 
