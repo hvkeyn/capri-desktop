@@ -68,7 +68,7 @@ above the answer**:
   search, yellow for a command, the accent for writing, red for a failure — so the kind of work is
   readable before a word is.
 
-Eight lines at most, oldest dropped, cleared at the start of the next message. The answer then streams
+Six lines at most, oldest dropped, cleared at the start of the next message. The answer then streams
 into the bubble *below* the stream, so the panel reads top-down: what she did, then what she concluded.
 
 This is the stageshow rule again — one focal object (the answer), and everything else steps back — plus
