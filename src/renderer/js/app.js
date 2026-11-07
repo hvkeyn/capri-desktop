@@ -105,8 +105,12 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
       track.addEventListener('loadedmetadata', resolve, { once: true });
       setTimeout(resolve, 900);
     });
-    if (Number.isFinite(track.duration) && track.duration > 1) {
-      const each = Math.max(28, Math.round((track.duration * 1000) / intro.frames.length));
+    // the entrance is a short thing: even a three-minute track gets eight or nine seconds of it
+    const seconds = Number.isFinite(track.duration) && track.duration > 1
+      ? Math.min(9, Math.max(6, track.duration))
+      : 8;
+    {
+      const each = Math.round((seconds * 1000) / intro.frames.length);
       durations = intro.frames.map(() => each);
       if (intro.captionAt?.length) {
         captionsAt.clear();
