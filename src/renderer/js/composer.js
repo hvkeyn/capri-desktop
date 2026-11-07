@@ -253,9 +253,16 @@ export class Composer {
     const panel = this.form.getBoundingClientRect();
     this.menuEl.hidden = false;
     const width = this.menuEl.offsetWidth || 150;
-    this.menuEl.style.left = `${Math.max(6, Math.min(x - panel.left, panel.width - width - 6))}px`;
-    const top = fromPencil ? y - panel.top - this.menuEl.offsetHeight - 6 : y - panel.top + 8;
-    this.menuEl.style.top = `${Math.max(4, top)}px`;
+    if (fromPencil) {
+      // above the whole composer, right-aligned: it must never sit on top of what you are typing
+      this.menuEl.style.left = 'auto';
+      this.menuEl.style.right = '6px';
+      this.menuEl.style.top = `${-(this.menuEl.offsetHeight + 8)}px`;
+    } else {
+      this.menuEl.style.right = 'auto';
+      this.menuEl.style.left = `${Math.max(6, Math.min(x - panel.left, panel.width - width - 6))}px`;
+      this.menuEl.style.top = `${Math.max(4, y - panel.top + 8)}px`;
+    }
     this.menuOpen = true;
   }
 
