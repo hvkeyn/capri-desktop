@@ -741,9 +741,20 @@ html[data-motion='reduced'] .panel__bar {
 }
 
 .panel.is-chat .panel__line {
-  max-height: min(36vh, 320px);
-  padding-block: 2px; /* the display face's glyphs reach past its line box: no scrollbar for that */
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: calc(var(--text-data) + 3px);
+  line-height: 1.65;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  text-wrap: pretty;
+  margin-top: 2px;
+  padding: 10px 12px 11px;
+  background: oklch(0.215 0.01 100 / 0.55);
+  border-left: 2px solid var(--accent);
+  max-height: min(50vh, 420px);
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--accent) transparent;
 }
@@ -1251,21 +1262,22 @@ html[data-motion='reduced'] .intro-shot {
 .panel.is-chat .panel__line {
   font-family: var(--font-mono);
   font-weight: 400;
-  font-size: calc(var(--text-data) + 2px);
-  line-height: 1.6;
+  font-size: calc(var(--text-data) + 3px);
+  line-height: 1.65;
   letter-spacing: 0;
   white-space: pre-wrap;
-  max-height: min(52vh, 440px);
+  max-height: min(50vh, 420px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-right: 6px;
+  margin-top: 2px;
+  padding: 10px 12px 11px;
+  background: oklch(0.215 0.01 100 / 0.55);
+  border-left: 2px solid var(--accent);
   scrollbar-width: thin;
   scrollbar-color: var(--accent) transparent;
 }
 
-.panel.is-chat .panel__line.is-streaming {
-  max-height: min(52vh, 440px);
-}
+
 
 /* the panel never grows past the screen: the answer scrolls, the form stays */
 .panel {
@@ -1292,12 +1304,42 @@ html[data-motion='reduced'] .intro-shot {
   max-height: calc(100vh - 92px - 28px);
 }
 
-.panel.is-chat .panel__line {
-  flex: 0 1 auto;
-}
-
 .panel.is-chat .panel__chat {
   flex: none;
   margin-top: auto;
   padding-top: 10px;
+}
+/* each step keeps the colour of its own kind of work, even after the panel goes idle */
+.panel__act[data-activity='think'] { --activity: oklch(0.72 0.16 300); }
+.panel__act[data-activity='read'] { --activity: var(--cyan); }
+.panel__act[data-activity='search'] { --activity: oklch(0.78 0.14 150); }
+.panel__act[data-activity='run'] { --activity: var(--yellow); }
+.panel__act[data-activity='write'] { --activity: oklch(0.8 0.15 90); }
+.panel__act[data-activity='wait'] { --activity: var(--paper-3); }
+.panel__act[data-activity='error'] { --activity: var(--red); }
+
+.panel__act {
+  font-size: 10px;
+  gap: 7px;
+}
+
+.panel__act-glyph,
+.panel__act-verb {
+  font-size: 10px;
+}
+
+.panel__act-target {
+  color: var(--paper);
+  opacity: 0.85;
+}
+
+.panel.is-chat .panel__quote {
+  margin-top: 8px;
+  font-size: calc(var(--text-data) + 1px);
+  color: var(--cyan);
+}
+
+.panel.is-chat .panel__thoughts {
+  margin: 12px 0 10px;
+  border-left-color: color-mix(in oklch, var(--paper-3) 50%, transparent);
 }
