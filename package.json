@@ -61,8 +61,14 @@
       "src/main/windows.ps1"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "portable",
+        "zip"
+      ],
       "icon": "assets/icons/capri.ico"
+    },
+    "portable": {
+      "artifactName": "Capri-${version}-portable.exe"
     },
     "nsis": {
       "oneClick": true,
