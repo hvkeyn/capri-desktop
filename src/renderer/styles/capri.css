@@ -806,6 +806,10 @@ html[data-motion='reduced'] .panel__bar {
   outline: none;
 }
 
+.panel__input.is-secret {
+  -webkit-text-security: disc;
+}
+
 .panel__input::placeholder {
   color: var(--paper-3);
 }

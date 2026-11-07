@@ -304,7 +304,8 @@ export class Panel {
     this.chatForm.hidden = !chat;
     this.note.hidden = !chat?.note;
     if (!chat) return;
-    this.chatInput.type = chat.secret ? 'password' : 'text';
+    // a textarea has no type: a secret is hidden with a class instead
+    this.chatInput.classList.toggle('is-secret', Boolean(chat.secret));
     this.chatInput.placeholder = chat.placeholder;
     this.chatInput.setAttribute('aria-label', chat.placeholder);
     this.chatInput.disabled = false;
