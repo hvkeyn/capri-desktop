@@ -748,7 +748,7 @@ html[data-motion='reduced'] .panel__bar {
   letter-spacing: 0;
   white-space: pre-wrap;
   text-wrap: pretty;
-  margin-top: 2px;
+  margin-top: 0;
   padding: 10px 12px 11px;
   background: oklch(0.215 0.01 100 / 0.55);
   border-left: 2px solid var(--accent);
@@ -1340,6 +1340,6 @@ html[data-motion='reduced'] .intro-shot {
 }
 
 .panel.is-chat .panel__thoughts {
-  margin: 12px 0 10px;
+  margin: 10px 0 6px;
   border-left-color: color-mix(in oklch, var(--paper-3) 50%, transparent);
 }
