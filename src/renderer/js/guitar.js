@@ -41,6 +41,16 @@ export class Guitar {
     img.className = 'guitar';
     img.src = this.image;
     img.alt = '';
+    // the same size as the character he sits beside, and on the same floor: he is a drawing of the same
+    // person, not a poster in the corner
+    const avatar = document.getElementById('capri');
+    const rect = avatar?.getBoundingClientRect();
+    const height = Math.max(220, Math.round((rect?.height || window.innerHeight * 0.36) * 1.02));
+    const bottom = Math.round(window.innerHeight - (rect?.bottom ?? window.innerHeight));
+    img.style.height = `${height}px`;
+    img.style.bottom = `${Math.max(0, bottom)}px`;
+    img.style.right = 'auto';
+    img.style.left = `${Math.round((rect?.left ?? window.innerWidth * 0.78) - height * 1.02)}px`;
     document.body.appendChild(img);
     this.el = img;
     requestAnimationFrame(() => img.classList.add('is-here'));
