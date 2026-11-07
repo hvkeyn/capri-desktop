@@ -92,7 +92,8 @@ function introOf(base, raw) {
     captions,
     captionsByLang,
     lineByLang,
-    sound: typeof raw.sound === 'string' && raw.sound ? picture(base, raw.sound) : '',
+    // the track is not a picture: picture() would refuse it, so the file is addressed directly
+    sound: typeof raw.sound === 'string' && raw.sound ? `${base}${raw.sound}` : '',
     soundFrom: Number.isFinite(soundFrom) ? Math.max(0, Math.min(frames.length - 1, soundFrom)) : -1,
     soundVolume: Number.isFinite(soundVolume) ? Math.min(1, Math.max(0, soundVolume)) : 0.7,
     captionAt: Array.isArray(raw.captionAt) ? raw.captionAt.map((v) => Math.min(1, Math.max(0, Number(v) || 0))) : [],
