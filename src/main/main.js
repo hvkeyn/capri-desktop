@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK, UPDATE } = require('./labels');
+const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK, UPDATE, ACCESS } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -496,7 +496,7 @@ function rebuildTray() {
   const hookState = activeHooks().status();
   const watched = activeAssistant();
   const lang = resolveLang(cfg.lang);
-  const t = Object.fromEntries(Object.entries({ ...TRAY[lang], ...(WORK[lang] || WORK.en), ...(UPDATE[lang] || UPDATE.en) }).map(([key, value]) =>
+  const t = Object.fromEntries(Object.entries({ ...TRAY[lang], ...(WORK[lang] || WORK.en), ...(UPDATE[lang] || UPDATE.en), ...(ACCESS[lang] || ACCESS.en) }).map(([key, value]) =>
     [key, typeof value === 'string' && watched.id !== 'claude' ? value.replaceAll('Claude Code', watched.name) : value]));
   // who's on the desktop: their name in the menu, and his wording when he's a he
   const skin = characters.get(cfg.character, characterDirs());
@@ -539,9 +539,9 @@ function rebuildTray() {
         {
           label: t.autonomy,
           submenu: [
-            { label: t.autonomyGuard, type: 'radio', checked: cfg.autonomy !== 'trusted' && cfg.autonomy !== 'full', click: () => updateConfig({ autonomy: 'guard' }) },
-            { label: t.autonomyTrusted, type: 'radio', checked: cfg.autonomy === 'trusted', click: () => updateConfig({ autonomy: 'trusted' }) },
-            { label: t.autonomyFull, type: 'radio', checked: cfg.autonomy === 'full', click: () => updateConfig({ autonomy: 'full' }) },
+            { label: t.autonomyGuard, type: 'radio', checked: cfg.autonomy !== 'trusted' && cfg.autonomy !== 'full', click: () => updateConfig({ autonomy: 'guard', autonomyPicked: true }) },
+            { label: t.autonomyTrusted, type: 'radio', checked: cfg.autonomy === 'trusted', click: () => updateConfig({ autonomy: 'trusted', autonomyPicked: true }) },
+            { label: t.autonomyFull, type: 'radio', checked: cfg.autonomy === 'full', click: () => updateConfig({ autonomy: 'full', autonomyPicked: true }) },
           ],
         },
         { type: 'separator' },
@@ -557,6 +557,7 @@ function rebuildTray() {
         ...(updateState.file ? [{ label: t.updateInstall, click: () => applyUpdate() }] : []),
       ],
     },
+    { label: t.access, click: () => checkAccess() },
     { label: t.lookNow, click: () => sendCommand('look') },
     {
       label: t.reminders,
@@ -1068,6 +1069,7 @@ let updateState = { checking: false, latest: null, available: null, file: null, 
 const updateCacheFile = () => path.join(app.getPath('userData'), 'update.json');
 const updatesDir = () => path.join(app.getPath('userData'), 'updates');
 const updateLabels = () => ({ ...(UPDATE[resolveLang(config.load().lang)] || UPDATE.en) });
+const accessLabels = () => ({ ...(ACCESS[resolveLang(config.load().lang)] || ACCESS.en) });
 
 async function checkUpdates({ force = false, quiet = false } = {}) {
   const t = updateLabels();
@@ -1159,6 +1161,27 @@ function cleanupOldUpdate() {
     // a leftover that can't be deleted now is deleted at the next start
   }
 }
+// "Check my access": the owner asks, and gets four facts back — model, tools, level, version — instead
+// of a character's opinion about her own permissions. It is what answers "у помощника есть доступ, но
+// отвечать не хочет": if the model or the tools are missing, this says so in one line.
+function checkAccess() {
+  const t = accessLabels();
+  const cfg = config.load();
+  const model = pickModel(cfg);
+  const supports = llm.supportsTools(cfg.provider);
+  const count = supports ? tools.TOOLS.length : 0;
+  const level = cfg.autonomy || 'guard';
+  const entries = [
+    { verb: 'MODEL', target: model || '—', error: !model },
+    { verb: 'TOOLS', target: String(count), error: !count },
+    { verb: 'LEVEL', target: level },
+    { verb: 'VERSION', target: app.getVersion() },
+  ];
+  const line = !model ? t.accessNoModel : !supports ? t.accessNoTools : t.accessLine(count, level);
+  sendCommand('access', { line, log: entries });
+  return { ok: Boolean(model && supports), model, tools: count, level, version: app.getVersion() };
+}
+
 const renameIn = (text, name) => text.replace(/\bCapri\b/g, name).replace(/Капри/g, name);
 
 // A character that isn't her names itself in the menu, and gets "him" instead of "her" if he's a he
@@ -1323,6 +1346,8 @@ function registerIpc() {
   ipcMain.handle('update:download', () => downloadUpdate());
   ipcMain.handle('update:apply', () => applyUpdate());
   ipcMain.handle('update:state', () => ({ current: app.getVersion(), ...updateState }));
+  // what she can actually do right now, for the panel: model, tools, level, version
+  ipcMain.handle('access:check', () => checkAccess());
   // she looks at your screen (look.js): the picture first, then what her AI says about it
   ipcMain.handle('look:snap', async () => {
     try {
@@ -1608,6 +1633,8 @@ function main() {
 
   app.whenReady().then(() => {
     cleanupOldUpdate(); // the exe before this one, if it was updated, is not running any more
+    const mig = config.migrate(config.load());
+    if (mig) config.save(mig); // an old profile's default level becomes the one this build ships with
     if (!['codex', 'claude'].includes(config.load().assistant)) config.save({ assistant: activeAssistant().id });
     registerAutostart(Boolean(config.load().autostart)); // set once, it stays in step with her setting
     serveProtocol();

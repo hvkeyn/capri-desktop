@@ -969,6 +969,10 @@ async function boot() {
       case 'forget': // "Forget our conversations" in her menu, maybe with her chat open
         chat.history = [];
         break;
+      case 'access': { // her menu › Check my access: what she can do, said plainly
+        panel.say({ kind: 'info', tag: 'ACCESS', line: cmd.line, log: cmd.log || [], hold: 9000 });
+        break;
+      }
       case 'update': { // a new version from her releases (main.js -> update.js), or the check itself
         if (cmd.kind === 'progress') {
           if (typeof cmd.percent === 'number') panel.setProgress(cmd.percent / 100);

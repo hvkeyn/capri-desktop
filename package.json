@@ -19,8 +19,10 @@
     "check:llm": "node scripts/check-llm.js",
     "check:deepseek": "node scripts/check-deepseek.js",
     "check:tools": "node scripts/check-tools.js",
-    "test": "node --test tests/agent.test.js tests/board.test.js tests/tools.test.js tests/update.test.js tests/hooks.test.js",
+    "test": "node --test tests/agent.test.js tests/board.test.js tests/tools.test.js tests/update.test.js tests/secrets.test.js tests/config.test.js tests/hooks.test.js",
     "smoke": "node scripts/smoke.js",
+    "check:secrets": "node scripts/check-secrets.js --all",
+    "hooks:secrets": "git config core.hooksPath .githooks",
     "try": "node scripts/try-work.js",
     "test:hooks": "node --test tests/hooks.test.js",
     "dist": "electron-builder --win"

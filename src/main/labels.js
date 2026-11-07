@@ -286,4 +286,38 @@ const UPDATE = {
   },
 };
 
-module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, UPDATE, LANGS: Object.keys(TRAY) };
+// "Check my access": what she can do right now, said to the owner in one line and four facts.
+const ACCESS = {
+  en: {
+    access: 'Check my access…',
+    accessLine: (tools, level) => `${tools} tools · level ${level}`,
+    accessNoModel: 'No model — nothing will answer until one is set up',
+    accessNoTools: 'This provider takes no tools: she can talk, but not look or act',
+  },
+  fr: {
+    access: 'Vérifier mes accès…',
+    accessLine: (tools, level) => `${tools} outils · niveau ${level}`,
+    accessNoModel: 'Pas de modèle — rien ne répondra avant d’en choisir un',
+    accessNoTools: 'Ce fournisseur n’accepte pas d’outils : elle parle, mais ne regarde ni n’agit',
+  },
+  es: {
+    access: 'Comprobar mi acceso…',
+    accessLine: (tools, level) => `${tools} herramientas · nivel ${level}`,
+    accessNoModel: 'Sin modelo: nada responderá hasta elegir uno',
+    accessNoTools: 'Este proveedor no acepta herramientas: habla, pero no mira ni actúa',
+  },
+  pt: {
+    access: 'Verificar o meu acesso…',
+    accessLine: (tools, level) => `${tools} ferramentas · nível ${level}`,
+    accessNoModel: 'Sem modelo: nada responde até escolheres um',
+    accessNoTools: 'Este fornecedor não aceita ferramentas: fala, mas não vê nem age',
+  },
+  ru: {
+    access: 'Проверить мой доступ…',
+    accessLine: (tools, level) => `инструментов: ${tools} · уровень ${level}`,
+    accessNoModel: 'Нет модели — ничего не ответит, пока она не выбрана',
+    accessNoTools: 'Провайдер не принимает инструменты: говорить может, смотреть и делать — нет',
+  },
+};
+
+module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, UPDATE, ACCESS, LANGS: Object.keys(TRAY) };

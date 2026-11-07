@@ -63,6 +63,8 @@ contextBridge.exposeInMainWorld('host', {
   updateDownload: () => ipcRenderer.invoke('update:download'),
   updateApply: () => ipcRenderer.invoke('update:apply'),
   updateState: () => ipcRenderer.invoke('update:state'),
+  // what she can do right now: model, tools, level, version (her menu › Check my access)
+  accessCheck: () => ipcRenderer.invoke('access:check'),
   // what you said to her, and what she answered: observations evolve.js learns from
   observe: (entry) => ipcRenderer.send('agent:observe', entry),
   lookSnap: () => ipcRenderer.invoke('look:snap'),

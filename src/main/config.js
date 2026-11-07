@@ -74,4 +74,14 @@ function save(patch) {
   return cache;
 }
 
-module.exports = { load, save, file, DEFAULTS };
+// A profile written by a build before 0.8.0 carries `autonomy: 'guard'` because that was the default
+// then, not because anyone picked it. One-time migration to the level this build ships with; once the
+// menu has been used, `autonomyPicked` is set and this never touches it again.
+function migrate(current) {
+  const cfg = current || {};
+  if (cfg.autonomyPicked) return null;
+  if (cfg.autonomy === DEFAULTS.autonomy) return { autonomyPicked: true };
+  return { autonomy: DEFAULTS.autonomy, autonomyPicked: true };
+}
+
+module.exports = { load, save, file, DEFAULTS, migrate };
