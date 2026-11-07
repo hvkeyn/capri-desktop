@@ -42,6 +42,7 @@ const DEFAULTS = {
   pcReact: true,     // she reacts to your PC: the processor at full tilt, the battery, the network, a USB stick, a game (pc.js)
   watchScreen: false, // she looks at your screen now and then and says something about it (look.js)
   lookAsked: false,  // she told you what looking means (where the picture goes) and you said yes
+  checkUpdates: true, // she asks GitHub for a newer release now and then (update.js), and offers it on the panel
   workspace: '',     // the folder a work order runs in ('' : ~/Capri Workspace, src/main/agent/guard.js)
   autonomy: 'full',  // what a work order may run: 'guard' (a project's own tools), 'trusted' (anything but the destructive ones) or 'full' (a shell too, like the harness)
 };

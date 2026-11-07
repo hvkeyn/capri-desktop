@@ -969,6 +969,31 @@ async function boot() {
       case 'forget': // "Forget our conversations" in her menu, maybe with her chat open
         chat.history = [];
         break;
+      case 'update': { // a new version from her releases (main.js -> update.js), or the check itself
+        if (cmd.kind === 'progress') {
+          if (typeof cmd.percent === 'number') panel.setProgress(cmd.percent / 100);
+          break;
+        }
+        const line = String(cmd.line || '');
+        if (!line) break;
+        const actions = cmd.kind === 'available' || cmd.kind === 'ready' ? (cmd.actions || []) : [];
+        panel.say({
+          kind: cmd.kind === 'ready' ? 'done' : cmd.kind === 'error' ? 'error' : cmd.kind === 'downloading' ? 'work' : 'info',
+          tag: 'UPDATE',
+          line,
+          progress: cmd.kind === 'downloading' ? 0 : undefined,
+          actions,
+          onAction: (id) => {
+            if (id === 'update:download') host.updateDownload();
+            else if (id === 'update:apply') host.updateApply().then((res) => {
+              if (!res?.ok) panel.say({ kind: 'error', tag: 'UPDATE', line: res?.error || '', hold: 7000 });
+            });
+            else panel.hide();
+          },
+          hold: actions.length ? null : 6000,
+        });
+        break;
+      }
       case 'chat': // "Talk to her" in her menu
         chat.start();
         break;

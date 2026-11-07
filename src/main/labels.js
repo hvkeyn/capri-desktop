@@ -236,4 +236,49 @@ const WORK = {
   },
 };
 
-module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, LANGS: Object.keys(TRAY) };
+// Updates from the releases on GitHub: the menu entries and the sentences the panel shows when a new
+// version is out, when it is downloaded, and when the check itself failed.
+const UPDATE = {
+  en: {
+    updates: 'Updates', updateCheck: 'Check for updates…', updateInstall: 'Install the downloaded update and restart',
+    updateAvailable: (v) => `Version ${v} is out`, updateDownload: 'Download', updateLater: 'Later',
+    updateReady: (v) => `${v} is downloaded`, updateRestart: 'Restart and update',
+    updateDownloading: (v) => `Downloading ${v}…`,
+    updateNone: (v) => `You're on the newest one (${v})`, updateFailed: (e) => `The update check failed: ${e}`,
+    updateNoFile: 'That release has no portable exe',
+  },
+  fr: {
+    updates: 'Mises à jour', updateCheck: 'Chercher une mise à jour…', updateInstall: 'Installer celle qui est téléchargée et redémarrer',
+    updateAvailable: (v) => `La version ${v} est sortie`, updateDownload: 'Télécharger', updateLater: 'Plus tard',
+    updateReady: (v) => `${v} est téléchargée`, updateRestart: 'Redémarrer et mettre à jour',
+    updateDownloading: (v) => `Téléchargement de ${v}…`,
+    updateNone: (v) => `Tu as la dernière (${v})`, updateFailed: (e) => `La recherche a échoué : ${e}`,
+    updateNoFile: 'Cette release n’a pas d’exe portable',
+  },
+  es: {
+    updates: 'Actualizaciones', updateCheck: 'Buscar actualizaciones…', updateInstall: 'Instalar la descargada y reiniciar',
+    updateAvailable: (v) => `Salió la versión ${v}`, updateDownload: 'Descargar', updateLater: 'Más tarde',
+    updateReady: (v) => `${v} está descargada`, updateRestart: 'Reiniciar y actualizar',
+    updateDownloading: (v) => `Descargando ${v}…`,
+    updateNone: (v) => `Tienes la última (${v})`, updateFailed: (e) => `La búsqueda falló: ${e}`,
+    updateNoFile: 'Esa release no trae un exe portable',
+  },
+  pt: {
+    updates: 'Atualizações', updateCheck: 'Procurar atualizações…', updateInstall: 'Instalar a descarregada e reiniciar',
+    updateAvailable: (v) => `Saiu a versão ${v}`, updateDownload: 'Descarregar', updateLater: 'Mais tarde',
+    updateReady: (v) => `${v} está descarregada`, updateRestart: 'Reiniciar e atualizar',
+    updateDownloading: (v) => `A descarregar ${v}…`,
+    updateNone: (v) => `Estás na mais recente (${v})`, updateFailed: (e) => `A verificação falhou: ${e}`,
+    updateNoFile: 'Essa release não tem um exe portátil',
+  },
+  ru: {
+    updates: 'Обновления', updateCheck: 'Проверить обновления…', updateInstall: 'Установить скачанное и перезапустить',
+    updateAvailable: (v) => `Вышла версия ${v}`, updateDownload: 'Скачать', updateLater: 'Позже',
+    updateReady: (v) => `${v} скачана`, updateRestart: 'Перезапустить и обновить',
+    updateDownloading: (v) => `Скачиваю ${v}…`,
+    updateNone: (v) => `У тебя последняя (${v})`, updateFailed: (e) => `Проверка обновлений не удалась: ${e}`,
+    updateNoFile: 'В этом релизе нет portable-файла',
+  },
+};
+
+module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, UPDATE, LANGS: Object.keys(TRAY) };

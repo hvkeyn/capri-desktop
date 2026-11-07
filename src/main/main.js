@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK } = require('./labels');
+const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK, UPDATE } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -25,6 +25,7 @@ const characters = require('./characters');
 const launch = require('./launch');
 const files = require('./files');
 const { Agent } = require('./agent');
+const updater = require('./update');
 const attach = require('./agent/attach');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
@@ -495,7 +496,7 @@ function rebuildTray() {
   const hookState = activeHooks().status();
   const watched = activeAssistant();
   const lang = resolveLang(cfg.lang);
-  const t = Object.fromEntries(Object.entries({ ...TRAY[lang], ...(WORK[lang] || WORK.en) }).map(([key, value]) =>
+  const t = Object.fromEntries(Object.entries({ ...TRAY[lang], ...(WORK[lang] || WORK.en), ...(UPDATE[lang] || UPDATE.en) }).map(([key, value]) =>
     [key, typeof value === 'string' && watched.id !== 'claude' ? value.replaceAll('Claude Code', watched.name) : value]));
   // who's on the desktop: their name in the menu, and his wording when he's a he
   const skin = characters.get(cfg.character, characterDirs());
@@ -546,6 +547,14 @@ function rebuildTray() {
         { type: 'separator' },
         { label: t.learn, click: () => sendCommand('evolve') },
         { label: t.harnessFolder, click: () => shell.openPath(getAgent().harnessDir) },
+      ],
+    },
+    {
+      // a new version, from her own releases: checked here, offered on the panel, swapped on restart
+      label: t.updates,
+      submenu: [
+        { label: t.updateCheck, click: () => checkUpdates({ force: true }) },
+        ...(updateState.file ? [{ label: t.updateInstall, click: () => applyUpdate() }] : []),
       ],
     },
     { label: t.lookNow, click: () => sendCommand('look') },
@@ -866,7 +875,18 @@ async function chatWithTools(cfg, model, messages, send, signal) {
       turns.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out).slice(0, 6000) });
     }
   }
-  return text; // still asking for tools after that many rounds: what it said is the answer
+  // Out of rounds: one last answer with no tools on the table. Her model already has every tool result
+  // in `turns`; all it has to do is say what it found — a long job should end with a sentence, not
+  // silence, and a model that keeps reaching for a tool otherwise leaves the user with nothing.
+  const closing = await llm.chat(cfg.provider, llmConfig(cfg), {
+    model,
+    messages: [...turns, {
+      role: 'user', // not a system note: some providers only accept one, at the very front
+      content: 'That is as far as your tools go this turn. Answer me now, from what you already have, '
+        + 'in two or three sentences: what you did or found, and what you did not get to. Do not call a tool again.',
+    }],
+  }, send, signal);
+  return closing || text;
 }
 
 // Her standing notes, from the harness evolve.js edits, at the end of the system prompt where a model
@@ -1039,6 +1059,91 @@ function characterVoice() {
   return { name: skin?.name || skin?.label || 'Capri', persona };
 }
 
+// ---- updates from GitHub ---------------------------------------------------------------------------
+// The portable exe is one file, so an update is "download the new one, swap it after the app has closed,
+// start it again" (update.js does the swap). Checked at most twice a day, never from inside a work order,
+// and never while she is answering: the panel asks, and nothing happens until you press the button.
+
+let updateState = { checking: false, latest: null, available: null, file: null, version: null };
+const updateCacheFile = () => path.join(app.getPath('userData'), 'update.json');
+const updatesDir = () => path.join(app.getPath('userData'), 'updates');
+const updateLabels = () => ({ ...(UPDATE[resolveLang(config.load().lang)] || UPDATE.en) });
+
+async function checkUpdates({ force = false, quiet = false } = {}) {
+  const t = updateLabels();
+  if (updateState.checking) return { ok: false, error: 'already checking' };
+  updateState.checking = true;
+  try {
+    const found = await updater.check({ current: app.getVersion(), cacheFile: updateCacheFile(), force });
+    updateState.latest = found.latest || null;
+    if (!found.ok) {
+      if (!quiet) sendCommand('update', { kind: 'error', line: t.updateFailed(found.error || '') });
+      return found;
+    }
+    if (!found.newer) {
+      if (!quiet) sendCommand('update', { kind: 'uptodate', line: t.updateNone(app.getVersion()) });
+      return found;
+    }
+    updateState.available = found;
+    sendCommand('update', {
+      kind: 'available',
+      version: found.latest,
+      line: t.updateAvailable(found.latest),
+      actions: [
+        { id: 'update:download', label: t.updateDownload, primary: true },
+        { id: 'update:later', label: t.updateLater },
+      ],
+    });
+    return found;
+  } finally {
+    updateState.checking = false;
+  }
+}
+
+async function downloadUpdate() {
+  const t = updateLabels();
+  const found = updateState.available;
+  if (!found) return { ok: false, error: 'nothing to download' };
+  if (!found.portable) {
+    sendCommand('update', { kind: 'error', line: t.updateNoFile });
+    return { ok: false, error: 'no portable exe in that release' };
+  }
+  sendCommand('update', { kind: 'downloading', version: found.latest, line: t.updateDownloading(found.latest) });
+  const res = await updater.download({
+    asset: found.portable,
+    dir: updatesDir(),
+    onProgress: (share) => sendCommand('update', { kind: 'progress', percent: share === null ? null : Math.round(share * 100) }),
+  });  if (!res.ok) {
+    sendCommand('update', { kind: 'error', line: t.updateFailed(res.error || '') });
+    return res;
+  }
+  updateState.file = res.file;
+  updateState.version = found.latest;
+  sendCommand('update', {
+    kind: 'ready',
+    version: found.latest,
+    line: t.updateReady(found.latest),
+    actions: [
+      { id: 'update:apply', label: t.updateRestart, primary: true },
+      { id: 'update:later', label: t.updateLater },
+    ],
+  });
+  return res;
+}
+
+// Swapping the exe means closing the app: refused while a work order is running, because that work is
+// on disk but not finished, and not from a dev run (there is no portable exe to swap).
+function applyUpdate() {
+  if (!updateState.file) return { ok: false, error: 'nothing downloaded' };
+  if (agent?.plan?.status === 'running') return { ok: false, error: 'a work order is still running' };
+  if (process.defaultApp) return { ok: false, error: 'running from source: update from a release build' };
+  const target = updater.portableTarget();
+  if (!target) return { ok: false, error: 'no exe to replace' };
+  const res = updater.apply({ file: updateState.file, target });
+  if (res.ok) setTimeout(() => app.quit(), 400);
+  return res;
+}
+
 const renameIn = (text, name) => text.replace(/\bCapri\b/g, name).replace(/Капри/g, name);
 
 // A character that isn't her names itself in the menu, and gets "him" instead of "her" if he's a he
@@ -1198,6 +1303,11 @@ function registerIpc() {
   // her improving her own harness, from what she has been corrected on
   ipcMain.handle('evolve:start', () => getAgent().evolve());
   ipcMain.on('agent:observe', (_e, entry) => getAgent().observe(entry || {}));
+  // updates from the releases on GitHub (update.js): the panel asks, main does the work
+  ipcMain.handle('update:check', () => checkUpdates({ force: true }));
+  ipcMain.handle('update:download', () => downloadUpdate());
+  ipcMain.handle('update:apply', () => applyUpdate());
+  ipcMain.handle('update:state', () => ({ current: app.getVersion(), ...updateState }));
   // she looks at your screen (look.js): the picture first, then what her AI says about it
   ipcMain.handle('look:snap', async () => {
     try {
@@ -1488,6 +1598,11 @@ function main() {
     registerIpc();
     createOverlay();
     createTray();
+    // once, a little after she is up: update.js caches the answer for 12 hours, and a quiet check says
+    // nothing when there is nothing to say (an update that exists is always shown)
+    if (config.load().checkUpdates !== false) {
+      setTimeout(() => { checkUpdates({ quiet: true }).catch(() => {}); }, 20000);
+    }
     windowWatch = startWindowWatch({
       overlay,
       onUpdate: (data) => {

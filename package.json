@@ -19,7 +19,7 @@
     "check:llm": "node scripts/check-llm.js",
     "check:deepseek": "node scripts/check-deepseek.js",
     "check:tools": "node scripts/check-tools.js",
-    "test": "node --test tests/agent.test.js tests/board.test.js tests/tools.test.js tests/hooks.test.js",
+    "test": "node --test tests/agent.test.js tests/board.test.js tests/tools.test.js tests/update.test.js tests/hooks.test.js",
     "smoke": "node scripts/smoke.js",
     "try": "node scripts/try-work.js",
     "test:hooks": "node --test tests/hooks.test.js",

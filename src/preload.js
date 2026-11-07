@@ -58,6 +58,11 @@ contextBridge.exposeInMainWorld('host', {
   // her improving her own harness (agent/evolve.js)
   evolveStart: () => ipcRenderer.invoke('evolve:start'),
   onEvolve: on('evolve:event'),
+  // a new version from her releases (update.js): the panel asks, main downloads and swaps it
+  updateCheck: () => ipcRenderer.invoke('update:check'),
+  updateDownload: () => ipcRenderer.invoke('update:download'),
+  updateApply: () => ipcRenderer.invoke('update:apply'),
+  updateState: () => ipcRenderer.invoke('update:state'),
   // what you said to her, and what she answered: observations evolve.js learns from
   observe: (entry) => ipcRenderer.send('agent:observe', entry),
   lookSnap: () => ipcRenderer.invoke('look:snap'),

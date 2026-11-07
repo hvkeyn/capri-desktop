@@ -70,10 +70,24 @@ a person worked in with spec-kit.
   and a backup of every accepted round. That's [RRSI](https://arxiv.org/abs/2609.24972) at desktop
   scale.
 
-[The harness](docs/agent.md) · [Evolving her harness](docs/evolve.md) · [The interface pass](docs/interface.md)
+[The harness](docs/agent.md) · [Evolving her harness](docs/evolve.md) · [The interface pass](docs/interface.md) · [Updates](docs/update.md)
 
 From a terminal, without the window: `npm run try -- "make hello.txt that says nova" C:\scratch` — a real
 work order on a real folder, printed phase by phase, ending with her report.
+
+## She updates herself
+
+Once, twenty seconds after she starts (and whenever you pick **Updates › Check for updates…** in her
+menu), she reads the newest release of this fork on GitHub. The answer is cached for twelve hours, so a
+day's worth of starts is one request, and a failed check doesn't hammer the API either.
+
+If there is a newer version, the panel says so with **Download** and **Later**. The download is the
+portable exe, with a bar; when it's done, **Restart and update** swaps the exe after she has closed and
+starts the new one. Nothing is installed, nothing restarts, and nothing is downloaded until you press it —
+and never while a work order is still running.
+
+No account, no token, no dependency: [docs/update.md](docs/update.md) has the details, including what it
+honestly does not do (the builds are unsigned).
 
 ## What she does
 
