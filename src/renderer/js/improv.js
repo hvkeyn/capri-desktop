@@ -130,11 +130,11 @@ export class Improv {
       .slice(0, 6);
   }
 
-  // Starting up: a greeting is wanted soon, the rest can wait until the intro is over.
+  // Starting up: a greeting is wanted soon, and the idle remark will be needed after the intro. A
+  // finished job and an error write theirs the first time they are actually wanted, not before.
   warm() {
-    setTimeout(() => this.fill('hello').catch(() => {}), 5000);
-    setTimeout(() => this.fill('idle').catch(() => {}), 12000);
-    setTimeout(() => this.fill('done').catch(() => {}), 20000);
+    setTimeout(() => this.fill('hello').catch(() => {}), 6000);
+    setTimeout(() => this.fill('idle').catch(() => {}), 18000);
   }
 
   // After a few real messages the remarks that were written before sound stale.
