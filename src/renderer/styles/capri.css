@@ -1114,19 +1114,24 @@ html[data-motion='reduced'] .intro-shot {
 }
 
 /* ---- her thinking, above the answer ---------------------------------------------------------------
-   What she is doing while she does it: one line of her own narration, then each tool she reaches for,
-   dim and small, with a caret while something is running. The frame takes the colour of the work:
-   thinking is violet, reading cyan, running yellow, writing the accent, a failure red. */
+   A thin timeline, not a wall: one line of her own narration, then each tool as a step with a glyph,
+   a verb, the thing it touches and its time. Mono, 9-10 px, dim; the frame takes the colour of the work
+   (violet to think, cyan to read, green to search, yellow to run, red to fail) so the kind of work is
+   readable before a word of the answer is. */
+
+.panel.is-chat {
+  width: clamp(340px, 27vw, 480px);
+}
 
 .panel__thoughts {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  margin: 8px 0 2px;
-  padding: 0 0 0 8px;
+  gap: 2px;
+  margin: 10px 0 6px;
+  padding: 0 0 0 9px;
   list-style: none;
-  border-left: 2px solid var(--line);
-  max-height: 7.5em;
+  border-left: 1px solid var(--line);
+  max-height: 9.5em;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--paper-3) transparent;
@@ -1149,53 +1154,74 @@ html[data-motion='reduced'] .intro-shot {
   50.01%, 100% { opacity: 0.15; }
 }
 
+/* her own line, before or after a tool: the one place in the stream with prose */
 .panel__thought {
   font-family: var(--font-mono);
   font-size: 10px;
-  line-height: 1.4;
+  line-height: 1.5;
   color: var(--paper-3);
   font-style: italic;
+  padding: 1px 0 2px;
 }
 
+/* a step: glyph, verb, target, time — one line each, never wrapping */
 .panel__act {
-  display: flex;
+  display: grid;
+  grid-template-columns: 12px 52px minmax(0, 1fr) auto;
+  column-gap: 6px;
   align-items: baseline;
-  gap: 6px;
+  padding: 1px 0;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--paper-2);
+  line-height: 1.5;
+}
+
+.panel__act-glyph {
+  color: var(--activity, var(--cyan));
+  font-size: 9px;
+  line-height: 1.5;
 }
 
 .panel__act-verb {
   color: var(--activity, var(--cyan));
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .panel__act-target {
   min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--paper-2);
+}
+
+.panel__act.is-pending .panel__act-target {
+  color: var(--paper-3);
 }
 
 .panel__act.is-pending .panel__act-target::after {
   content: ' …';
-  color: var(--paper-3);
 }
 
+.panel__act.is-bad .panel__act-glyph,
 .panel__act.is-bad .panel__act-verb,
 .panel__act.is-bad .panel__act-target {
   color: var(--red);
 }
 
 .panel__act-ms {
-  margin-left: auto;
   color: var(--paper-3);
   font-size: 8px;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
+/* the frame and her face follow the work */
 .panel[data-activity='think'] { --activity: oklch(0.72 0.16 300); }
 .panel[data-activity='read'] { --activity: var(--cyan); }
 .panel[data-activity='search'] { --activity: oklch(0.78 0.14 150); }
@@ -1210,5 +1236,68 @@ html[data-motion='reduced'] .intro-shot {
 .panel[data-activity='run'] .panel__frame,
 .panel[data-activity='write'] .panel__frame,
 .panel[data-activity='wait'] .panel__frame {
-  border-color: color-mix(in oklch, var(--activity) 70%, var(--frame));
+  --frame: var(--activity);
+}
+
+/* ---- a chat answer is read, not glanced at ---------------------------------------------------------
+   The display face is right for one line under her portrait and wrong for six paragraphs of news:
+   in a chat the answer is mono at reading size, with a real line height, blank lines kept, and its own
+   scroll so the input stays where it was. */
+
+.panel.is-chat .panel__plate {
+  padding: 14px 16px 14px 14px;
+}
+
+.panel.is-chat .panel__line {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: calc(var(--text-data) + 2px);
+  line-height: 1.6;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  max-height: min(52vh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.panel.is-chat .panel__line.is-streaming {
+  max-height: min(52vh, 440px);
+}
+
+/* the panel never grows past the screen: the answer scrolls, the form stays */
+.panel {
+  max-height: calc(100vh - 92px);
+}
+
+.panel__frame {
+  max-height: inherit;
+}
+
+.panel__plate {
+  max-height: inherit;
+  overflow: hidden;
+}
+
+.panel__body {
+  max-height: inherit;
+  overflow: hidden;
+}
+
+.panel.is-chat .panel__body {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 92px - 28px);
+}
+
+.panel.is-chat .panel__line {
+  flex: 0 1 auto;
+}
+
+.panel.is-chat .panel__chat {
+  flex: none;
+  margin-top: auto;
+  padding-top: 10px;
 }

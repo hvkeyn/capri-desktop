@@ -20,6 +20,8 @@ export const FACES = {
 // What her face does while a tool runs: reading is a look down, running is the working face, a failure is
 // the laugh she cannot help.
 const ACTIVITY_FACE = { think: 'aside', read: 'calm', search: 'look', run: 'calm', write: 'smug', wait: 'aside', error: 'laugh' };
+// A glyph per kind of work, so the stream reads as a timeline even at a glance.
+const ACTIVITY_GLYPH = { think: '✦', read: '▤', search: '⌕', run: '▸', write: '✎', wait: '…', error: '✕' };
 
 const KIND_FACE = { alert: 'many', done: 'look', error: 'laugh', work: 'calm', idle: 'calm', report: 'smug', chat: 'look', remind: 'look' };
 const PRIORITY = { info: 1, idle: 1, work: 2, done: 3, error: 3, report: 3, chat: 3, alert: 4, remind: 4 };
@@ -366,26 +368,28 @@ export class Panel {
       if (entry.kind === 'act') li.dataset.activity = entry.activity || 'think';
       if (entry.pending) li.classList.add('is-pending');
       if (entry.ok === false) li.classList.add('is-bad');
-      const text = document.createElement('span');
       if (entry.kind === 'say') {
+        const text = document.createElement('span');
         text.className = 'panel__thought-text';
         text.textContent = entry.text;
+        li.append(text);
       } else {
-        text.className = 'panel__act-text';
+        const glyph = document.createElement('span');
+        glyph.className = 'panel__act-glyph';
+        glyph.textContent = ACTIVITY_GLYPH[entry.activity] || '·';
         const verb = document.createElement('span');
         verb.className = 'panel__act-verb';
         verb.textContent = entry.verb || '';
         const target = document.createElement('span');
         target.className = 'panel__act-target';
         target.textContent = entry.target || '';
-        text.append(verb, target);
-      }
-      li.append(text);
-      if (entry.kind === 'act' && entry.ms !== null && entry.ms !== undefined) {
-        const ms = document.createElement('span');
-        ms.className = 'panel__act-ms';
-        ms.textContent = `${Math.round(entry.ms / 100) / 10} s`;
-        li.append(ms);
+        li.append(glyph, verb, target);
+        if (entry.ms !== null && entry.ms !== undefined) {
+          const ms = document.createElement('span');
+          ms.className = 'panel__act-ms';
+          ms.textContent = `${(Math.round(entry.ms / 100) / 10).toFixed(1)}s`;
+          li.append(ms);
+        }
       }
       return li;
     }));
