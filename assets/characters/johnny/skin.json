@@ -311,5 +311,6 @@
       "fps": 12
     }
   },
-  "flat": true
+  "flat": true,
+  "floorOffset": 26
 }

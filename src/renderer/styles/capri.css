@@ -1028,12 +1028,12 @@ html[data-motion='reduced'] .arrival {
 }
 
 .intro-shot.is-far {
-  height: 40vh;
+  height: 64vh;
   transform: translate(-50%, 0) scale(1);
 }
 
 .intro-shot.is-near {
-  height: 58vh;
+  height: 92vh;
   transform: translate(-50%, 0) scale(1.02);
 }
 

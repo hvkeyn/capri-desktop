@@ -294,7 +294,7 @@ async function boot() {
   capri.wander = config.wander;
   capri.possessWindows = config.possess;
   capri.restOn = config.rest || 'corner';
-  capri.setView(innerWidth, innerHeight, innerHeight - floorGap);
+  capri.setView(innerWidth, innerHeight, innerHeight - floorGap + (skin?.floorOffset || 0));
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
   capri.skinFlat = Boolean(skin?.flat);
@@ -891,7 +891,7 @@ async function boot() {
   window.addEventListener('resize', () => {
     fx.resize(innerWidth, innerHeight);
     chip.place(innerWidth, innerHeight - floorGap);
-    capri.setView(innerWidth, innerHeight, innerHeight - floorGap);
+    capri.setView(innerWidth, innerHeight, innerHeight - floorGap + (skin?.floorOffset || 0));
   });
 
   host.onConfig((cfg) => {
