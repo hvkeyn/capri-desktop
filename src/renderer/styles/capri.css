@@ -1067,29 +1067,25 @@ html[data-motion='reduced'] .intro-shot {
 
 .intro-caption {
   position: fixed;
-  z-index: 999;
   left: 50%;
-  bottom: 19vh;
-  z-index: 60;
+  bottom: 9vh;
+  z-index: 999;
   transform: translate(-50%, 6px);
-  padding: 10px 20px 10px 16px;
-  background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), oklch(0.16 0.01 100 / 0.88) 34%, oklch(0.16 0.01 100 / 0.88));
-  border-left: 3px solid var(--accent);
-  border-top: 1px solid color-mix(in oklch, var(--accent) 35%, transparent);
-  border-bottom: 1px solid color-mix(in oklch, var(--paper-3) 40%, transparent);
+  padding: 12px 28px 12px 22px;
+  background: oklch(0.17 0.012 100 / 0.94);
+  border: 2px solid var(--accent);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: clamp(16px, 1.9vw, 30px);
-  text-shadow: 0 0 18px color-mix(in oklch, var(--accent) 35%, transparent);
-  line-height: 1.2;
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  font-size: clamp(18px, 2vw, 34px);
+  line-height: 1.15;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   white-space: nowrap;
   opacity: 0;
-  box-shadow: 0 14px 40px oklch(0 0 0 / 0.55), 0 0 24px color-mix(in oklch, var(--accent) 12%, transparent);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.7), 0 18px 50px oklch(0 0 0 / 0.65), 0 0 30px color-mix(in oklch, var(--accent) 30%, transparent);
   transition: opacity 90ms steps(2, end), transform 90ms steps(2, end);
-  z-index: 999;
 }
 
 .intro-caption::before {
@@ -1149,6 +1145,7 @@ html[data-motion='reduced'] .intro-shot {
   transform: none;
   filter: none;
   object-fit: cover;
+  object-position: center 32%;
 }
 
 /* ---- her thinking, above the answer ---------------------------------------------------------------
