@@ -140,18 +140,7 @@
       "intro/084.webp",
       "intro/085.webp",
       "intro/086.webp",
-      "intro/087.webp",
-      "intro/088.webp",
-      "intro/089.webp",
-      "intro/090.webp",
-      "intro/091.webp",
-      "intro/092.webp",
-      "intro/093.webp",
-      "intro/094.webp",
-      "intro/095.webp",
-      "intro/096.webp",
-      "intro/097.webp",
-      "intro/098.webp"
+      "intro/087.webp"
     ],
     "closeupFrom": 20,
     "cover": false,
@@ -243,67 +232,56 @@
       55,
       55,
       55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
-      55,
       55
     ],
     "captionsByLang": {
       "ru": [
         {
-          "from": 22,
+          "from": 20,
           "text": "ЭЙ. ПРОСЫПАЙСЯ, САМУРАЙ"
         },
         {
-          "from": 68,
+          "from": 66,
           "text": "У НАС ЕСТЬ ГОРОД, ЧТОБЫ СЖЕЧЬ"
         }
       ],
       "en": [
         {
-          "from": 22,
+          "from": 20,
           "text": "HEY. WAKE UP, SAMURAI"
         },
         {
-          "from": 68,
+          "from": 66,
           "text": "WE HAVE A CITY TO BURN"
         }
       ],
       "fr": [
         {
-          "from": 22,
+          "from": 20,
           "text": "HEY. RÉVEILLE-TOI, SAMOURAÏ"
         },
         {
-          "from": 68,
+          "from": 66,
           "text": "ON A UNE VILLE À BRÛLER"
         }
       ],
       "es": [
         {
-          "from": 22,
+          "from": 20,
           "text": "OYE. DESPIERTA, SAMURÁI"
         },
         {
-          "from": 68,
+          "from": 66,
           "text": "TENEMOS UNA CIUDAD QUE QUEMAR"
         }
       ],
       "pt": [
         {
-          "from": 22,
+          "from": 20,
           "text": "EI. ACORDA, SAMURAI"
         },
         {
-          "from": 68,
+          "from": 66,
           "text": "TEMOS UMA CIDADE PARA QUEIMAR"
         }
       ]

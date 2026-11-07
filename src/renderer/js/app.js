@@ -102,6 +102,7 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
     track.preload = 'auto';
   }
   let playing = false;
+  let captionTimer = 0;
 
   let front = 0;
   const geometry = intro.cover ? 'is-cover' : null;
@@ -119,11 +120,13 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
       track.play().catch(() => {});
     }
     const text = captionsAt.get(i);
+    if (text) clearTimeout(captionTimer); // the last line goes before the next one arrives
     if (text) {
       caption.textContent = text;
       caption.classList.remove('is-on');
       void caption.offsetWidth; // restart the flicker
       caption.classList.add('is-on');
+      captionTimer = setTimeout(() => caption.classList.remove('is-on'), 2400);
     }
     await sleep(durations[i]);
   }
@@ -139,6 +142,7 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   }
   // the last frame comes apart: slices, colour split, and the avatar shows up in the middle of it
   if (intro.dissolve) layers[1 - front].classList.add('is-dissolving');
+  clearTimeout(captionTimer);
   caption.classList.add('is-fading');
   if (avatar) avatar.style.visibility = '';
   await sleep(240);

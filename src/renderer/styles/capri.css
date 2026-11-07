@@ -1075,10 +1075,11 @@ html[data-motion='reduced'] .intro-shot {
   border-left: 3px solid var(--accent);
   border-top: 1px solid color-mix(in oklch, var(--accent) 35%, transparent);
   border-bottom: 1px solid color-mix(in oklch, var(--paper-3) 40%, transparent);
-  color: var(--paper);
+  color: var(--accent);
   font-family: var(--font-mono);
   font-weight: 600;
   font-size: clamp(16px, 1.9vw, 30px);
+  text-shadow: 0 0 18px color-mix(in oklch, var(--accent) 35%, transparent);
   line-height: 1.2;
   letter-spacing: 0.16em;
   text-transform: uppercase;
