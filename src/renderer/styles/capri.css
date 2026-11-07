@@ -1112,3 +1112,103 @@ html[data-motion='reduced'] .intro-shot {
   filter: none;
   object-fit: cover;
 }
+
+/* ---- her thinking, above the answer ---------------------------------------------------------------
+   What she is doing while she does it: one line of her own narration, then each tool she reaches for,
+   dim and small, with a caret while something is running. The frame takes the colour of the work:
+   thinking is violet, reading cyan, running yellow, writing the accent, a failure red. */
+
+.panel__thoughts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 8px 0 2px;
+  padding: 0 0 0 8px;
+  list-style: none;
+  border-left: 2px solid var(--line);
+  max-height: 7.5em;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-3) transparent;
+}
+
+.panel__thoughts.is-live {
+  border-left-color: var(--activity, var(--cyan));
+}
+
+.panel__thoughts.is-live::after {
+  content: '▌';
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--activity, var(--cyan));
+  animation: panel-caret 1.1s steps(1, end) infinite;
+}
+
+@keyframes panel-caret {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0.15; }
+}
+
+.panel__thought {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--paper-3);
+  font-style: italic;
+}
+
+.panel__act {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--paper-2);
+}
+
+.panel__act-verb {
+  color: var(--activity, var(--cyan));
+  font-weight: 600;
+}
+
+.panel__act-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel__act.is-pending .panel__act-target::after {
+  content: ' …';
+  color: var(--paper-3);
+}
+
+.panel__act.is-bad .panel__act-verb,
+.panel__act.is-bad .panel__act-target {
+  color: var(--red);
+}
+
+.panel__act-ms {
+  margin-left: auto;
+  color: var(--paper-3);
+  font-size: 8px;
+  letter-spacing: 0.02em;
+}
+
+.panel[data-activity='think'] { --activity: oklch(0.72 0.16 300); }
+.panel[data-activity='read'] { --activity: var(--cyan); }
+.panel[data-activity='search'] { --activity: oklch(0.78 0.14 150); }
+.panel[data-activity='run'] { --activity: var(--yellow); }
+.panel[data-activity='write'] { --activity: oklch(0.8 0.15 90); }
+.panel[data-activity='wait'] { --activity: var(--paper-3); }
+.panel[data-activity='error'] { --activity: var(--red); }
+
+.panel[data-activity='think'] .panel__frame,
+.panel[data-activity='read'] .panel__frame,
+.panel[data-activity='search'] .panel__frame,
+.panel[data-activity='run'] .panel__frame,
+.panel[data-activity='write'] .panel__frame,
+.panel[data-activity='wait'] .panel__frame {
+  border-color: color-mix(in oklch, var(--activity) 70%, var(--frame));
+}

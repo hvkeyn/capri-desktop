@@ -54,3 +54,23 @@ VoiceOver/TalkBack, springs instead of linear tweens).
 - No light theme: she is a Night City HUD; the classic theme already exists for the old violet look.
 - No animated cursor walkthroughs (stageshow's subject): there is nothing to demonstrate — the board
   is the thing, live.
+
+## The thinking stream
+
+A long answer used to be a blinking bar. Now, while a turn runs, the panel shows **what she is doing,
+above the answer**:
+
+- a line of her own narration (the model's note before a tool, in her voice: *"the disk's full again —
+  figures"*), dim and italic;
+- then each tool as a line of its own: a verb, the thing it touches, a pencil-dot while it runs and its
+  time when it lands (`LISTS C:\Projects` … `1.2 s`), red if it was refused;
+- the frame and her face take the colour of the work: violet for thinking, cyan for reading, green for a
+  search, yellow for a command, the accent for writing, red for a failure — so the kind of work is
+  readable before a word is.
+
+Eight lines at most, oldest dropped, cleared at the start of the next message. The answer then streams
+into the bubble *below* the stream, so the panel reads top-down: what she did, then what she concluded.
+
+This is the stageshow rule again — one focal object (the answer), and everything else steps back — plus
+the ExpoKit one: state has a colour **and** a word, never colour alone.
+

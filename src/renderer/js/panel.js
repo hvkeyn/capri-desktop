@@ -17,6 +17,10 @@ export const FACES = {
   many: 'face-many.png',   // all her eyes on you
   grin: 'capri-face.png',
 };
+// What her face does while a tool runs: reading is a look down, running is the working face, a failure is
+// the laugh she cannot help.
+const ACTIVITY_FACE = { think: 'aside', read: 'calm', search: 'look', run: 'calm', write: 'smug', wait: 'aside', error: 'laugh' };
+
 const KIND_FACE = { alert: 'many', done: 'look', error: 'laugh', work: 'calm', idle: 'calm', report: 'smug', chat: 'look', remind: 'look' };
 const PRIORITY = { info: 1, idle: 1, work: 2, done: 3, error: 3, report: 3, chat: 3, alert: 4, remind: 4 };
 const DECODE_STEP_MS = 28;
@@ -30,6 +34,8 @@ export class Panel {
     // the pictures of her faces, by name (app.js: the character's own, hers where it has none)
     this.faces = faces || Object.fromEntries(Object.entries(FACES).map(([name, file]) => [name, FACE_DIR + file]));
     this.line = panel.querySelector('.panel__line');
+    this.thoughtsEl = panel.querySelector('.panel__thoughts');
+    this.thoughts = []; // her narration and her tools, above the answer, this turn
     this.stopStream(); // her chat answer, decoding in (stream)
     this.streamTo = [];
     this.portrait = panel.querySelector('.panel__face img');
@@ -107,6 +113,7 @@ export class Panel {
   // progress: a bar under the line, 0..1 (a download)
   // onLeave: () => void, when this message goes (closed, timed out or replaced)
   say(msg) {
+    this.clearThoughts();
     const cur = this.current;
     // don't step on something more important that just appeared (one step of her guide follows another)
     const steps = cur?.guide && msg.guide;
@@ -300,6 +307,7 @@ export class Panel {
   // A chat turn: what you said goes up top, her answer starts coming in under it (stream), without
   // announcing the panel all over again.
   chatTurn({ quote, face }) {
+    this.clearThoughts();
     if (!this.current?.chat) return;
     clearInterval(this.decodeTimer);
     this.stopStream();
@@ -308,6 +316,99 @@ export class Panel {
     this.quote.hidden = !quote;
     this.line.textContent = '';
     this.line.classList.add('is-streaming');
+    this.place();
+  }
+
+  // ---- what she is doing while she does it ----------------------------------------------------------
+  // Her thinking, above the answer: a line of her own narration, then every tool she reaches for, then
+  // what came back. It is cleared at the start of each turn and kept while the answer grows, so the panel
+  // shows how she got there instead of a blinking bar.
+
+  clearThoughts() {
+    this.thoughts = [];
+    this.renderThoughts();
+    this.setActivity(null);
+  }
+
+  // A line of her own thinking (the model's note before a tool, in her voice).
+  think(text) {
+    const line = String(text ?? '').trim();
+    if (!line) return;
+    this.thoughts.push({ kind: 'say', text: line });
+    if (this.thoughts.length > 6) this.thoughts.shift();
+    this.renderThoughts();
+  }
+
+  // A tool, starting (pending) or finished (ok/ms): the verb and target come from activity.js.
+  act({ verb, target, activity = 'think', ok = null } = {}) {
+    this.thoughts.push({ kind: 'act', verb, target, activity, ok, pending: ok === null });
+    if (this.thoughts.length > 6) this.thoughts.shift();
+    this.setActivity(ok === false ? 'error' : activity);
+    this.renderThoughts();
+  }
+
+  // The tool that was running is done: the same entry changes colour, no new line.
+  finishAct({ ok = true, ms = null } = {}) {
+    const entry = [...this.thoughts].reverse().find((t) => t.kind === 'act' && t.pending);
+    if (!entry) return;
+    entry.pending = false;
+    entry.ok = ok;
+    entry.ms = ms;
+    this.setActivity(ok ? null : 'error');
+    this.renderThoughts();
+  }
+
+  renderThoughts() {
+    if (!this.thoughtsEl) return;
+    this.thoughtsEl.replaceChildren(...this.thoughts.map((entry) => {
+      const li = document.createElement('li');
+      li.className = entry.kind === 'say' ? 'panel__thought' : 'panel__act';
+      if (entry.kind === 'act') li.dataset.activity = entry.activity || 'think';
+      if (entry.pending) li.classList.add('is-pending');
+      if (entry.ok === false) li.classList.add('is-bad');
+      const text = document.createElement('span');
+      if (entry.kind === 'say') {
+        text.className = 'panel__thought-text';
+        text.textContent = entry.text;
+      } else {
+        text.className = 'panel__act-text';
+        const verb = document.createElement('span');
+        verb.className = 'panel__act-verb';
+        verb.textContent = entry.verb || '';
+        const target = document.createElement('span');
+        target.className = 'panel__act-target';
+        target.textContent = entry.target || '';
+        text.append(verb, target);
+      }
+      li.append(text);
+      if (entry.kind === 'act' && entry.ms !== null && entry.ms !== undefined) {
+        const ms = document.createElement('span');
+        ms.className = 'panel__act-ms';
+        ms.textContent = `${Math.round(entry.ms / 100) / 10} s`;
+        li.append(ms);
+      }
+      return li;
+    }));
+    this.thoughtsEl.hidden = this.thoughts.length === 0;
+    this.thoughtsEl.classList.toggle('is-live', this.thoughts.some((t) => t.pending) || Boolean(this.activity && this.activity !== 'error'));
+    this.place();
+  }
+
+  // The colour of the frame, and her face, follow the kind of work: reading, running, writing, waiting.
+  setActivity(kind) {
+    this.activity = kind || null;
+    this.el.dataset.activity = kind || 'idle';
+    this.thoughtsEl?.classList.toggle('is-live', Boolean(kind));
+    const face = kind && ACTIVITY_FACE[kind];
+    if (face) this.setFace(face);
+  }
+
+  // The answer bubble is emptied without closing the panel: the text that was there has moved up into the
+  // thinking stream (it was her narration before a tool, not her answer).
+  clearAnswer() {
+    this.stopStream();
+    this.line.textContent = '';
+    this.line.classList.remove('is-streaming');
     this.place();
   }
 

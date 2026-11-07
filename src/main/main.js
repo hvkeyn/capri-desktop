@@ -856,14 +856,18 @@ function chatToolContext() {
   };
 }
 
-async function chatWithTools(cfg, model, messages, send, signal) {
+async function chatWithTools(cfg, model, messages, send, signal, onEvent = null) {
   const turns = [...messages];
   let text = '';
   const ctx = chatToolContext();
+  // What she is doing goes to the panel as it happens: her own narration before a tool, then each tool
+  // starting and ending. The panel draws it above the answer, so a long turn is not a blinking bar.
+  const tell = (payload) => onEvent?.(payload);
   for (let round = 0; round <= TOOL_ROUNDS; round++) {
     const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { model, messages: turns, tools: tools.TOOLS }, send, signal);
     text = res.text;
     if (!res.toolCalls.length) return text;
+    if (String(res.text || '').trim()) tell({ kind: 'thought', text: String(res.text).trim() });
     turns.push({
       role: 'assistant',
       content: res.text || '',
@@ -872,7 +876,10 @@ async function chatWithTools(cfg, model, messages, send, signal) {
     for (const call of res.toolCalls) {
       let args = {};
       try { args = JSON.parse(call.arguments || '{}'); } catch { /* no arguments: the tool's own defaults */ }
+      tell({ kind: 'tool-start', name: call.name, args });
+      const started = Date.now();
       const out = await tools.run(call.name, args, ctx).catch((err) => ({ error: err.message }));
+      tell({ kind: 'tool-end', name: call.name, ok: !out?.error, ms: Date.now() - started });
       turns.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out).slice(0, 6000) });
     }
   }
@@ -929,11 +936,11 @@ function rememberChat(turns, answer) {
 
 // Her chat's answer: with the tools when her AI can take them, plainly when the server doesn't know
 // them, and the usual move to another model when this one is busy or gone.
-async function chatAnswer(cfg, messages, send, signal, streamed) {
+async function chatAnswer(cfg, messages, send, signal, streamed, onEvent = null) {
   const model = pickModel(cfg);
   if (model && llm.supportsTools(cfg.provider)) {
     try {
-      return await chatWithTools(cfg, model, messages, send, signal);
+      return await chatWithTools(cfg, model, messages, send, signal, onEvent);
     } catch (err) {
       const plain = ['busy', 'gone', 'signin'].includes(err.code)
         || err.status === 400 || err.status === 422 || /tool/i.test(err.message || '');
@@ -1270,7 +1277,8 @@ function registerIpc() {
       };
       const cfg = config.load();
       const turns = withStandingNotes(Array.isArray(messages) ? messages : []);
-      const text = await chatAnswer(cfg, turns, send, abort.signal, () => streamed);
+      const onEvent = (payload) => overlay?.webContents.send('chat:event', { id, ...payload });
+      const text = await chatAnswer(cfg, turns, send, abort.signal, () => streamed, onEvent);
       rememberChat(turns, text);
       if (cfg.provider === 'claude') saveMemory({ claude: llm.claudeMemory() });
       return { ok: true, text };

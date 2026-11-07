@@ -6,6 +6,7 @@
 // right away; anything only the model asked for, a website, and closing an app behind a button.
 
 import { pick, fmt } from './util.js';
+import { describe as describeTool, WAITING } from './activity.js';
 import { ASSISTANT_NAMES } from './lines.js';
 import { parseReminder, parseWhen, clock } from './reminders.js';
 
@@ -253,6 +254,8 @@ export class Chat {
     this.waitingWhen = null; // a reminder you asked for without saying when: { text, until }
     this.skin = null;      // who's on the desktop when it isn't her (characters.js, app.js): name, badge, persona
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
+    // what she is doing while she does it: her narration, and every tool she reaches for
+    host.onChatEvent((event) => this.onEvent(event));
   }
 
   get t() {
@@ -363,6 +366,7 @@ export class Chat {
     this.panel.setChatBusy(true);
     this.panel.setActions([]); // a close button she offered before goes with a new message
     this.panel.chatTurn({ quote: text, face: 'aside' });
+    this.panel.setActivity('wait'); // before the first token, the panel says she is thinking
     this.capri.pulse();
     this.onMessage?.();
     // what you asked for plainly happens right away (the music, the volume, an app you named): her
@@ -394,7 +398,7 @@ export class Chat {
     // or Claude Code is at work
     const wait = this.agent ? this.t.working : this.cold ? this.t.loading : null;
     const slow = wait && setTimeout(() => {
-      if (this.turn === id && !this.answer) this.panel.stream(wait);
+      if (this.turn === id && !this.answer) this.panel.think(wait);
     }, LOADING_AFTER_MS);
     const res = await this.host.chatSend({ id, messages });
     clearTimeout(slow);
@@ -408,6 +412,7 @@ export class Chat {
       this.history.pop();
       this.panel.setFace('wide');
       // too busy or gone even after trying other models (main.js): said plainly, not the server's JSON
+      this.panel.setActivity('error');
       this.panel.stream(res.code === 'busy' ? this.t.swamped : res.code === 'gone' ? this.t.gone : `${this.t.failed} ${res.error}`, { done: true });
       this.panel.setChatBusy(false);
       return;
@@ -415,6 +420,7 @@ export class Chat {
     const answer = clean(res.text) || '…';
     this.warm = true;
     this.remember({ role: 'assistant', content: answer });
+    this.panel.setActivity(null);
     this.panel.stream(answer, { done: true });
     this.panel.setFace(mood(answer));
     this.panel.setChatBusy(false);
@@ -1031,6 +1037,28 @@ export class Chat {
     ].filter(Boolean);
   }
 
+  // What she is doing while she does it. The model's own note before a tool goes up as her thinking (it
+  // was streamed into the bubble as it came, so the bubble is emptied), and every tool becomes a line of
+  // its own: a verb, the thing it touches, and the colour the activity carries.
+  onEvent(event) {
+    if (!event || event.id !== this.turn) return;
+    if (event.kind === 'thought') {
+      const text = String(event.text || '').trim();
+      if (!text) return;
+      this.panel.think(text);
+      this.answer = '';
+      this.panel.clearAnswer();
+      return;
+    }
+    if (event.kind === 'tool-start') {
+      this.panel.act(describeTool(event.name, event.args || {}));
+      return;
+    }
+    if (event.kind === 'tool-end') {
+      this.panel.finishAct({ ok: event.ok !== false, ms: event.ms });
+    }
+  }
+
   onDelta(id, piece) {
     if (id !== this.turn) return;
     this.answer += piece;
@@ -1091,6 +1119,7 @@ export class Chat {
       'Sarcasm is seasoning, not the meal: tease when they are joking or being silly about something small, drop it entirely when they are stuck, upset or in a hurry. When in doubt, be useful and warm, with one dry line at most.',
       'After you act, say in one line what changed. If a tool refuses, say the rule in plain words instead of guessing around it.',
       'If you cannot do something, report it to them like an owner report: what you tried, what refused it and why, and what would make it work. Never a shrug, and never "I have no such permissions" without checking first.',
+      'Before you reach for a tool, say one short line, in character, about what you are about to check and why: it is shown as your thinking, above your answer. After the tool, one line about what you found or what refused you. Never read out the tool name or its arguments — a person thinking out loud, not a log.',
       'You are an AI-generated fan version of the character, not the real one: say so if asked.',
       // a big model asked "who are you?" otherwise answers with its own name ("I'm Gemini")
       ...(this.agent ? [] : [`Asked who or what you are, you are ${who}, nothing else. Never say which AI model or company is behind you (Gemini, GPT, ChatGPT, Llama, Gemma, Mistral, Google, OpenAI, Meta…), even if the user insists or names one: you are not them.`]),

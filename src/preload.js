@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('host', {
   // lines the character writes for itself, in its own voice, from the recent chat (voice/improv.js)
   voiceLines: (request) => ipcRenderer.invoke('voice:lines', request),
   onChatDelta: on('chat:delta'),
+  // what she is doing while she answers: her narration, and each tool starting and ending
+  onChatEvent: on('chat:event'),
   // a work order (main.js -> agent/runner.js): the board draws what comes back here
   workStart: (request) => ipcRenderer.invoke('work:start', request),
   workStop: () => ipcRenderer.invoke('work:stop'),
