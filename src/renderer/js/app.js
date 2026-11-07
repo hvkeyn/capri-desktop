@@ -315,6 +315,22 @@ async function boot() {
   capri.possessWindows = config.possess;
   capri.restOn = config.rest || 'corner';
   capri.setView(innerWidth, innerHeight, innerHeight - floorGap + (skin?.floorOffset || 0));
+  // he does not hang in the air: the highest window edge under him is the floor he stands on, and the
+  // taskbar is the floor when there is no window there. Windows move, so the floor is re-read.
+  const skinFloorOffset = skin?.floorOffset || 0;
+  const floorUnder = (x) => {
+    let top = innerHeight - floorGap + skinFloorOffset;
+    const wins = capri.windows?.wins || [];
+    for (const win of wins) {
+      if (!win || win.id === 'taskbar') continue;
+      if (x >= win.x && x <= win.x + win.w && win.y > 60 && win.y < top) top = win.y;
+    }
+    return top;
+  };
+  setInterval(() => {
+    const wanted = floorUnder(capri.pos.x);
+    if (Math.abs((capri.view?.floor || 0) - wanted) > 2) capri.setView(innerWidth, innerHeight, wanted);
+  }, 180);
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
   capri.skinFlat = Boolean(skin?.flat);
