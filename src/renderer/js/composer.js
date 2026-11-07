@@ -36,6 +36,8 @@ export class Composer {
     this.lastPush = 0;
     this.focusSnapshot = null;
     this.menuOpen = false;
+    // a fixed layer on the body: the panel clips what is inside it, and this menu must not be clipped
+    document.body.append(this.menuEl);
 
     this.wire();
     this.renderFiles();
@@ -81,7 +83,9 @@ export class Composer {
       if (this.menuOpen) this.hideMenu();
       else this.openMenu(this.pencilBtn.getBoundingClientRect().left, this.pencilBtn.getBoundingClientRect().top, true);
     });
-    document.addEventListener('click', () => this.hideMenu());
+    document.addEventListener('pointerdown', (e) => {
+      if (!this.menuEl.contains(e.target)) this.hideMenu();
+    });
   }
 
   keydown(e) {
@@ -250,19 +254,14 @@ export class Composer {
       });
       return button;
     }));
-    const panel = this.form.getBoundingClientRect();
     this.menuEl.hidden = false;
-    const width = this.menuEl.offsetWidth || 150;
-    if (fromPencil) {
-      // above the whole composer, right-aligned: it must never sit on top of what you are typing
-      this.menuEl.style.left = 'auto';
-      this.menuEl.style.right = '6px';
-      this.menuEl.style.top = `${-(this.menuEl.offsetHeight + 8)}px`;
-    } else {
-      this.menuEl.style.right = 'auto';
-      this.menuEl.style.left = `${Math.max(6, Math.min(x - panel.left, panel.width - width - 6))}px`;
-      this.menuEl.style.top = `${Math.max(4, y - panel.top + 8)}px`;
-    }
+    const width = this.menuEl.offsetWidth || 160;
+    const height = this.menuEl.offsetHeight || 160;
+    const panel = this.form.getBoundingClientRect();
+    const x0 = fromPencil ? panel.right - width - 6 : Math.min(x, window.innerWidth - width - 6);
+    const y0 = fromPencil ? panel.top - height - 8 : Math.min(y + 8, window.innerHeight - height - 6);
+    this.menuEl.style.left = `${Math.max(6, x0)}px`;
+    this.menuEl.style.top = `${Math.max(6, y0)}px`;
     this.menuOpen = true;
   }
 

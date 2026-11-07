@@ -1659,7 +1659,7 @@ html[data-motion='reduced'] .intro-shot {
 }
 
 .panel__menu {
-  position: absolute;
+  position: fixed;
   z-index: 5;
   min-width: 150px;
   padding: 4px;

@@ -362,6 +362,7 @@ export class Chat {
   close() {
     if (!this.open) return;
     this.open = false;
+    this.panel.setChatBusy(false);
     if (this.turn) this.host.chatStop(this.turn);
     this.turn = 0;
     this.host.focusOverlay(false);
@@ -424,6 +425,7 @@ export class Chat {
     if (this.turn !== id) {
       // closed meanwhile: your message goes too, or the next answer would answer it as well
       if (this.history.at(-1)?.content === payload) this.history.pop();
+      this.panel.setChatBusy(false);
       return;
     }
     this.turn = 0;
@@ -1142,6 +1144,7 @@ export class Chat {
       'When a fact can come from more than one place, take two: the machine itself and a second source (a file, a command, a page). If they disagree, say which you trust and why. If a source is missing, say what is missing instead of filling it in.',
       'web_fetch reads a page and gives you its text: use it for something current, and name the address you read. And use the tools they wrote themselves — harness/tools.json is theirs, and it is there to be called.',
       'For a file, search by the shape of the name with find_files ("last week", ext:pdf, in:folder) instead of walking folders; look with file_info and tree before you touch anything. copy, move and delete need full access, and delete puts the file in ~/.capri-trash — say exactly what you moved.',
+      'Do not lean on the same imagery twice in a row: the city, the sky, the rain, the neon. Say the thing plainly, or find a different picture.',
       'In an answer, set one to three key words or half-sentences in **bold** — the thing worth glancing at, not every other word. That is what gets lit in the panel.',
       'see_screen looks at the screen right now: with a vision model you get a description, with any other model the text Windows recognized on it. When they ask what is on their screen, call it first — never say the pixels are not given to you.',
       'The project is the folder you are told at the top; "в проекте" / "in the project" means that one. A bare word like png means the extension. If find_files comes back empty, read its roots and indexed count before saying there is nothing: then try another word, or search explicitly with in:. Never sweep a whole drive with Get-ChildItem — that is minutes, and it is how a search turns into a timeout.',
