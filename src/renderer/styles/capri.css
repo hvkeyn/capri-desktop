@@ -1741,6 +1741,8 @@ html[data-motion='reduced'] .intro-shot {
   right: 1vw;
   bottom: -3vh;
   height: 46vh;
+  will-change: transform, opacity;
+  contain: layout paint;
   z-index: 32;
   pointer-events: none;
   opacity: 0;

@@ -474,7 +474,12 @@ async function boot() {
   }, WATCH_MS);
   window.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (chip.visible && chip.contains(e.clientX, e.clientY, 0)) host.openMenu();
+    // right-click anywhere on her, her panel, the board or the chip opens her menu — the chip alone was
+    // the only thing it answered to, so on the character it looked broken
+    const r = panel.rect();
+    const onPanel = r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    const onChip = chip.visible && chip.contains(e.clientX, e.clientY, 0);
+    if (onPanel || onChip || capri.hit(e.clientX, e.clientY) || board.contains(e.clientX, e.clientY)) host.openMenu();
   });
   window.addEventListener('click', (e) => {
     if (chip.visible && chip.contains(e.clientX, e.clientY, 0)) comeOut();
