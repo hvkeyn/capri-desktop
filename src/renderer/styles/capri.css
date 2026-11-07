@@ -1065,28 +1065,7 @@ html[data-motion='reduced'] .intro-shot {
   z-index: 41;
 }
 
-.intro-caption {
-  position: fixed;
-  left: 50%;
-  bottom: 9vh;
-  z-index: 999;
-  transform: translate(-50%, 6px);
-  padding: 12px 28px 12px 22px;
-  background: oklch(0.17 0.012 100 / 0.94);
-  border: 2px solid var(--accent);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: clamp(18px, 2vw, 34px);
-  line-height: 1.15;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  opacity: 0;
-  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
-  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.7), 0 18px 50px oklch(0 0 0 / 0.65), 0 0 30px color-mix(in oklch, var(--accent) 30%, transparent);
-  transition: opacity 90ms steps(2, end), transform 90ms steps(2, end);
-}
+
 
 .intro-caption::before {
   content: '// ';
@@ -1715,4 +1694,41 @@ html[data-motion='reduced'] .intro-shot {
 .panel__chat.is-drop {
   outline: 1px dashed var(--accent);
   outline-offset: 3px;
+}
+
+/* the words of the entrance: the same plate her panels wear, yellow frame and all */
+.intro-caption {
+  position: fixed;
+  left: 50%;
+  bottom: 9vh;
+  z-index: 2147483000;
+  display: block;
+  transform: translate(-50%, 6px);
+  padding: 12px 28px 12px 22px;
+  box-sizing: border-box;
+  background: oklch(0.17 0.012 100 / 0.94);
+  border: 2px solid #f2f000;
+  color: #f2f000;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(18px, 2vw, 34px);
+  line-height: 1.15;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: visible;
+  box-shadow: 0 0 0 1px oklch(0 0 0 / 0.7), 0 18px 50px oklch(0 0 0 / 0.65), 0 0 30px rgba(242, 240, 0, 0.35);
+  transition: opacity 90ms steps(2, end), transform 90ms steps(2, end);
+}
+
+.intro-caption.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  animation: caption-flicker 220ms steps(2, end) 2;
+}
+
+.intro-caption.is-fading {
+  opacity: 0;
+  transform: translate(-50%, -6px);
 }
