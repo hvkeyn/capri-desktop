@@ -297,10 +297,11 @@ système. Tu peux en choisir une autre dans son menu.
 
 ### Démarrage rapide (Windows, sans coder)
 
-1. Télécharge **`Capri-Setup-x.y.z.exe`** dans la [dernière release](https://github.com/mochiiwuff/capri-desktop/releases/latest)
-   et lance-le. Il s'installe pour ton utilisateur seulement (pas besoin d'être administrateur), ajoute un raccourci
-   sur le bureau et lance Capri. Pas besoin de Node.js ni de rien d'autre.
-2. L'installeur n'est pas signé (un certificat de signature, c'est payant), donc Windows SmartScreen peut afficher
+1. Télécharge **`Capri-x.y.z-portable.exe`** dans la [dernière release](https://github.com/hvkeyn/capri-desktop/releases/latest)
+   et lance-le : rien ne s'installe — c'est toute l'appli dans un seul fichier, et elle garde ses réglages dans
+   `%APPDATA%\capri-desktop`. Tu préfères un dossier ? Le `.zip` d'à côté se décompresse n'importe où.
+   Pas besoin de Node.js ni de rien d'autre.
+2. Il n'est pas signé (un certificat de signature, c'est payant), donc Windows SmartScreen peut afficher
    « Windows a protégé votre ordinateur » : clique sur **Informations complémentaires**, puis **Exécuter quand même**.
 3. Capri apparaît et se présente. Clique sur **Me brancher** : ça la connecte à Claude Code.
 4. Ferme complètement Claude Code et rouvre-le (il lit ses hooks au début d'une session). Dès que Claude fait quelque
@@ -323,7 +324,7 @@ s'endort. Tu peux juste la laisser là.
 Il faut [Node.js](https://nodejs.org) 20 ou plus.
 
 ```bash
-git clone https://github.com/mochiiwuff/capri-desktop.git
+git clone https://github.com/hvkeyn/capri-desktop.git
 cd capri-desktop
 npm install
 npm start

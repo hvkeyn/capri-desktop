@@ -346,10 +346,11 @@ own. You can choose another one in her menu.
 
 ### Quick start (Windows, no coding)
 
-1. Download **`Capri-Setup-x.y.z.exe`** from the [latest release](https://github.com/mochiiwuff/capri-desktop/releases/latest)
-   and run it. It installs for your user only (no admin rights), adds a desktop shortcut and starts Capri.
+1. Download **`Capri-x.y.z-portable.exe`** from the [latest release](https://github.com/hvkeyn/capri-desktop/releases/latest)
+   and run it: nothing is installed — it's the whole app in one file, and it keeps its settings in
+   `%APPDATA%\capri-desktop`. Prefer a folder? The `.zip` next to it unpacks anywhere.
    You don't need Node.js or anything else.
-2. The installer isn't signed (a code-signing certificate costs money), so Windows SmartScreen may say
+2. It isn't signed (a code-signing certificate costs money), so Windows SmartScreen may say
    "Windows protected your PC": click **More info**, then **Run anyway**.
 3. Capri shows up and introduces herself. Click **Plug me in**: that connects her to Claude Code.
 4. Close Claude Code completely and open it again (it reads its hooks when a session starts). As soon as Claude does
@@ -371,7 +372,7 @@ asleep. You can just leave her there.
 You need [Node.js](https://nodejs.org) 20 or newer.
 
 ```bash
-git clone https://github.com/mochiiwuff/capri-desktop.git
+git clone https://github.com/hvkeyn/capri-desktop.git
 cd capri-desktop
 npm install
 npm start
