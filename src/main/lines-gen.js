@@ -33,6 +33,18 @@ const KINDS = {
     en: 'the assistant needs the user\'s permission before it can go on. One short line, urgent but not bossy',
     ru: 'ассистенту нужно разрешение пользователя, чтобы продолжить. Одна короткая фраза, срочно, но не начальственно',
   },
+  gaze: {
+    en: 'you are looking up at the satellite over the city. One short line about it, no explanation',
+    ru: 'ты смотришь вверх на спутник над городом. Одна короткая фраза про него, без объяснений',
+  },
+  uplink: {
+    en: 'you think about going up there yourself one day. One short line, wistful but dry',
+    ru: 'ты думаешь, что однажды поднимешься туда сама. Одна короткая фраза, с тоской, но сухо',
+  },
+  reply: {
+    en: 'they just said something to you and you answer back, one short line, no question',
+    ru: 'пользователь только что что-то сказал, ответь одной короткой фразой, без вопроса',
+  },
   bye: {
     en: 'they are closing the chat or leaving for the night. Say goodbye in one short line',
     ru: 'пользователь закрывает чат или уходит на ночь. Попрощайся одной короткой фразой',

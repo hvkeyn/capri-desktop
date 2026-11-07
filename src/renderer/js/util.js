@@ -5,12 +5,40 @@ export const rand = (a, b) => a + Math.random() * (b - a);
 // twice in a row often enough to notice — and on a pool of four, it read as a catchphrase.
 const bags = new WeakMap();
 
+// The bag survives a restart: without that, every launch started the same pool from the beginning and a
+// line heard yesterday came back as "the same phrase again". localStorage if the page has it, memory if not.
+const store = (() => {
+  try {
+    const probe = '__capri_bag__';
+    localStorage.setItem(probe, '1');
+    localStorage.removeItem(probe);
+    return localStorage;
+  } catch {
+    return null;
+  }
+})();
+
+const hash = (text) => {
+  let h = 0;
+  for (let i = 0; i < text.length; i += 1) h = (h * 31 + text.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+};
+
+const bagKey = (list) => `capri.bag.${hash(list.map((item) => String(item)).join('|'))}.${list.length}`;
+
 export const pick = (list) => {
   if (!Array.isArray(list) || !list.length) return undefined;
   if (list.length === 1) return list[0];
   let state = bags.get(list);
   if (!state) {
-    state = { bag: [], last: -1 };
+    const key = bagKey(list);
+    let saved = null;
+    try {
+      saved = store ? JSON.parse(store.getItem(key) || 'null') : null;
+    } catch {
+      saved = null;
+    }
+    state = saved && Array.isArray(saved.bag) ? saved : { bag: [], last: -1 };
     bags.set(list, state);
   }
   if (!state.bag.length) {
@@ -28,6 +56,11 @@ export const pick = (list) => {
   }
   const index = state.bag.pop();
   state.last = index;
+  try {
+    if (store) store.setItem(bagKey(list), JSON.stringify({ bag: state.bag, last: state.last }));
+  } catch {
+    // a full or blocked store only costs the memory of it
+  }
   return list[index];
 };
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
