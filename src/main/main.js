@@ -565,6 +565,7 @@ function rebuildTray() {
     ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
     { label: t.talk, click: () => sendCommand('chat') },
     { label: t.moreLines, click: () => sendCommand('moreLines') },
+    { label: (GUITAR[lang] || GUITAR.en), click: () => sendCommand('guitar') },
     {
       // the working half: a work order in a folder of yours, and the rounds where she learns from you
       label: t.work,

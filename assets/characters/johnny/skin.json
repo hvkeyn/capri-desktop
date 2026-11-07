@@ -238,5 +238,23 @@
     }
   },
   "flat": true,
-  "floorOffset": 26
+  "floorOffset": 26,
+  "guitar": {
+    "image": "poses/guitar.webp",
+    "tracks": [
+      "audio/guitar/01-busker-i-pon-pon-shit.mp3",
+      "audio/guitar/02-busker-ii-chippin-in.mp3",
+      "audio/guitar/03-busker-iii-beast-of-beauclair.mp3",
+      "audio/guitar/04-busker-iv.mp3",
+      "audio/guitar/05-busker-v.mp3",
+      "audio/guitar/06-chippin-in-kerry.mp3",
+      "audio/guitar/07-kerrys-yacht-song.mp3",
+      "audio/guitar/08-nomad-campfire-song.mp3",
+      "audio/guitar/09-outsider-no-more-acoustic.mp3",
+      "audio/guitar/10-scooters-song.mp3",
+      "audio/guitar/11-jackies-ofrenda-i.mp3",
+      "audio/guitar/12-jackies-ofrenda-ii.mp3",
+      "audio/guitar/13-jackies-ofrenda-iii.mp3"
+    ]
+  }
 }

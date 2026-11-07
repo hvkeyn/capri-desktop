@@ -325,4 +325,15 @@ const ACCESS = {
   },
 };
 
-module.exports = { TRAY, TRAY_M, POSE_LABELS, WORK, UPDATE, ACCESS, LANGS: Object.keys(TRAY) };
+
+// the guitar in her menu
+const GUITAR = {
+  fr: 'Jouer de la guitare',
+  en: 'Play the guitar',
+  es: 'Tocar la guitarra',
+  pt: 'Tocar violão',
+  ru: 'Играть на гитаре',
+};
+
+module.exports = {
+  GUITAR, TRAY, TRAY_M, POSE_LABELS, WORK, UPDATE, ACCESS, LANGS: Object.keys(TRAY) };

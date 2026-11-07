@@ -7,6 +7,7 @@ import { Voice } from './voice.js';
 import { Brain } from './brain.js';
 import { Improv } from './improv.js';
 import { Guide } from './guide.js';
+import { Guitar } from './guitar.js';
 import { Mission } from './mission.js';
 import { Chat } from './chat.js';
 import { Setup } from './setup.js';
@@ -517,8 +518,16 @@ async function boot() {
   // Her guide (guide.js): her welcome on first launch, and "How does it work?" in her menu,
   // where she takes you to things and points at them.
   const guide = new Guide({ capri, panel, voice, host, brain });
+  const guitar = new Guitar({ capri, panel, host, skin });
+  window.__capriGuitar = guitar;
   // Talking to her (chat.js): "Talk to her" in her menu, or the button when you click her idle.
   const chat = new Chat({ capri, panel, voice, host, brain });
+  // nothing is happening: now and then one chord from the edge, never while the chat or a job is open
+  setInterval(() => {
+    if (chat.open || guide.running || capri.busy || capri.stowed || capri.dragging) return;
+    if (capri.mode !== 'idle' && capri.mode !== 'sleep') return;
+    guitar.maybe();
+  }, 75000);
   // who's on the desktop: their words, their name in her panels, their projection (characters.js)
   chat.skin = skin;
   if (skin?.name) {
@@ -1095,6 +1104,9 @@ async function boot() {
         }
         break;
       }
+      case 'guitar': // "Play the guitar" in the tray: a whole song, sitting on the edge
+        guitar.toggle();
+        break;
       case 'chat': // "Talk to her" in her menu
         chat.start();
         break;
@@ -1247,7 +1259,8 @@ async function boot() {
   const hooks = await host.hooksStatus();
   // the pieces of her, for the smoke test (scripts/smoke.js) and for a look from the devtools console:
   // the board is otherwise only reachable through her menu
-  window.__capri = { capri, panel, brain, chat, board, mission };
+  window.__capri = {
+    guitar, capri, panel, brain, chat, board, mission };
   // her welcome: the first time, or while she's meant to watch Claude Code and isn't plugged into it
   if (!config.welcomed || (config.claude && !hooks.installed)) guide.welcome();
   else panel.say({ kind: 'info', line: brain.onlineLine(), hold: 4000 });

@@ -96,6 +96,10 @@ function introOf(base, raw) {
     sound: typeof raw.sound === 'string' && raw.sound ? `${base}${raw.sound}` : '',
     soundFrom: Number.isFinite(soundFrom) ? Math.max(0, Math.min(frames.length - 1, soundFrom)) : -1,
     soundVolume: Number.isFinite(soundVolume) ? Math.min(1, Math.max(0, soundVolume)) : 0.7,
+    guitar: raw.guitar && typeof raw.guitar === 'object' ? {
+      image: typeof raw.guitar.image === 'string' && raw.guitar.image ? `${base}${raw.guitar.image}` : '',
+      tracks: Array.isArray(raw.guitar.tracks) ? raw.guitar.tracks.filter((t) => typeof t === 'string').map((t) => `${base}${t}`) : [],
+    } : null,
     captionAt: Array.isArray(raw.captionAt) ? raw.captionAt.map((v) => Math.min(1, Math.max(0, Number(v) || 0))) : [],
     // frames that are full pictures (a room behind him) fill the screen; transparent ones float
     cover: raw.cover === true,
