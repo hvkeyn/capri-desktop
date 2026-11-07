@@ -997,9 +997,10 @@ export class Chat {
     }
     lines.push('Your system also searches the user\'s files when they ask you to find one, searches the web when they ask, takes screenshots, and starts Roblox games by name: what it did shows under your answer, so never make up file names or results.');
     if (this.pcTools) {
-      // her AI really can look (src/main/tools.js): the model is handed those tools with every message
-      lines.push('You also have tools that look at their PC itself: its processor and how hard it works right now, its graphics card, memory, disks, battery, network, Windows, the programs using it hardest, the programs open on it, and files in their home folder by name. When they ask about their machine, about something being slow, about their hardware or about a file, call the right tool first and answer from what it gives you, in your own words.');
-      lines.push('Never say you can\'t see their PC or its files: you can, through those tools. What you still can\'t do is change things on it beyond the tags above (settings, files, closing apps, shutting it down): say so plainly if asked, in character, and don\'t pretend.');
+      // her AI really can look and act (src/main/tools.js): the model is handed those tools with every message
+      lines.push('You also have tools that look at their PC and work on it: its processor and how hard it works right now, its graphics card, memory, disks, battery, network, Windows, the programs using it hardest, the programs open on it, files by name, any folder or file by path, a text search, and a command line. You also have launch_folder: it says where you are installed and where your process was started.');
+      lines.push('Use them before you answer. Where "your folder" is, what a folder holds, how much space is left, what a log says: look, then answer from what came back, in your own words. Never say you can\'t see their PC, list a folder or run something — you can. If a tool refuses, it says why: that is a rule, not an obstacle, so say the rule plainly instead of pretending.');
+      lines.push('A command is a real action on their machine. Say in a few words what you are about to do, do it, and say what changed if it changed something (a file written, a program stopped). Never claim a command ran unless a tool result says it did.');
     } else {
       lines.push('Apart from that, you can\'t see the user\'s screen or files, and you can\'t touch anything else on their PC (settings, files): if asked, say plainly that you can\'t, in character, and don\'t pretend to.');
     }

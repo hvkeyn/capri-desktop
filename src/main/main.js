@@ -830,14 +830,26 @@ async function signInToOllama() {
   }
 }
 
-// Her answer with the tools of tools.js: her AI may look at the PC (its hardware and how hard it
-// works, what's open on it, files by name) before it writes anything. Read-only, so it needs no
-// click; anything that *changes* the PC is still her chat's own doing, with its buttons.
-const TOOL_ROUNDS = 3;
+// Her chat's tools (tools.js) talked to the same PC her work orders touch: the same level, the same
+// guard. Five rounds, because a real task is "read it, run it, read what it said, run the fix".
+const TOOL_ROUNDS = 5;
+
+// Where her AI is allowed to work: the folder she was set up with, else the user's home. `full` reads
+// anywhere; below that, home and below.
+function chatToolContext() {
+  const cfg = config.load();
+  return {
+    autonomy: cfg.autonomy || 'guard',
+    root: cfg.workspace || os.homedir(),
+    home: os.homedir(),
+    appRoot: ROOT,
+  };
+}
 
 async function chatWithTools(cfg, model, messages, send, signal) {
   const turns = [...messages];
   let text = '';
+  const ctx = chatToolContext();
   for (let round = 0; round <= TOOL_ROUNDS; round++) {
     const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { model, messages: turns, tools: tools.TOOLS }, send, signal);
     text = res.text;
@@ -850,7 +862,7 @@ async function chatWithTools(cfg, model, messages, send, signal) {
     for (const call of res.toolCalls) {
       let args = {};
       try { args = JSON.parse(call.arguments || '{}'); } catch { /* no arguments: the tool's own defaults */ }
-      const out = await tools.run(call.name, args).catch((err) => ({ error: err.message }));
+      const out = await tools.run(call.name, args, ctx).catch((err) => ({ error: err.message }));
       turns.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out).slice(0, 6000) });
     }
   }
@@ -858,7 +870,8 @@ async function chatWithTools(cfg, model, messages, send, signal) {
 }
 
 // Her standing notes, from the harness evolve.js edits, at the end of the system prompt where a model
-// weighs them most — and only when there is something there to weigh.
+// weighs them most — and only when there is something there to weigh. After them, the facts she cannot
+// work out for herself: where she is installed, where this process was started, and how far her hands go.
 function withStandingNotes(messages) {
   const turns = messages.map((m) => ({ ...m }));
   let note = '';
@@ -867,7 +880,10 @@ function withStandingNotes(messages) {
   } catch {
     // no harness yet: her own persona stands alone
   }
-  if (!note) return turns;
+  const cfg = config.load();
+  note += `\n\nWhere you are: the app runs from ${ROOT} (that is your own folder), this process was started in `
+    + `${process.cwd()}, the user's home folder is ${os.homedir()}, and your commands run at level `
+    + `"${cfg.autonomy || 'guard'}" (full means any program, a shell too).`;
   if (turns[0]?.role === 'system' && typeof turns[0].content === 'string') {
     turns[0].content += note;
   } else {

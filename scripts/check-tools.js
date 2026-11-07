@@ -3,9 +3,13 @@
 const assert = require('node:assert');
 const llm = require('../src/main/llm');
 const tools = require('../src/main/tools');
+const path = require('node:path');
+const os = require('node:os');
 
 const cfg = { apiKeys: {}, provider: 'deepseek' };
-const MAX_ROUNDS = 3;
+const MAX_ROUNDS = 5;
+// what main.js hands her: the level in her menu, the home folder, and the folder she runs from
+const CTX = { autonomy: 'full', root: os.homedir(), home: os.homedir(), appRoot: path.resolve(__dirname, '..') };
 
 (async () => {
   if (!process.env.DEEPSEEK_API_KEY && !cfg.apiKeys.deepseek) {
@@ -18,7 +22,7 @@ const MAX_ROUNDS = 3;
   const system = 'You are Capri, the personality construct from Project Capricorn, living on the user\'s desktop. '
     + 'You can look at their PC with the tools you have; use them instead of saying you cannot see the machine. '
     + 'Answer in Russian, in character, two sentences at most, plain text.';
-  const history = [{ role: 'user', content: 'Опиши что у меня в системе сейчас с оборудованием и какое оно загружено' }];
+  const history = [{ role: 'user', content: 'Опиши моё железо и покажи, что лежит в папке, откуда ты запущена' }];
 
   const messages = [{ role: 'system', content: system }, ...history];
   const used = [];
@@ -37,7 +41,7 @@ const MAX_ROUNDS = 3;
     for (const call of res.toolCalls) {
       let args = {};
       try { args = JSON.parse(call.arguments || '{}'); } catch {}
-      const out = await tools.run(call.name, args);
+      const out = await tools.run(call.name, args, CTX);
       used.push(call.name);
       console.log(`  tool ${call.name}(${JSON.stringify(args)}) -> ${JSON.stringify(out).slice(0, 160)}…`);
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(out).slice(0, 6000) });

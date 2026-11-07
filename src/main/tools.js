@@ -1,16 +1,20 @@
 'use strict';
 
-// What her AI may look at on this PC, offered to it as tools (OpenAI-style function calling): the
-// machine's hardware and how hard it works, what's open on it, and files by name. Read only, all of
-// it, so her AI can call them by itself, without a click. Anything that *changes* the PC stays in
-// her chat's own hands (chat.js), where it already has its buttons.
+// What her AI may look at on this PC, and what it may run on it, offered to it as tools (OpenAI-style
+// function calling): the machine's hardware and how hard it works, what's open on it, files by name,
+// folders and files by path, a search, and a command line. The commands go through agent/guard.js at
+// the level in her menu (full by default: a shell too), so a chat that used to answer "I can't" now
+// does it — and a refusal is a sentence the model reads, not a silent no.
 //
 // Windows gets the real thing (WMI through PowerShell); elsewhere the same shape from Node.
 
 const os = require('node:os');
 const fs = require('node:fs');
+const path = require('node:path');
 const { execFile } = require('node:child_process');
 const apps = require('./apps');
+const guard = require('./agent/guard');
+const exec = require('./agent/exec');
 
 const WIN = process.platform === 'win32';
 const GB = (bytes) => Math.round((bytes / 1024 ** 3) * 10) / 10;
@@ -64,6 +68,71 @@ const TOOLS = [
           limit: { type: 'integer', description: 'how many, 1 to 20 (default 8)' },
         },
         required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'launch_folder',
+      description: 'Where you are installed and where your process was started from, plus this PC\'s folder and the level you may run things at. Use it instead of guessing where "your folder" is.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_dir',
+      description: "List a folder on this PC. A path starting with ~ is the user's home; at full access an absolute path anywhere is fine, otherwise the home folder and below.",
+      parameters: {
+        type: 'object',
+        properties: { path: { type: 'string', description: 'folder; default is the home folder' } },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'read_file',
+      description: 'Read a text file: the source the user means, a log, a config. Read before you change anything, and never guess at a file you can open.',
+      parameters: {
+        type: 'object',
+        properties: {
+          path: { type: 'string', description: 'file, ~ allowed, absolute at full access' },
+          offset: { type: 'integer', description: 'byte to start at (default 0), for the rest of a long file' },
+        },
+        required: ['path'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_files',
+      description: 'Find text in files under a folder: every matching line with its file and line number. Plain text, or /a regex/ between slashes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pattern: { type: 'string' },
+          path: { type: 'string', description: 'folder to search under (default: the home folder)' },
+        },
+        required: ['pattern'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_command',
+      description: "Run a command on this PC and read what it printed: the shell at full access, a project's own tools below that. The level in the user's menu decides what is allowed; a refusal says why and is a rule, not an obstacle.",
+      parameters: {
+        type: 'object',
+        properties: {
+          command: { type: 'string', description: 'e.g. "dir C:\\Projects" or "git status --short" — no shell tricks unless running a shell' },
+          cwd: { type: 'string', description: 'folder to run it in (default: the working folder)' },
+        },
+        required: ['command'],
       },
     },
   },
@@ -176,15 +245,174 @@ async function findFiles(name, limit = 8) {
   return rows.map((f) => ({ path: f.FullName, kb: f.KB }));
 }
 
-// One way in, from her chat (main.js): a tool's name and the arguments her AI gave for it.
-async function run(name, args = {}) {
+// One way in, from her chat (main.js): a tool's name, the arguments her AI gave for it, and where she
+// is allowed to work. Everything that reads lives here; everything that runs goes through agent/guard
+// and agent/exec, at the level in her menu — so a chat that used to say "I can't" now does it, and a
+// command that is refused says so in words the model can read.
+async function run(name, args = {}, ctx = {}) {
   const a = args && typeof args === 'object' ? args : {};
   switch (name) {
     case 'system_info': return systemInfo(String(a.section || 'all'));
     case 'open_apps': return openApps();
     case 'find_files': return findFiles(a.name, a.limit);
+    case 'launch_folder': return launchFolder(ctx);
+    case 'list_dir': return listFolder(a.path, ctx);
+    case 'read_file': return readFileContent(a.path, a.offset, ctx);
+    case 'search_files': return searchInFolder(a.pattern, a.path, ctx);
+    case 'run_command': return runCommand(a.command, a.cwd, ctx);
     default: return { error: `no such tool: ${name}` };
   }
 }
 
-module.exports = { TOOLS, run, systemInfo, openApps, findFiles };
+// ---- reading and running, from her chat ------------------------------------------------------------
+
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'target', 'vendor', '.venv', 'venv', '__pycache__', 'AppData']);
+const BINARY = /\.(png|jpe?g|gif|webp|bmp|ico|woff2?|ttf|otf|mp[34]|wav|ogg|zip|7z|rar|gz|tgz|exe|dll|so|dylib|pdf|asar|db|sqlite|bin|dat|psd|blend|fbx|glb|gltf)$/i;
+const READ_CAP = 160 * 1024;
+const LIST_CAP = 200;
+const HIT_CAP = 80;
+
+const chatRoot = (ctx) => path.resolve(ctx.root || ctx.home || os.homedir());
+
+// A path the model gave: `~` for home, relative to the working folder, and absolute anywhere only at
+// full access (a read is harmless, but a chat shouldn't be talked into poking around at `guard`).
+function chatPath(input, ctx) {
+  const raw = String(input ?? '').trim() || '.';
+  const home = ctx.home || os.homedir();
+  let want = raw;
+  if (want === '~') want = home;
+  else if (want.startsWith('~/') || want.startsWith('~\\')) want = path.join(home, want.slice(2));
+  const root = chatRoot(ctx);
+  const full = path.resolve(root, want);
+  if (ctx.autonomy !== 'full' && !guard.within(home, full) && !guard.within(root, full)) {
+    return { error: `"${raw}" is outside your home folder; full access (her menu › Work) reads anywhere` };
+  }
+  return { path: full };
+}
+
+function launchFolder(ctx) {
+  return {
+    app: ctx.appRoot || null,
+    executable: process.execPath,
+    startedIn: process.cwd(),
+    home: ctx.home || os.homedir(),
+    workingFolder: chatRoot(ctx),
+    level: ctx.autonomy || 'guard',
+  };
+}
+
+function listFolder(where, ctx) {
+  const at = chatPath(where || '.', ctx);
+  if (at.error) return { error: at.error };
+  let entries;
+  try {
+    entries = fs.readdirSync(at.path, { withFileTypes: true });
+  } catch (err) {
+    return { error: `cannot read that folder: ${err.code || err.message}` };
+  }
+  const rows = entries.slice(0, LIST_CAP).map((e) => {
+    let bytes = null;
+    try { bytes = e.isFile() ? fs.statSync(path.join(at.path, e.name)).size : null; } catch { /* gone */ }
+    return { name: e.name, dir: e.isDirectory(), bytes };
+  });
+  return { path: at.path, entries: rows, ...(entries.length > rows.length ? { more: true } : {}) };
+}
+
+function readFileContent(where, offset = 0, ctx = {}) {
+  const at = chatPath(where, ctx);
+  if (at.error) return { error: at.error };
+  let stat;
+  try {
+    stat = fs.statSync(at.path);
+  } catch {
+    return { error: `no such file: ${where}` };
+  }
+  if (!stat.isFile()) return { error: `not a file: ${where}` };
+  if (BINARY.test(at.path)) return { error: `${where} is binary; only text can be read` };
+  if (stat.size > 8 * 1024 * 1024) return { error: `${Math.round(stat.size / 1024)} KB is too big to read at once` };
+  const start = Math.max(0, Number(offset) || 0);
+  const fd = fs.openSync(at.path, 'r');
+  try {
+    const length = Math.min(READ_CAP, Math.max(0, stat.size - start));
+    const buf = Buffer.alloc(length);
+    fs.readSync(fd, buf, 0, length, start);
+    const clipped = start + length < stat.size;
+    return { path: at.path, bytes: stat.size, text: buf.toString('utf8'), ...(clipped ? { more: true, nextOffset: start + length } : {}) };
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function searchInFolder(pattern, where, ctx) {
+  const at = chatPath(where || '.', ctx);
+  if (at.error) return { error: at.error };
+  const source = String(pattern || '');
+  if (!source) return { error: 'nothing to search for' };
+  let test = null;
+  if (/^\/.*\/[gimsuy]*$/.test(source)) {
+    try {
+      test = new RegExp(source.slice(1, source.lastIndexOf('/')), source.slice(source.lastIndexOf('/') + 1));
+    } catch {
+      return { error: 'that is not a valid pattern' };
+    }
+  }
+  const hits = [];
+  let walked = 0;
+  const walk = (dir) => {
+    if (hits.length >= HIT_CAP || walked > 3000) return;
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (hits.length >= HIT_CAP) return;
+      if (e.isDirectory()) {
+        if (!SKIP_DIRS.has(e.name)) walk(path.join(dir, e.name));
+        continue;
+      }
+      if (SKIP_DIRS.has(e.name) || BINARY.test(e.name)) continue;
+      walked += 1;
+      let text;
+      try {
+        const size = fs.statSync(path.join(dir, e.name)).size;
+        if (size > READ_CAP) continue;
+        text = fs.readFileSync(path.join(dir, e.name), 'utf8');
+      } catch {
+        continue;
+      }
+      const lines = text.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const hit = test ? test.test(line) : line.toLowerCase().includes(source.toLowerCase());
+        if (test) test.lastIndex = 0;
+        if (!hit) continue;
+        hits.push({ file: path.relative(at.path, path.join(dir, e.name)), line: i + 1, text: line.trim().slice(0, 200) });
+        if (hits.length >= HIT_CAP) break;
+      }
+    }
+  };
+  walk(at.path);
+  return { pattern: source, in: at.path, hits, ...(hits.length >= HIT_CAP ? { more: true } : {}) };
+}
+
+async function runCommand(command, cwd, ctx = {}) {
+  const text = String(command || '').trim();
+  if (!text) return { error: 'empty command' };
+  const where = cwd ? chatPath(cwd, ctx) : { path: chatRoot(ctx) };
+  if (where.error) return { error: where.error };
+  const out = await exec.run(text, { root: where.path, autonomy: ctx.autonomy || 'guard' });
+  // what a model needs is the tail: a failing build says why at the end of stderr, not at the start
+  return {
+    ok: out.ok,
+    command: out.command || text,
+    exit: out.ok ? 0 : (out.code ?? null),
+    ms: out.ms || 0,
+    out: out.out || '',
+    stderr: out.stderr || '',
+    ...(out.error ? { error: out.error } : {}),
+  };
+}
+
+module.exports = { TOOLS, run, systemInfo, openApps, findFiles, launchFolder, listFolder, readFileContent, searchInFolder, runCommand };
