@@ -9,6 +9,7 @@ import { pick, fmt } from './util.js';
 import { describe as describeTool, WAITING } from './activity.js';
 import { ASSISTANT_NAMES } from './lines.js';
 import { parseReminder, parseWhen, clock } from './reminders.js';
+import { Composer, fileContext } from './composer.js';
 
 const REMEMBER = 20; // messages she has in mind when answering
 const KEEP = 60;     // messages she remembers across restarts (memory.json)
