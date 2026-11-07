@@ -26,6 +26,7 @@ const launch = require('./launch');
 const files = require('./files');
 const { Agent } = require('./agent');
 const updater = require('./update');
+const ocr = require('./ocr');
 const attach = require('./agent/attach');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
@@ -120,6 +121,38 @@ function attachmentsFromClipboard() {
 const DESCRIBE_SYSTEM = 'You read a picture for someone who is about to act on it. Say everything in it that could matter, '
   + 'transcribe any text exactly, name the app or site if it is recognisable, and leave out opinion. '
   + 'Answer in the language of the task. Nothing else: no preamble.';
+
+
+// What "what is on my screen" means here: one picture, then her eyes or Windows' OCR. A vision model
+// describes it; a text-only one gets the words Windows recognized, which is most of what a desktop is.
+async function readScreen() {
+  const shot = await snapScreen();
+  const file = path.join(app.getPath('temp'), `capri-screen-${Date.now()}.jpg`);
+  fs.writeFileSync(file, Buffer.from(shot, 'base64'));
+  try {
+    const cfg = config.load();
+    const model = pickModel(cfg);
+    const eyes = cfg.provider !== 'claude'
+      && !(cfg.provider === 'ollama' && !(await ollama.canSee(model)));
+    if (eyes) {
+      const described = await describePicture({ path: file, mime: 'image/jpeg', name: 'screen.jpg' }, 'what is happening on this screen right now');
+      if (described.description) return { ok: true, mode: 'vision', text: described.description, model };
+    }
+    const read = await ocr.recognize(file);
+    if (read.ok) {
+      return {
+        ok: true,
+        mode: 'ocr',
+        text: read.text,
+        lang: read.lang,
+        note: eyes ? 'the picture could not be described; this is the text recognized on it' : 'the model has no eyes: this is the text Windows recognized on the screen',
+      };
+    }
+    return { ok: false, error: 'nothing could be read on the screen' };
+  } finally {
+    try { fs.rmSync(file, { force: true }); } catch { /* gone already */ }
+  }
+}
 
 async function describePicture(item, goal) {
   const cfg = config.load();
@@ -1677,6 +1710,7 @@ function main() {
     createOverlay();
     createTray();
     loadCustomTools(); // the ones the user wrote in harness/tools.json, if any
+    tools.setScreenReader(readScreen); // "what is on my screen" is a tool now, like the rest
     // once, a little after she is up: update.js caches the answer for 12 hours, and a quiet check says
     // nothing when there is nothing to say (an update that exists is always shown)
     if (config.load().checkUpdates !== false) {

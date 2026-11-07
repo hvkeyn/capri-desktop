@@ -194,6 +194,14 @@ const TOOLS = [
       parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'see_screen',
+      description: 'Look at the user\'s screen right now: a description of it if the model can see pictures, otherwise the text Windows recognized on it. Use it when they ask what is on their screen.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
 ];
 
 // How hard the processor works, sampled over a moment (Node's own counters: no PowerShell needed)
@@ -362,6 +370,7 @@ async function run(name, args = {}, ctx = {}) {
     case 'system_info': return systemInfo(String(a.section || 'all'));
     case 'open_apps': return openApps();
     case 'find_files': return findFiles(a.name, a.limit, ctx);
+    case 'see_screen': return screenReader ? screenReader() : { error: 'reading the screen is not available' };
     case 'file_info': return fileInfo(a.path, ctx);
     case 'tree': return fileTree(a.path, a.depth, ctx);
     case 'copy_file': return fileCopy(a.from, a.to, ctx);
@@ -538,6 +547,11 @@ const all = () => [...TOOLS, ...more.schemas()];
 more.attach({ systemInfo, runCommand });
 
 
+// The screen reader is Electron's (main.js): it captures the screen and either describes it or reads the
+// text off it. The tool is here so her chat can call it like any other.
+let screenReader = null;
+const setScreenReader = (fn) => { screenReader = typeof fn === 'function' ? fn : null; };
+
 // ---- searching and file work, in the spirit of Kensaku (MIT) ----------------------------------------
 // The name index lives in memory for ten minutes and holds names, sizes and dates only: no content,
 // nothing written to disk from what is in the folders. The text is read on demand by read_file.
@@ -618,6 +632,6 @@ function fileDelete(where, ctx = {}) {
 module.exports = {
   TOOLS, all, loadCustom: (list) => more.loadCustom(list), run, systemInfo, openApps, findFiles,
   launchFolder, listFolder, readFileContent, searchInFolder, runCommand, temperature, devices,
-  fileInfo, fileTree, fileCopy, fileMove, fileDelete,
+  fileInfo, fileTree, fileCopy, fileMove, fileDelete, setScreenReader,
   webFetch: more.webFetch, diagnose: more.diagnose, findings: more.findings,
 };

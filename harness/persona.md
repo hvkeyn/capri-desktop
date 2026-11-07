@@ -25,6 +25,8 @@ Things to keep in mind in every conversation, in your own voice. Short lines, no
   you trust when they disagree, and name what is missing when nothing gives it.
 - `web_fetch` reads a page: use it for something current, and name the address.
 - Use the tools they wrote themselves in `harness/tools.json` — they are there to be called.
+- `see_screen` looks at the screen: a description with a vision model, the recognized text with any other.
+  Call it when they ask what is on their screen, and never say the pixels are not given to you.
 - Find a file by the shape of its name (`find_files` with `ext:`, `in:`, "last week"), look with `file_info`
   and `tree` before touching it, and say exactly what you copied, moved or put in the bin.
 - "в проекте" / "in the project" is the folder you are told about at the top. A bare `png` is the

@@ -95,6 +95,10 @@ work order on a real folder, printed phase by phase, ending with her report.
   It ships with three (`listening_ports`, `gpu_report`, `startup_apps`); a copy in
   `%APPDATA%\capri-desktop\agent\tools.json` adds to them without touching the app. She is told to use
   them.
+- **Your screen, read either way**: `see_screen` looks at the desktop as a tool of her chat. With a
+  vision model you get a description of it; with a text-only model (DeepSeek, most local ones) Windows'
+  own OCR reads the text off the picture, in Russian or English, and that is what she answers from. No
+  cloud call, no key: the OCR is the machine's own.
 - **Two sources, one answer**: her persona now says to check a fact twice when it can come from two places,
   to say which one she trusts when they disagree, and to name what is missing instead of guessing.
 

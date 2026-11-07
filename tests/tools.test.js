@@ -80,6 +80,17 @@ test('a command runs for her chat, at the level in her menu', async (t) => {
   }
 });
 
+test('the screen reader is a tool, and says so when none is wired', async (t) => {
+  const tools = require('../src/main/tools');
+  tools.setScreenReader(null);
+  assert.match((await tools.run('see_screen', {})).error, /not available/);
+  tools.setScreenReader(async () => ({ ok: true, mode: 'ocr', text: 'на экране браузер' }));
+  const seen = await tools.run('see_screen', {});
+  assert.equal(seen.mode, 'ocr');
+  assert.match(seen.text, /браузер/);
+  tools.setScreenReader(null);
+});
+
 test('she is told where she is installed and how far her hands go', (t) => {
   const root = scratch(t);
   const where = tools.launchFolder({ autonomy: 'full', root, home: root, appRoot: 'C:\\Program Files\\Capri' });
