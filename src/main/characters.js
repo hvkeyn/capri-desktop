@@ -71,17 +71,25 @@ function introOf(base, raw) {
   const durations = Array.isArray(raw.durations)
     ? raw.durations.map((ms) => Math.min(4000, Math.max(80, Number(ms) || 0)))
     : [];
-  const captions = Array.isArray(raw.captions)
-    ? raw.captions
-      .map((c) => ({ from: Math.max(0, Number(c?.from) || 0), text: String(c?.text || '').trim().slice(0, 90) }))
-      .filter((c) => c.text)
-    : [];
+  const clean = (list) => (Array.isArray(list) ? list : [])
+    .map((c) => ({ from: Math.max(0, Number(c?.from) || 0), text: String(c?.text || '').trim().slice(0, 90) }))
+    .filter((c) => c.text);
+  const captions = clean(raw.captions);
+  // the same two lines in every language the app speaks: the caption follows the menu, not the skin
+  const captionsByLang = raw.captionsByLang && typeof raw.captionsByLang === 'object'
+    ? Object.fromEntries(Object.entries(raw.captionsByLang).map(([lang, list]) => [lang, clean(list)]).filter(([, list]) => list.length))
+    : {};
+  const lineByLang = raw.lineByLang && typeof raw.lineByLang === 'object'
+    ? Object.fromEntries(Object.entries(raw.lineByLang).map(([lang, text]) => [lang, String(text || '').trim().slice(0, 200)]).filter(([, text]) => text))
+    : {};
   return {
     frames,
     closeupFrom: Number.isFinite(closeupFrom) ? Math.max(0, Math.min(frames.length - 1, closeupFrom)) : Math.max(0, frames.length - 1),
     frameMs: Number.isFinite(frameMs) && frameMs > 80 ? Math.min(3000, frameMs) : 460,
     durations: durations.length === frames.length ? durations : [],
     captions,
+    captionsByLang,
+    lineByLang,
     // frames that are full pictures (a room behind him) fill the screen; transparent ones float
     cover: raw.cover === true,
     // a sheet that dissolves by itself doesn't need the app's dissolve on top of it

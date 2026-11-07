@@ -89,8 +89,12 @@ async function playIntro(capri, skin, intro, avatar, panel) {
   const durations = Array.isArray(intro.durations) && intro.durations.length === intro.frames.length
     ? intro.durations
     : intro.frames.map((_, i) => (i < closeupFrom ? 320 : intro.frameMs || 460));
-  const captions = (intro.captions || []).filter((c) => c && typeof c.text === 'string');
+  // the captions follow the language of the app, not the language of the skin
+  const lang = String(config.lang && config.lang !== 'auto' ? config.lang : (navigator.language || 'en')).slice(0, 2).toLowerCase();
+  const spoken = intro.captionsByLang || {};
+  const captions = ((spoken[lang] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
   const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
+  const closing = (intro.lineByLang && (intro.lineByLang[lang] || intro.lineByLang.en)) || intro.line;
 
   let front = 0;
   const geometry = intro.cover ? 'is-cover' : null;
@@ -121,7 +125,7 @@ async function playIntro(capri, skin, intro, avatar, panel) {
   await capri.materialize(capri.spot('post'));
   await sleep(520);
   stage.remove();
-  if (intro.line) panel?.say({ kind: 'info', face: 'smug', line: intro.line, hold: 7000 });
+  if (closing) panel?.say({ kind: 'info', face: 'smug', line: closing, hold: 7000 });
 }
 
 // A character with several drawings can move through them by itself (skin.json's "auto"): one while
