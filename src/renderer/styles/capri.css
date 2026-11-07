@@ -1089,7 +1089,7 @@ html[data-motion='reduced'] .intro-shot {
   opacity: 0;
   box-shadow: 0 14px 40px oklch(0 0 0 / 0.55), 0 0 24px color-mix(in oklch, var(--accent) 12%, transparent);
   transition: opacity 90ms steps(2, end), transform 90ms steps(2, end);
-  z-index: 42;
+  z-index: 999;
 }
 
 .intro-caption::before {
