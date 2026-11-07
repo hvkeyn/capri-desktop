@@ -1067,6 +1067,7 @@ html[data-motion='reduced'] .intro-shot {
 
 .intro-caption {
   position: fixed;
+  z-index: 999;
   left: 50%;
   bottom: 19vh;
   z-index: 60;

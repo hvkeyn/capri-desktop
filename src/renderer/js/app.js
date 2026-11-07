@@ -74,7 +74,7 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   }
   const caption = document.createElement('div');
   caption.className = 'intro-caption';
-  stage.appendChild(caption);
+  document.body.appendChild(caption); // above the frames: inside the stage they cover it
   if (avatar) avatar.style.visibility = 'hidden';
   document.body.appendChild(stage);
 
