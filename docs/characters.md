@@ -16,6 +16,10 @@ characters/
     full.png      the figure: 240 x 420, transparent background, feet at the bottom
     face.png      a face for her panels: 256 x 256 (optional)
     cutin-grin.png ...   close-ups for her cut-ins: 360 x 240 (optional)
+    poses/        other drawings of the same figure (optional)
+    motions/      frame folders for loops: smoke/000.png ...
+    intro/        the frames it comes in with
+    lines/        its own words: ru.json, en.json ...
 ```
 
 `skin.json` says what's in there:
@@ -56,7 +60,7 @@ characters/
 - `intro` (optional) is how it comes in — frames, played once at start:
   `{"frames": ["intro/01.png", "…"], "closeupFrom": 6, "durations": [230, 220, …],
     "captions": [{"from": 6, "text": "WAKE UP"}, {"from": 9, "text": "WE HAVE A CITY TO BURN"}],
-    "cover": true, "dissolve": false, "line": "…"}`.
+    "cover": false, "dissolve": true, "line": "…"}`.
   Frames cross-fade; `cover` fills the screen with whole pictures (a room behind them) instead of floating
   a cut-out; `dissolve: false` switches off the app's own dissolving exit for a sheet that already
   dissolves; `captions` are the yellow slabs; `line` is what it says once it's the little avatar.
@@ -64,7 +68,8 @@ characters/
 Two places are read, yours first:
 
 - `%APPDATA%\capri-desktop\characters\<id>\` — yours, untouched by an update.
-- `<the app>\assets\characters\<id>\` — what a build ships (the repo has `johnny` as a placeholder).
+- `<the app>\assets\characters\<id>\` — what a build ships (the repo's `johnny` is a complete character:
+  intro, poses, smoke and sadness loops, his own lines and persona).
 
 ## The figure is animated by her rig
 
@@ -80,20 +85,13 @@ middle at `x 118`. So a character's art should be:
 Art that doesn't follow those proportions still shows up and moves, but her head will tilt around the
 wrong point and her hands will reach out of thin air.
 
-## About the Johnny Silverhand addon
+## About Johnny Silverhand
 
-[johnny-silverhand](https://www.moddb.com/games/desktop-girlfriend-neo/addons/johnny-silverhand) is an
-addon for **Desktop Girlfriend NEO**: a Unity HDRP player model (`JohnnySilverhand.zip`, ModDB lists its
-licence as **Proprietary**). Two consequences:
-
-- it is **not** in this repository and cannot be: it isn't ours to redistribute;
-- it is a 3D model for another game, not a 240 x 420 figure, so it can't be dropped into
-  `characters/` as-is either.
-
-The `johnny` folder this fork ships is a **placeholder** (`tools/make-johnny.py` draws it): it exists so
-the switch can be tried, and so the folder shows the shape of a real one. For the real thing, put a
-cut-out of him — from a screenshot you have the rights to, or your own art — into
-`%APPDATA%\capri-desktop\characters\johnny\full.png` and keep or edit the `skin.json` beside it.
+The `johnny` folder this fork ships is the project's own art: a cut-out figure, his close-ups, poses,
+the smoking and sadness loops and his intro. It is freely licensed and lives in this repository; it is
+not the Desktop Girlfriend NEO addon and does not use its files. To make him yours, replace the pictures
+in `assets/characters/johnny/` (or copy the folder into `%APPDATA%\capri-desktop\characters\johnny\`)
+and keep or edit the `skin.json` beside them.
 
 ## From a 3D model (a Unity `.char`)
 
@@ -110,7 +108,18 @@ or any real renderer handles that OBJ; `tools/render-obj.py` gives a rough unlit
 a look at the geometry — it is not good enough to ship. Put the render at `characters/<id>/full.png` with a
 `skin.json` beside it, and it's a character.
 
-## Text stays hers
+## Text is theirs too
 
-Her name in the panels, her lines, her voice: those are Capri's and are not part of a character yet. A
-character changes the figure, its faces and its close-ups, not what she says.
+A character brings its own `persona` (who it is, how it talks) and its own `lines/<lang>.json` (what it
+says on its own: starting a session, work in progress, done, errors, idle, being petted, the PC
+reacting). It can also bring `intro.line` and captions.
+
+When a model is set up, the app goes one step further: it asks it for a small batch of fresh remarks in
+that character's voice, with the persona and the last few messages of your chat as context
+(`src/renderer/js/improv.js`, IPC `voice:lines`). Those lines are used for idle talk, greetings, a
+finished job and errors, and are rewritten as the conversation moves on. They are never saved as chat
+history and never replace the written fallback: with no key, no network or a refusal, the `lines` files
+still carry the character.
+
+Her own panels and guide still use Capri's wording for anything a character hasn't overridden — that is
+on purpose, so a half-written skin never shows an empty line.

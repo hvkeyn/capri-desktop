@@ -309,7 +309,7 @@ export class Chat {
     // angry, sulking, dizzy…: she greets you the way she feels, and her model is told she did
     const feeling = this.bond?.feeling;
     const moody = !tiny && feeling && t.moody[feeling];
-    const hello = moody ? fmt(pick(moody), this.bond.mood.vars) : pick(this.history.length ? t.again : t.hello);
+    const hello = moody ? fmt(pick(moody), this.bond.mood.vars) : (this.brain.improv?.take('hello') || pick(this.history.length ? t.again : t.hello));
     this.opening = moody ? hello : null;
     host.focusOverlay(true); // the keyboard, for typing to her
     const shown = this.panel.say({
@@ -473,6 +473,7 @@ export class Chat {
     this.history.push(message);
     this.history = this.history.slice(-KEEP);
     this.host.chatRemember(this.history);
+    this.brain.improv?.maybeRefresh(); // the lines it wrote before may no longer fit the conversation
   }
 
   listApps() {

@@ -5,6 +5,7 @@ import { Panel, FACES } from './panel.js';
 import { Board } from './board.js';
 import { Voice } from './voice.js';
 import { Brain } from './brain.js';
+import { Improv } from './improv.js';
 import { Guide } from './guide.js';
 import { Mission } from './mission.js';
 import { Chat } from './chat.js';
@@ -471,6 +472,12 @@ async function boot() {
   guide.custom = custom;
   brain.custom = mine(config);
 
+  // Words it writes for itself, in the voice of who is on the desktop and with the last few things you
+  // said in mind (improv.js): the canned lines stay as the fallback when there is no model to ask.
+  const improv = new Improv({ host, chat, brain });
+  brain.improv = improv;
+  improv.warm();
+
   // How close she is to you (bond.js), her jealousy of your other AIs, the reminders she keeps.
   const bond = new Bond({ host, data: config.bond });
   brain.bond = bond;
@@ -762,7 +769,7 @@ async function boot() {
   };
 
   // what's in here, for --dev scripts (debug route `eval`)
-  window.dev = { capri, brain, panel, chat, guide, fx, voice, bond, jealousy, reminders, look, pc, setup, poseDirector, screens: () => screens };
+  window.dev = { capri, brain, panel, chat, guide, fx, voice, bond, jealousy, reminders, look, pc, setup, poseDirector, improv, screens: () => screens };
 
   host.onClaudeEvent((evt) => {
     poseDirector?.onEvent(evt);

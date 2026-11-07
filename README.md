@@ -2,14 +2,15 @@
 
 # Capri
 
-> **This fork** starts on **DeepSeek** instead of a local Ollama model: her chat, her answers and what she
-> reads off your screen go to `https://api.deepseek.com`, with the model `deepseek-flash`. It also lets her
-> AI **look at your PC** (hardware, load, disks, battery, open apps, files by name) through read-only tools,
-> so she can answer about your machine instead of saying she can't see it, and it lets you **pick who lives
-> on your desktop**: right-click her › **Character**, with a `johnny` placeholder skin and a folder of your
-> own pictures. She also has a working half now — see [She works](#she-works). Nothing else changes: she
-> still watches Claude Code, Codex and Antigravity, and every action that changes something keeps its button. See [docs/deepseek.md](docs/deepseek.md) for the key, the models
-> and the tools, and [docs/characters.md](docs/characters.md) for characters.
+> **This fork** is **Capri 0.6.1**. It starts on **DeepSeek** instead of a local Ollama model: her chat,
+> her answers and what she reads off your screen go to `https://api.deepseek.com`, with
+> `deepseek-flash`. Her AI can **look at your PC** (hardware, load, disks, battery, open apps, files by
+> name) through read-only tools, and it can **work in a folder** through the work-order harness. You can
+> also **pick who lives on your desktop**: right-click her › **Character**. `johnny` is no longer a
+> placeholder — he has his own intro, close-ups, poses and looping performances, and he speaks in
+> Johnny's voice, including lines the model writes for him from your recent conversation. See
+> [docs/deepseek.md](docs/deepseek.md) for the key, the models and the tools, and
+> [docs/characters.md](docs/characters.md) for characters.
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
 and tells you what your coding AI is up to: **Claude Code**, **Codex** or **Antigravity**. She teleports,
@@ -18,6 +19,26 @@ glitches, comments on every action, comes to find you when it needs your permiss
 ![Capri telling you Claude is done](docs/done.png)
 
 ![Teleport, frame by frame](docs/teleport.png)
+
+## Who lives on your desktop
+
+Right-click her › **Character**: **Capri** is always there, and every folder in `assets/characters/` (or
+`%APPDATA%\capri-desktop\characters\`) adds another. A character brings what it has:
+
+- **an intro** — its own frames, cross-faded, with captions and a glitch exit (Johnny walks in, leans
+  close, takes the sunglasses off: *«Проснись уже, самурай. Время сжечь этот город.»*);
+- **poses and loops** — still drawings and real frame-by-frame performances. Johnny stands and smokes
+  (cigarette in his hand, the ember pulsing, the smoke rising past his face), sits sad, and breathes
+  while standing. The loops are texture swaps under the character, so they stay smooth and transparent;
+- **its own words** — `lines/<lang>.json` overrides hers for everything he says on his own: starting a
+  session, work in progress, done, errors, idle, being petted or thrown, the PC reacting;
+- **a voice the AI can extend** — when there is a model, the app asks it for a small batch of fresh
+  remarks in the character's voice, using its `persona` and the last few things you said to each other.
+  Those lines are used for idle talk, greetings, a finished job and errors, and are replaced as the
+  conversation moves on. No model: the written lines stay, so nothing breaks.
+
+`flat: true` in a skin turns Capri's rig off for art that wasn't drawn for it, so no arm or mane is
+torn off the picture. [docs/characters.md](docs/characters.md) has the whole skin format.
 
 ## She works
 

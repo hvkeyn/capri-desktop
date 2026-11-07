@@ -33,6 +33,7 @@ export class Brain {
     this.watching = true;   // she follows Claude Code (her menu; off, she just keeps you company)
     this.thinkTimer = 0;
     this.thinking = null;   // { s, since, said, fidget, gazed } while Claude is quiet mid-task
+    this.improv = null;     // voice/improv.js: lines it writes for itself, when it can
   }
 
   get t() {
@@ -292,7 +293,7 @@ export class Brain {
     const done = (extra) => {
       if (reply) this.replyFor = s;
       if (reply) this.say('done', pick(this.t.reply), s, { ...extra, reply, hold: null });
-      else this.say('done', pick(this.t.done), s, { ...extra, quote: clip(quote, 150) });
+      else this.say('done', this.improv?.take('done') || pick(this.t.done), s, { ...extra, quote: clip(quote, 150) });
     };
     if (!wasWorking && !s.count) {
       // a Stop with nothing before it: just say it quietly
@@ -334,7 +335,7 @@ export class Brain {
     this.capri.hurt();
     this.voice.play('error');
     const detail = evt.error || evt.message || '';
-    this.say('error', pick(this.t.crashed), s, { face: 'wide', quote: clip(String(detail), 120), hold: 9000 });
+    this.say('error', this.improv?.take('error') || pick(this.t.crashed), s, { face: 'wide', quote: clip(String(detail), 120), hold: 9000 });
   }
 
   onSubagent(evt, s, starting) {
@@ -360,7 +361,9 @@ export class Brain {
     const mine = this.custom.myLines || [];
     const close = this.t.bond.idle[this.bond?.stage || 0] || [];
     let line = pick(this.t.idle);
-    if (mine.length && Math.random() < 0.5) line = pick(mine);
+    const own = this.improv?.take('idle'); // a line it wrote for itself a moment ago
+    if (own) line = own;
+    else if (mine.length && Math.random() < 0.5) line = pick(mine);
     else if (close.length && Math.random() < 0.4) line = pick(close);
     return fmt(line, { name: this.custom.userName || 'choom' });
   }

@@ -1122,6 +1122,24 @@ function registerIpc() {
     }
   });
   ipcMain.on('chat:stop', (_e, id) => chats.get(id)?.abort());
+  // A short line the character writes for itself (voice/improv.js): the same voice and the same
+  // history as the chat, but nothing is remembered and no tools are on the table.
+  ipcMain.handle('voice:lines', async (_e, { messages } = {}) => {
+    const cfg = config.load();
+    if (!chatModels?.length) await refreshModels();
+    const model = pickModel(cfg);
+    if (!model) return { ok: false, code: 'noai', error: 'no AI model set up' };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    try {
+      const text = await llm.chat(cfg.provider, llmConfig(cfg), { model, messages: Array.isArray(messages) ? messages : [] }, () => {}, ctrl.signal);
+      return { ok: true, text: text || '' };
+    } catch (err) {
+      return { ok: false, error: ctrl.signal.aborted ? 'timed out' : err.message };
+    } finally {
+      clearTimeout(timer);
+    }
+  });
   // A work order (src/main/agent): the board asks, main starts it, and every change comes back on
   // `work:state` as the whole state, so the board never has to reconstruct anything.
   ipcMain.handle('work:start', async (_e, { goal, workspace, attachments } = {}) => {
