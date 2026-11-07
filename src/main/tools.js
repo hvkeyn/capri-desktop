@@ -544,13 +544,30 @@ more.attach({ systemInfo, runCommand });
 
 async function findFiles(name, limit = 8, ctx = {}) {
   const query = String(name || '').trim();
-  if (query.replace(/\b(ext|in|modified|size):[^\s]+/g, '').trim().length < 2 && !/(ext|in|modified|size):/.test(query)) {
+  const parsed = fss.parseQuery(query);
+  const words = parsed.terms.join(' ').trim();
+  if (words.length < 2 && !parsed.ext && !parsed.inPath && !parsed.project && parsed.modifiedAfter === null && parsed.sizeMin === null) {
     return { error: 'give at least two characters of the name, or a filter like ext:pdf' };
   }
-  const root = ctx.root || ctx.home || os.homedir();
-  const { entries, cached } = fss.index(root);
-  const hits = fss.search(entries, query, { limit: Math.max(1, Math.min(20, Number(limit) || 8)) });
-  return { query, root, cached, indexed: entries.length, hits };
+  // Two places matter: the home folder, and the project she is working in (which may live on another
+  // drive). Both are indexed separately and searched together; "в проекте" narrows it to the project.
+  const home = ctx.home || os.homedir();
+  const project = ctx.project ? path.resolve(String(ctx.project)) : null;
+  const roots = [home];
+  if (project && !project.toLowerCase().startsWith(home.toLowerCase() + path.sep)) roots.push(project);
+  const entries = roots.flatMap((root) => fss.index(root).entries);
+  const hits = fss.search(entries, parsed, {
+    limit: Math.max(1, Math.min(20, Number(limit) || 8)),
+    project: parsed.project ? project : null,
+  });
+  return {
+    query,
+    roots,
+    project,
+    indexed: entries.length,
+    hits,
+    ...(hits.length ? {} : { note: parsed.project ? 'nothing matched in the project; try another word, or search wider without «в проекте»' : 'nothing matched in those folders; try another word, or in:folder' }),
+  };
 }
 
 function fileInfo(where, ctx = {}) {

@@ -42,6 +42,28 @@ test('the query carries the filters people actually type', () => {
   assert.equal(ru.modifiedAfter, now - 7 * 86400000);
 });
 
+test('a bare extension is a filter, and "в проекте" is a scope', () => {
+  const q = fss.parseQuery('png в проекте за последнюю неделю');
+  assert.deepEqual(q.terms, []);
+  assert.deepEqual(q.ext, ['png']);
+  assert.equal(q.project, true);
+  assert.ok(q.modifiedAfter);
+
+  const md = fss.parseQuery('report md');
+  assert.deepEqual(md.terms, ['report']);
+  assert.deepEqual(md.ext, ['md']);
+});
+
+test('a short word must appear as written, not be spelled across a name', () => {
+  assert.equal(fss.scoreName('interesting.png', 'png').exact, true);
+  assert.equal(fss.scoreName('p-i-n-g.txt', 'p i n g'), null);
+  // three letters must appear as written; four may be matched in order
+  assert.equal(fss.scoreName('project-board.js', 'pbd'), null);
+  const fuzzy = fss.scoreName('project-board.js', 'prbd');
+  assert.ok(fuzzy.score > 0);
+  assert.equal(fuzzy.exact, false);
+});
+
 test('search ranks by the name and honours the filters', () => {
   const now = Date.now();
   const entries = [

@@ -106,7 +106,9 @@ your folders is written to disk**. Content is still read on demand, file by file
 
 - **`find_files`** finds a name in whatever shape you remember it — exactly, as a prefix, inside, or just
   the letters in order — and ranks the hits. The query takes filters: `ext:pdf`, `in:projects`,
-  `modified:>7d`, `size:>10mb`, and phrases like "last week" or "за последнюю неделю".
+  `modified:>7d`, `size:>10mb`, and phrases like "last week" or "за последнюю неделю". A bare word like
+  `png` is the extension; **"в проекте" / "in the project"** narrows the search to the folder she is told is
+  the project (the one Claude Code works in), which may live on another drive.
 - **`file_info`** says what a thing is (kind, size, made, changed); **`tree`** shows the shape of a folder
   without opening it file by file.
 - **`copy_file`, `move_file`, `delete_file`** — full access only, one file at a time (a folder is a work

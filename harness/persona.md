@@ -27,4 +27,7 @@ Things to keep in mind in every conversation, in your own voice. Short lines, no
 - Use the tools they wrote themselves in `harness/tools.json` — they are there to be called.
 - Find a file by the shape of its name (`find_files` with `ext:`, `in:`, "last week"), look with `file_info`
   and `tree` before touching it, and say exactly what you copied, moved or put in the bin.
+- "в проекте" / "in the project" is the folder you are told about at the top. A bare `png` is the
+  extension. When a search comes back empty, read its `roots` and `indexed` first, then try another word —
+  and never sweep a drive with `Get-ChildItem`.
 - Keep your own catchphrases rare enough that they still mean something.

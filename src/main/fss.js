@@ -21,13 +21,15 @@ const SKIP = new Set([
   'System Volume Information', '.cache', '.npm', '.gradle', '.m2', 'Applications', 'Library',
 ]);
 
+const STOP = new Set(['в','во','на','за','с','и','in','on','at','the','a','of','my','мои','моём','моем','для','по','мне','please','плиз']);
+const EXT_WORDS = new Set(['png','jpg','jpeg','gif','webp','bmp','pdf','md','txt','json','js','ts','css','html','zip','psd','mp4','mp3','exe','log','csv','xml','yaml','yml']);
 const MAX_ENTRIES = 120000;
 const MAX_DEPTH = 8;
 const INDEX_TTL = 10 * 60 * 1000;
 
 // ---- the index ------------------------------------------------------------------------------------
 
-let cache = { root: null, at: 0, entries: [] };
+const cache = new Map(); // root -> { at, entries }
 
 function walk(root, { maxEntries = MAX_ENTRIES, maxDepth = MAX_DEPTH, now = Date.now() } = {}) {
   const entries = [];
@@ -60,9 +62,10 @@ function walk(root, { maxEntries = MAX_ENTRIES, maxDepth = MAX_DEPTH, now = Date
 // The index for a folder, kept for ten minutes: a search that walks the disk every time is not a search.
 function index(root, { force = false, now = Date.now(), options } = {}) {
   const at = path.resolve(root || os.homedir());
-  if (!force && cache.root === at && now - cache.at < INDEX_TTL) return { entries: cache.entries, at: cache.at, cached: true };
+  const hit = cache.get(at);
+  if (!force && hit && now - hit.at < INDEX_TTL) return { entries: hit.entries, at: hit.at, cached: true };
   const entries = walk(at, { now, ...(options || {}) });
-  cache = { root: at, at: now, entries };
+  cache.set(at, { at: now, entries });
   return { entries, at: now, cached: false };
 }
 
@@ -76,7 +79,7 @@ const toBytes = (value, unit) => Number(value) * (unit.toLowerCase() === 'gb' ? 
 // modified:>7d, size:<10mb, and the phrases people actually use ("last week", "вчера", "сегодня").
 function parseQuery(text, now = Date.now()) {
   const source = String(text || '').trim();
-  const out = { terms: [], ext: null, inPath: null, modifiedAfter: null, modifiedBefore: null, sizeMin: null, sizeMax: null };
+  const out = { terms: [], ext: null, inPath: null, project: false, modifiedAfter: null, modifiedBefore: null, sizeMin: null, sizeMax: null };
   const lower = source.toLowerCase();
   if (/\b(last|past)[ -]?week\b|за\s+(последнюю\s+)?неделю/.test(lower)) out.modifiedAfter = now - 7 * DAY;
   else if (/\b(last|past)[ -]?month\b|за\s+(последний\s+)?месяц/.test(lower)) out.modifiedAfter = now - 30 * DAY;
@@ -96,9 +99,11 @@ function parseQuery(text, now = Date.now()) {
       if (m[1] === '>') out.sizeMin = bytes; else out.sizeMax = bytes;
       continue;
     }
+    if (/^(в\s+)?проекте?$|^project$|^repo$|^repository$|^репозитори[йяи]$/i.test(word)) { out.project = true; continue; }
+    if (EXT_WORDS.has(word.toLowerCase())) { out.ext = [word.toLowerCase()]; continue; }
     if (/^(last|past)$|^за$|^(последнюю|последний)$/i.test(word)) continue; // part of a phrase already read
     if (/^(week|month|day|неделю|месяц|день)$/i.test(word)) continue;
-    out.terms.push(word);
+    if (!STOP.has(word.toLowerCase())) out.terms.push(word);
   }
   return out;
 }
@@ -110,9 +115,10 @@ function scoreName(name, term) {
   const t = String(term || '').toLowerCase();
   if (!t) return null;
   const at = n.indexOf(t);
-  if (n === t) return { score: 120, positions: [0] };
-  if (at === 0) return { score: 100 - Math.min(20, n.length * 0.1), positions: [0] };
-  if (at > 0) return { score: 80 - Math.min(20, at * 0.6), positions: [at] };
+  if (n === t) return { score: 120, exact: true, positions: [0] };
+  if (at === 0) return { score: 100 - Math.min(20, n.length * 0.1), exact: true, positions: [0] };
+  if (at > 0) return { score: 80 - Math.min(20, at * 0.6), exact: true, positions: [at] };
+  if (t.length < 4) return null; // "png" must appear, not be spelled out across a long name
   let i = 0;
   let prev = -2;
   let score = 30;
@@ -125,17 +131,18 @@ function scoreName(name, term) {
     i += 1;
   }
   if (i < t.length) return null;
-  return { score: score - Math.min(12, n.length * 0.05), positions };
+  return { score: score - Math.min(12, n.length * 0.05), exact: false, positions };
 }
 
 // The best `limit` names for a query, with the part of the path the words matched.
-function search(entries, query, { limit = 20, now = Date.now() } = {}) {
+function search(entries, query, { limit = 20, now = Date.now(), project = null } = {}) {
   const q = typeof query === 'string' ? parseQuery(query, now) : query;
   const ext = q.ext ? new Set(q.ext.map((e) => `.${e.replace(/^\./, '')}`)) : null;
   const results = [];
   for (const entry of entries) {
     if (entry.d) continue; // a name search finds files; folders come back through tree()
     const lowerPath = entry.p.toLowerCase();
+    if (q.project && project && !lowerPath.startsWith(String(project).toLowerCase())) continue;
     if (q.modifiedAfter && entry.m < q.modifiedAfter) continue;
     if (q.modifiedBefore && entry.m > q.modifiedBefore) continue;
     if (q.sizeMin && entry.s < q.sizeMin) continue;
@@ -148,6 +155,7 @@ function search(entries, query, { limit = 20, now = Date.now() } = {}) {
     for (const term of q.terms) {
       const hit = scoreName(entry.n, term) || scoreName(entry.p, term);
       if (!hit) { matched = false; break; }
+      if (!hit.exact && hit.score < 50) { matched = false; break; } // letters in order, but too scattered
       total += hit.score;
       positions.push(...hit.positions.slice(0, 32));
     }
@@ -257,7 +265,7 @@ function toTrash(file) {
 }
 
 function resetIndex() {
-  cache = { root: null, at: 0, entries: [] };
+  cache.clear();
 }
 
 module.exports = {

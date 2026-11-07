@@ -846,6 +846,11 @@ const TOOL_ROUNDS = 5;
 
 // Where her AI is allowed to work: the folder she was set up with, else the user's home. `full` reads
 // anywhere; below that, home and below.
+function projectRoot() {
+  const cfg = config.load();
+  return cfg.claudeCwd || cfg.workspace || null;
+}
+
 function chatToolContext() {
   const cfg = config.load();
   return {
@@ -853,6 +858,7 @@ function chatToolContext() {
     root: cfg.workspace || os.homedir(),
     home: os.homedir(),
     appRoot: ROOT,
+    project: projectRoot(),
   };
 }
 
@@ -912,6 +918,8 @@ function withStandingNotes(messages) {
   note += `\n\nWhere you are: the app runs from ${ROOT} (that is your own folder), this process was started in `
     + `${process.cwd()}, the user's home folder is ${os.homedir()}, and your commands run at level `
     + `"${cfg.autonomy || 'guard'}" (full means any program, a shell too).`;
+  const project = projectRoot();
+  if (project) note += ` The project you are looking at is ${project}: "в проекте", "in the project" and "repo" mean that folder.`;
   if (turns[0]?.role === 'system' && typeof turns[0].content === 'string') {
     turns[0].content += note;
   } else {
