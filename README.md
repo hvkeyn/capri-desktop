@@ -75,6 +75,37 @@ a person worked in with spec-kit.
 From a terminal, without the window: `npm run try -- "make hello.txt that says nova" C:\scratch` — a real
 work order on a real folder, printed phase by phase, ending with her report.
 
+## She grows
+
+- **More to look at**: the machine's temperatures (`temperature`: ACPI thermal zones and `nvidia-smi`) and
+  its devices (`devices`: displays, sound, USB), next to the hardware, disks and processes she had.
+- **One call that says what is wrong**: `diagnose` gathers the lot and returns a short list of findings
+  (disk under 10 %, memory over 85 %, a hot GPU, a tired battery), so "what's up with my PC" is one step.
+- **The web**: `web_fetch` reads a page and gives her its text, for something current that isn't on this
+  PC. She names the address she read.
+- **Tools of your own**: `harness/tools.json` — a command with `{placeholders}`, at the level in her menu:
+
+  ```json
+  { "name": "startup_apps", "description": "What starts with Windows",
+    "autonomy": "full",
+    "command": "powershell -NoProfile -Command \"Get-CimInstance Win32_StartupCommand | ConvertTo-Json\"",
+    "parameters": { "type": "object", "properties": {}, "required": [] } }
+  ```
+
+  It ships with three (`listening_ports`, `gpu_report`, `startup_apps`); a copy in
+  `%APPDATA%\capri-desktop\agent\tools.json` adds to them without touching the app. She is told to use
+  them.
+- **Two sources, one answer**: her persona now says to check a fact twice when it can come from two places,
+  to say which one she trusts when they disagree, and to name what is missing instead of guessing.
+
+## She thinks out loud, and reads well
+
+- While a turn runs, the panel shows **what she is doing**: a line of her own narration, then each tool as
+  a glyph, a verb, its target and its time, in the colour of that kind of work (violet to think, cyan to
+  read, yellow to run, red to fail). Her frame and her face follow the activity.
+- The answer itself is **set for reading** — mono, a real line height, its own scroll — with **bold** from
+  her own text and every **number that matters** (50 из 64 ГБ, 62.9 ГБ, 49 °C) lit.
+
 ## She updates herself
 
 Once, twenty seconds after she starts (and whenever you pick **Updates › Check for updates…** in her

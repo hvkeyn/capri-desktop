@@ -13,6 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const apps = require('./apps');
+const more = require('./tools-more');
 const guard = require('./agent/guard');
 const exec = require('./agent/exec');
 
@@ -134,6 +135,22 @@ const TOOLS = [
         },
         required: ['command'],
       },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'web_fetch',
+      description: 'Read a web page and return its text, the HTML stripped and the title kept. Use it when the answer needs something current that is not on this PC.',
+      parameters: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'diagnose',
+      description: 'One call that looks at everything and says what is wrong: processor load, memory, free disk, temperatures, devices, the heaviest programs, then a short list of findings.',
+      parameters: { type: 'object', properties: {}, required: [] },
     },
   },
 ];
@@ -309,7 +326,9 @@ async function run(name, args = {}, ctx = {}) {
     case 'read_file': return readFileContent(a.path, a.offset, ctx);
     case 'search_files': return searchInFolder(a.pattern, a.path, ctx);
     case 'run_command': return runCommand(a.command, a.cwd, ctx);
-    default: return { error: `no such tool: ${name}` };
+    case 'web_fetch':
+    case 'diagnose': return more.run(name, a, ctx);
+    default: return (await more.run(name, a, ctx)) || { error: `no such tool: ${name}` };
   }
 }
 
@@ -464,4 +483,11 @@ async function runCommand(command, cwd, ctx = {}) {
   };
 }
 
-module.exports = { TOOLS, run, systemInfo, openApps, findFiles, launchFolder, listFolder, readFileContent, searchInFolder, runCommand, temperature, devices };
+const all = () => [...TOOLS, ...more.schemas()];
+more.attach({ systemInfo, runCommand });
+
+module.exports = {
+  TOOLS, all, loadCustom: (list) => more.loadCustom(list), run, systemInfo, openApps, findFiles,
+  launchFolder, listFolder, readFileContent, searchInFolder, runCommand, temperature, devices,
+  webFetch: more.webFetch, diagnose: more.diagnose, findings: more.findings,
+};

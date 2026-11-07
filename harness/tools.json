@@ -1,0 +1,23 @@
+[
+  {
+    "name": "listening_ports",
+    "description": "Every TCP port something is listening on right now, with the program that owns it. Good for \"what is running\" and for a server that won't start.",
+    "autonomy": "full",
+    "command": "powershell -NoProfile -Command \"Get-NetTCPConnection -State Listen | Select-Object -First 20 LocalAddress,LocalPort,OwningProcess | ConvertTo-Json -Compress\"",
+    "parameters": { "type": "object", "properties": {}, "required": [] }
+  },
+  {
+    "name": "gpu_report",
+    "description": "The graphics card's own report from nvidia-smi: name, temperature, load, memory, power.",
+    "autonomy": "full",
+    "command": "nvidia-smi",
+    "parameters": { "type": "object", "properties": {}, "required": [] }
+  },
+  {
+    "name": "startup_apps",
+    "description": "What starts with Windows for this user: name and command, so \"why is it slow at login\" has an answer.",
+    "autonomy": "full",
+    "command": "powershell -NoProfile -Command \"Get-CimInstance Win32_StartupCommand | Select-Object -First 15 Name,Command,Location | ConvertTo-Json -Compress\"",
+    "parameters": { "type": "object", "properties": {}, "required": [] }
+  }
+]

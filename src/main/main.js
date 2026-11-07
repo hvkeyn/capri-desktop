@@ -864,7 +864,7 @@ async function chatWithTools(cfg, model, messages, send, signal, onEvent = null)
   // starting and ending. The panel draws it above the answer, so a long turn is not a blinking bar.
   const tell = (payload) => onEvent?.(payload);
   for (let round = 0; round <= TOOL_ROUNDS; round++) {
-    const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { model, messages: turns, tools: tools.TOOLS }, send, signal);
+    const res = await llm.chatTools(cfg.provider, llmConfig(cfg), { model, messages: turns, tools: tools.all() }, send, signal);
     text = res.text;
     if (!res.toolCalls.length) return text;
     if (String(res.text || '').trim()) tell({ kind: 'thought', text: String(res.text).trim() });
@@ -1045,6 +1045,25 @@ async function pickClaudeFolder() {
   updateConfig({ claudeCwd: filePaths[0] });
 }
 
+
+// Her own tools, from the file the user edits: harness/tools.json ships the examples, and a copy in her
+// storage (agent/tools.json) adds to them without touching the app. Loaded once, at the start.
+function loadCustomTools() {
+  const files = [path.join(ROOT, 'harness', 'tools.json'), path.join(app.getPath('userData'), 'agent', 'tools.json')];
+  const list = [];
+  for (const file of files) {
+    try {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (Array.isArray(data)) list.push(...data);
+    } catch {
+      // no file there, or not JSON: the built-ins are enough
+    }
+  }
+  const count = tools.loadCustom(list);
+  if (count) console.log('[capri] custom tools:', list.map((tool) => tool.name).join(', '));
+  return count;
+}
+
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   tray = new Tray(icon);
@@ -1176,7 +1195,7 @@ function checkAccess() {
   const cfg = config.load();
   const model = pickModel(cfg);
   const supports = llm.supportsTools(cfg.provider);
-  const count = supports ? tools.TOOLS.length : 0;
+  const count = supports ? tools.all().length : 0;
   const level = cfg.autonomy || 'guard';
   const entries = [
     { verb: 'MODEL', target: model || '—', error: !model },
@@ -1649,6 +1668,7 @@ function main() {
     registerIpc();
     createOverlay();
     createTray();
+    loadCustomTools(); // the ones the user wrote in harness/tools.json, if any
     // once, a little after she is up: update.js caches the answer for 12 hours, and a quiet check says
     // nothing when there is nothing to say (an update that exists is always shown)
     if (config.load().checkUpdates !== false) {
