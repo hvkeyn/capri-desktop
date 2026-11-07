@@ -95,6 +95,7 @@ function introOf(base, raw) {
     sound: typeof raw.sound === 'string' && raw.sound ? picture(base, raw.sound) : '',
     soundFrom: Number.isFinite(soundFrom) ? Math.max(0, Math.min(frames.length - 1, soundFrom)) : -1,
     soundVolume: Number.isFinite(soundVolume) ? Math.min(1, Math.max(0, soundVolume)) : 0.7,
+    captionAt: Array.isArray(raw.captionAt) ? raw.captionAt.map((v) => Math.min(1, Math.max(0, Number(v) || 0))) : [],
     // frames that are full pictures (a room behind him) fill the screen; transparent ones float
     cover: raw.cover === true,
     // a sheet that dissolves by itself doesn't need the app's dissolve on top of it

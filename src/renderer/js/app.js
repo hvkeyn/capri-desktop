@@ -86,7 +86,7 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   });
 
   const closeupFrom = intro.closeupFrom ?? intro.frames.length - 1;
-  const durations = Array.isArray(intro.durations) && intro.durations.length === intro.frames.length
+  let durations = Array.isArray(intro.durations) && intro.durations.length === intro.frames.length
     ? intro.durations
     : intro.frames.map((_, i) => (i < closeupFrom ? 320 : intro.frameMs || 460));
   // the captions follow the language of the app, not the language of the skin
@@ -100,6 +100,22 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   if (track) {
     track.volume = intro.soundVolume ?? 0.7;
     track.preload = 'auto';
+    // the pictures follow the track: once its length is known, every frame gets its share of it
+    await new Promise((resolve) => {
+      track.addEventListener('loadedmetadata', resolve, { once: true });
+      setTimeout(resolve, 900);
+    });
+    if (Number.isFinite(track.duration) && track.duration > 1) {
+      const each = Math.max(28, Math.round((track.duration * 1000) / intro.frames.length));
+      durations = intro.frames.map(() => each);
+      if (intro.captionAt?.length) {
+        captionsAt.clear();
+        captions.forEach((cap, index) => {
+          const at = Math.min(intro.frames.length - 1, Math.round((intro.captionAt[index] ?? 0) * intro.frames.length));
+          captionsAt.set(at, cap.text);
+        });
+      }
+    }
   }
   let playing = false;
   let captionTimer = 0;

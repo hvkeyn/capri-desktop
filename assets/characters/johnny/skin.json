@@ -71,31 +71,94 @@
       "intro/015.webp",
       "intro/016.webp",
       "intro/017.webp",
-      "intro/018.webp"
+      "intro/018.webp",
+      "intro/019.webp",
+      "intro/020.webp",
+      "intro/021.webp",
+      "intro/022.webp",
+      "intro/023.webp",
+      "intro/024.webp",
+      "intro/025.webp",
+      "intro/026.webp",
+      "intro/027.webp",
+      "intro/028.webp",
+      "intro/029.webp",
+      "intro/030.webp",
+      "intro/031.webp",
+      "intro/032.webp",
+      "intro/033.webp",
+      "intro/034.webp",
+      "intro/035.webp",
+      "intro/036.webp",
+      "intro/037.webp",
+      "intro/038.webp",
+      "intro/039.webp",
+      "intro/040.webp",
+      "intro/041.webp",
+      "intro/042.webp",
+      "intro/043.webp",
+      "intro/044.webp",
+      "intro/045.webp",
+      "intro/046.webp",
+      "intro/047.webp",
+      "intro/048.webp",
+      "intro/049.webp",
+      "intro/050.webp",
+      "intro/051.webp",
+      "intro/052.webp",
+      "intro/053.webp",
+      "intro/054.webp",
+      "intro/055.webp",
+      "intro/056.webp",
+      "intro/057.webp",
+      "intro/058.webp",
+      "intro/059.webp",
+      "intro/060.webp",
+      "intro/061.webp",
+      "intro/062.webp",
+      "intro/063.webp",
+      "intro/064.webp",
+      "intro/065.webp",
+      "intro/066.webp",
+      "intro/067.webp",
+      "intro/068.webp",
+      "intro/069.webp",
+      "intro/070.webp",
+      "intro/071.webp",
+      "intro/072.webp",
+      "intro/073.webp",
+      "intro/074.webp",
+      "intro/075.webp",
+      "intro/076.webp",
+      "intro/077.webp",
+      "intro/078.webp",
+      "intro/079.webp",
+      "intro/080.webp",
+      "intro/081.webp",
+      "intro/082.webp",
+      "intro/083.webp",
+      "intro/084.webp",
+      "intro/085.webp",
+      "intro/086.webp",
+      "intro/087.webp",
+      "intro/088.webp",
+      "intro/089.webp",
+      "intro/090.webp",
+      "intro/091.webp",
+      "intro/092.webp",
+      "intro/093.webp",
+      "intro/094.webp",
+      "intro/095.webp",
+      "intro/096.webp",
+      "intro/097.webp",
+      "intro/098.webp",
+      "intro/099.webp",
+      "intro/100.webp"
     ],
-    "closeupFrom": 6,
-    "cover": true,
+    "closeupFrom": 40,
+    "cover": false,
     "dissolve": true,
-    "durations": [
-      650,
-      650,
-      650,
-      650,
-      650,
-      700,
-      850,
-      850,
-      850,
-      850,
-      900,
-      900,
-      900,
-      900,
-      900,
-      900,
-      1100,
-      1400
-    ],
+    "durations": [],
     "captionsByLang": {
       "ru": [
         {
@@ -103,7 +166,7 @@
           "text": "ЭЙ. ПРОСЫПАЙСЯ, САМУРАЙ"
         },
         {
-          "from": 11,
+          "from": 58,
           "text": "У НАС ЕСТЬ ГОРОД, ЧТОБЫ СЖЕЧЬ"
         }
       ],
@@ -113,7 +176,7 @@
           "text": "HEY. WAKE UP, SAMURAI"
         },
         {
-          "from": 11,
+          "from": 58,
           "text": "WE HAVE A CITY TO BURN"
         }
       ],
@@ -123,7 +186,7 @@
           "text": "HEY. RÉVEILLE-TOI, SAMOURAÏ"
         },
         {
-          "from": 11,
+          "from": 58,
           "text": "ON A UNE VILLE À BRÛLER"
         }
       ],
@@ -133,7 +196,7 @@
           "text": "OYE. DESPIERTA, SAMURÁI"
         },
         {
-          "from": 11,
+          "from": 58,
           "text": "TENEMOS UNA CIUDAD QUE QUEMAR"
         }
       ],
@@ -143,7 +206,7 @@
           "text": "EI. ACORDA, SAMURAI"
         },
         {
-          "from": 11,
+          "from": 58,
           "text": "TEMOS UMA CIDADE PARA QUEIMAR"
         }
       ]
@@ -155,9 +218,13 @@
       "es": "Despierta ya, samurái. Es hora de quemar esta ciudad.",
       "pt": "Acorda, samurai. É hora de queimar esta cidade."
     },
-    "sound": "audio/wake-up-samurai.mp3",
+    "sound": "audio/wake-the-fuck-up.mp3",
     "soundFrom": 0,
-    "soundVolume": 0.6
+    "soundVolume": 0.85,
+    "captionAt": [
+      0.08,
+      0.55
+    ]
   },
   "animations": {
     "smoke": {
