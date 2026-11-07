@@ -79,6 +79,8 @@ function introOf(base, raw) {
   const captionsByLang = raw.captionsByLang && typeof raw.captionsByLang === 'object'
     ? Object.fromEntries(Object.entries(raw.captionsByLang).map(([lang, list]) => [lang, clean(list)]).filter(([, list]) => list.length))
     : {};
+  const soundFrom = Number(raw.soundFrom);
+  const soundVolume = Number(raw.soundVolume);
   const lineByLang = raw.lineByLang && typeof raw.lineByLang === 'object'
     ? Object.fromEntries(Object.entries(raw.lineByLang).map(([lang, text]) => [lang, String(text || '').trim().slice(0, 200)]).filter(([, text]) => text))
     : {};
@@ -90,6 +92,9 @@ function introOf(base, raw) {
     captions,
     captionsByLang,
     lineByLang,
+    sound: typeof raw.sound === 'string' && raw.sound ? picture(base, raw.sound) : '',
+    soundFrom: Number.isFinite(soundFrom) ? Math.max(0, Math.min(frames.length - 1, soundFrom)) : -1,
+    soundVolume: Number.isFinite(soundVolume) ? Math.min(1, Math.max(0, soundVolume)) : 0.7,
     // frames that are full pictures (a room behind him) fill the screen; transparent ones float
     cover: raw.cover === true,
     // a sheet that dissolves by itself doesn't need the app's dissolve on top of it

@@ -95,6 +95,13 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   const captions = ((spoken[langKey] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
   const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
   const closing = (intro.lineByLang && (intro.lineByLang[langKey] || intro.lineByLang.en)) || intro.line;
+  // the sound that comes with it: the line about the city, played as the words land, faded out with the glitch
+  const track = intro.sound ? new Audio(intro.sound) : null;
+  if (track) {
+    track.volume = intro.soundVolume ?? 0.7;
+    track.preload = 'auto';
+  }
+  let playing = false;
 
   let front = 0;
   const geometry = intro.cover ? 'is-cover' : null;
@@ -107,6 +114,10 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
     layer.className = `intro-shot ${shape}`;
     front = 1 - front;
 
+    if (track && !playing && i >= (intro.soundFrom ?? -1)) {
+      playing = true;
+      track.play().catch(() => {});
+    }
     const text = captionsAt.get(i);
     if (text) {
       caption.textContent = text;
@@ -117,6 +128,15 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
     await sleep(durations[i]);
   }
 
+  if (track && playing) {
+    const fade = setInterval(() => {
+      track.volume = Math.max(0, track.volume - 0.08);
+      if (track.volume <= 0) {
+        clearInterval(fade);
+        track.pause();
+      }
+    }, 60);
+  }
   // the last frame comes apart: slices, colour split, and the avatar shows up in the middle of it
   if (intro.dissolve) layers[1 - front].classList.add('is-dissolving');
   caption.classList.add('is-fading');
