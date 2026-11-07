@@ -9,7 +9,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 
-const SCRIPT = path.join(__dirname, 'ocr.ps1');
+// Inside a packaged app this module lives in app.asar, and PowerShell cannot open a path inside an
+// archive: the script is unpacked next to it (asarUnpack), and the path has to say so.
+const scriptPath = (dirname) => {
+  const bundled = path.join(dirname, 'ocr.ps1');
+  return /app\.asar([\\/])/.test(bundled) ? bundled.replace(/app\.asar([\\/])/, 'app.asar.unpacked$1') : bundled;
+};
+const SCRIPT = scriptPath(__dirname);
 const LANGS = ['ru', 'en-US'];
 const TIMEOUT = 30000;
 
@@ -56,4 +62,4 @@ async function recognize(file, { langs = LANGS } = {}) {
   };
 }
 
-module.exports = { recognize, quality, LANGS, SCRIPT };
+module.exports = { recognize, quality, LANGS, SCRIPT, scriptPath };

@@ -19,6 +19,16 @@ test('a Russian result is chosen only when it really is Cyrillic', () => {
   assert.ok(ocr.quality('hello world of night city', 'en-US') > 0.9);
 });
 
+test('the OCR script is found outside the archive when packaged', () => {
+  const inside = path.join('C:', 'Apps', 'Capri', 'resources', 'app.asar', 'src', 'main');
+  const outside = ocr.scriptPath(inside);
+  assert.match(outside, /app\.asar\.unpacked/);
+  assert.equal(outside.endsWith(path.join('src', 'main', 'ocr.ps1')), true);
+  // and stays put when running from source
+  const here = ocr.scriptPath(path.join('E:', 'repo', 'src', 'main'));
+  assert.equal(here.includes('unpacked'), false);
+});
+
 test('nothing to read is an answer, not a crash', async () => {
   const missing = path.join(os.tmpdir(), 'capri-nope-' + Date.now() + '.png');
   const out = await ocr.recognize(missing);
