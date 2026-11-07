@@ -1738,9 +1738,9 @@ html[data-motion='reduced'] .intro-shot {
 /* the guitar: he sits on the edge of the screen, leaning on it, and plays */
 .guitar {
   position: fixed;
-  right: -2vw;
-  bottom: -2vh;
-  height: 62vh;
+  right: 1vw;
+  bottom: -3vh;
+  height: 46vh;
   z-index: 32;
   pointer-events: none;
   opacity: 0;
