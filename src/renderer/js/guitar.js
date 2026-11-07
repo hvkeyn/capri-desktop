@@ -1,23 +1,25 @@
 // The guitar: he sits on the edge of the screen, leans on it and plays. Sometimes it is one chord and
-// gone; sometimes a whole track from his own playlist (the in-game songs, cut from the gamerip).
+// gone; sometimes a whole song from his own playlist (the in-game tracks, cut from the gamerip).
 //
-// It is a picture over the desktop, not a rig pose: the drawing is high-resolution and reads better at
-// size than a 240-pixel sprite. Everything is cleaned up when the mode ends or the chat opens.
+// The frames are a real animation (56 of them, cut from his sheet): while a song plays, they run in a loop
+// at a strumming pace. When a chord is asked for, the same loop runs for a few seconds and stops.
 
-const SESSION_MAX = 26; // seconds of a full track before he puts it down by himself
+const FRAME_MS = 85; // a strumming pace, not a film: he is sitting, not running
 
 export class Guitar {
   constructor({ capri, panel, host, skin }) {
     this.capri = capri;
     this.panel = panel;
     this.host = host;
+    this.frames = Array.isArray(skin?.guitar?.frames) ? skin.guitar.frames : [];
+    this.image = skin?.guitar?.image || this.frames[0] || '';
     this.tracks = Array.isArray(skin?.guitar?.tracks) ? skin.guitar.tracks : [];
-    this.image = skin?.guitar?.image || '';
     this.audio = null;
     this.el = null;
     this.timer = 0;
+    this.frameTimer = 0;
+    this.frame = 0;
     this.last = -1;
-    this.busy = false;
     this.onChange = null;
   }
 
@@ -29,7 +31,6 @@ export class Guitar {
     return Boolean(this.el);
   }
 
-  // The picture on the edge, and the sound with it. `seconds` limits a chord; a full track plays out.
   start({ seconds = 0, volume = 0.55, track = null } = {}) {
     if (!this.available || this.playing) return false;
     const index = track ?? this.nextTrack();
@@ -43,6 +44,7 @@ export class Guitar {
     document.body.appendChild(img);
     this.el = img;
     requestAnimationFrame(() => img.classList.add('is-here'));
+    this.runFrames();
 
     const audio = new Audio(src);
     audio.volume = volume;
@@ -51,14 +53,27 @@ export class Guitar {
     audio.addEventListener('ended', () => this.stop());
     audio.play().catch(() => {});
 
-    this.timer = setTimeout(() => this.stop(), seconds > 0 ? seconds * 1000 : SESSION_MAX * 1000);
+    if (seconds > 0) this.timer = setTimeout(() => this.stop(), seconds * 1000);
     this.onChange?.(true);
     return true;
   }
 
+  runFrames() {
+    if (this.frames.length < 2 || !this.el) return;
+    clearInterval(this.frameTimer);
+    this.frame = 0;
+    this.frameTimer = setInterval(() => {
+      if (!this.el) return;
+      this.frame = (this.frame + 1) % this.frames.length;
+      this.el.src = this.frames[this.frame];
+    }, FRAME_MS);
+  }
+
   stop() {
     clearTimeout(this.timer);
+    clearInterval(this.frameTimer);
     this.timer = 0;
+    this.frameTimer = 0;
     if (this.audio) {
       try {
         this.audio.pause();
@@ -90,10 +105,10 @@ export class Guitar {
     return index;
   }
 
-  // Nothing is happening: now and then, one chord and no more — never twice in a row.
+  // Nothing is happening: now and then one chord and no more.
   maybe() {
-    if (!this.available || this.playing || this.busy) return;
+    if (!this.available || this.playing) return;
     if (Math.random() > 0.3) return;
-    this.start({ seconds: 6, volume: 0.4 });
+    this.start({ seconds: 7, volume: 0.4 });
   }
 }
