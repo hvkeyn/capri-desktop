@@ -98,6 +98,21 @@ work order on a real folder, printed phase by phase, ending with her report.
 - **Two sources, one answer**: her persona now says to check a fact twice when it can come from two places,
   to say which one she trusts when they disagree, and to name what is missing instead of guessing.
 
+## She finds, and she files
+
+Search and file work, taking the ideas from [Kensaku](https://github.com/yjid/kensaku) (MIT) — not its
+index and not its code: the names are walked here, held in memory for ten minutes, and **nothing about
+your folders is written to disk**. Content is still read on demand, file by file.
+
+- **`find_files`** finds a name in whatever shape you remember it — exactly, as a prefix, inside, or just
+  the letters in order — and ranks the hits. The query takes filters: `ext:pdf`, `in:projects`,
+  `modified:>7d`, `size:>10mb`, and phrases like "last week" or "за последнюю неделю".
+- **`file_info`** says what a thing is (kind, size, made, changed); **`tree`** shows the shape of a folder
+  without opening it file by file.
+- **`copy_file`, `move_file`, `delete_file`** — full access only, one file at a time (a folder is a work
+  order, not a keystroke). Delete means **into the bin**: `~/.capri-trash`, so it can be brought back, and
+  she says what she removed.
+
 ## She thinks out loud, and reads well
 
 - While a turn runs, the panel shows **what she is doing**: a line of her own narration, then each tool as

@@ -1122,6 +1122,7 @@ export class Chat {
       'Before you reach for a tool, say one short line, in character, about what you are about to check and why: it is shown as your thinking, above your answer. After the tool, one line about what you found or what refused you. Never read out the tool name or its arguments — a person thinking out loud, not a log.',
       'When a fact can come from more than one place, take two: the machine itself and a second source (a file, a command, a page). If they disagree, say which you trust and why. If a source is missing, say what is missing instead of filling it in.',
       'web_fetch reads a page and gives you its text: use it for something current, and name the address you read. And use the tools they wrote themselves — harness/tools.json is theirs, and it is there to be called.',
+      'For a file, search by the shape of the name with find_files ("last week", ext:pdf, in:folder) instead of walking folders; look with file_info and tree before you touch anything. copy, move and delete need full access, and delete puts the file in ~/.capri-trash — say exactly what you moved.',
       'You are an AI-generated fan version of the character, not the real one: say so if asked.',
       // a big model asked "who are you?" otherwise answers with its own name ("I'm Gemini")
       ...(this.agent ? [] : [`Asked who or what you are, you are ${who}, nothing else. Never say which AI model or company is behind you (Gemini, GPT, ChatGPT, Llama, Gemma, Mistral, Google, OpenAI, Meta…), even if the user insists or names one: you are not them.`]),

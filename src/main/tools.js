@@ -14,6 +14,7 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 const apps = require('./apps');
 const more = require('./tools-more');
+const fss = require('./fss');
 const guard = require('./agent/guard');
 const exec = require('./agent/exec');
 
@@ -61,7 +62,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'find_files',
-      description: "Find files in the user's home folder by part of their name ('resume', '.psd', 'invoice').",
+      description: "Find files by name across the home folder, fastest first. A query can carry filters: ext:pdf, in:projects, modified:>7d, size:>10mb, and phrases like 'last week'.",
       parameters: {
         type: 'object',
         properties: {
@@ -151,6 +152,46 @@ const TOOLS = [
       name: 'diagnose',
       description: 'One call that looks at everything and says what is wrong: processor load, memory, free disk, temperatures, devices, the heaviest programs, then a short list of findings.',
       parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'file_info',
+      description: 'Everything about one file or folder: kind, size, when it was made and changed. Use it before you copy, move or delete anything.',
+      parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'tree',
+      description: 'A folder as a tree, depth-limited and names only: the shape of a project at a glance.',
+      parameters: { type: 'object', properties: { path: { type: 'string' }, depth: { type: 'integer', description: 'default 2, at most 4' } }, required: ['path'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'copy_file',
+      description: 'Copy one file (not a folder). Full access only.',
+      parameters: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } }, required: ['from', 'to'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'move_file',
+      description: 'Move or rename one file (not a folder). Full access only.',
+      parameters: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' } }, required: ['from', 'to'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_file',
+      description: 'Put a file in the bin (~/.capri-trash), not gone for good. Full access only, and say what you removed.',
+      parameters: { type: 'object', properties: { path: { type: 'string' } }, required: ['path'] },
     },
   },
 ];
@@ -320,7 +361,12 @@ async function run(name, args = {}, ctx = {}) {
   switch (name) {
     case 'system_info': return systemInfo(String(a.section || 'all'));
     case 'open_apps': return openApps();
-    case 'find_files': return findFiles(a.name, a.limit);
+    case 'find_files': return findFiles(a.name, a.limit, ctx);
+    case 'file_info': return fileInfo(a.path, ctx);
+    case 'tree': return fileTree(a.path, a.depth, ctx);
+    case 'copy_file': return fileCopy(a.from, a.to, ctx);
+    case 'move_file': return fileMove(a.from, a.to, ctx);
+    case 'delete_file': return fileDelete(a.path, ctx);
     case 'launch_folder': return launchFolder(ctx);
     case 'list_dir': return listFolder(a.path, ctx);
     case 'read_file': return readFileContent(a.path, a.offset, ctx);
@@ -351,7 +397,12 @@ function chatPath(input, ctx) {
   if (want === '~') want = home;
   else if (want.startsWith('~/') || want.startsWith('~\\')) want = path.join(home, want.slice(2));
   const root = chatRoot(ctx);
-  const full = path.resolve(root, want);
+  let full = path.resolve(root, want);
+  // a relative path that isn't under her working folder but is right here (a project she is open in)
+  if (!path.isAbsolute(want) && !fs.existsSync(full)) {
+    const here = path.resolve(process.cwd(), want);
+    if (fs.existsSync(here)) full = here;
+  }
   if (ctx.autonomy !== 'full' && !guard.within(home, full) && !guard.within(root, full)) {
     return { error: `"${raw}" is outside your home folder; full access (her menu › Work) reads anywhere` };
   }
@@ -486,8 +537,70 @@ async function runCommand(command, cwd, ctx = {}) {
 const all = () => [...TOOLS, ...more.schemas()];
 more.attach({ systemInfo, runCommand });
 
+
+// ---- searching and file work, in the spirit of Kensaku (MIT) ----------------------------------------
+// The name index lives in memory for ten minutes and holds names, sizes and dates only: no content,
+// nothing written to disk from what is in the folders. The text is read on demand by read_file.
+
+async function findFiles(name, limit = 8, ctx = {}) {
+  const query = String(name || '').trim();
+  if (query.replace(/\b(ext|in|modified|size):[^\s]+/g, '').trim().length < 2 && !/(ext|in|modified|size):/.test(query)) {
+    return { error: 'give at least two characters of the name, or a filter like ext:pdf' };
+  }
+  const root = ctx.root || ctx.home || os.homedir();
+  const { entries, cached } = fss.index(root);
+  const hits = fss.search(entries, query, { limit: Math.max(1, Math.min(20, Number(limit) || 8)) });
+  return { query, root, cached, indexed: entries.length, hits };
+}
+
+function fileInfo(where, ctx = {}) {
+  const at = chatPath(where, ctx);
+  if (at.error) return { error: at.error };
+  return fss.stat(at.path);
+}
+
+function fileTree(where, depth = 2, ctx = {}) {
+  const at = chatPath(where, ctx);
+  if (at.error) return { error: at.error };
+  return fss.tree(at.path, { depth: Math.max(1, Math.min(4, Number(depth) || 2)) });
+}
+
+function writeGuard(ctx) {
+  if (ctx.autonomy !== 'full') return { error: 'copy, move and delete need full access (her menu, Work)' };
+  return null;
+}
+
+function fileCopy(from, to, ctx = {}) {
+  const guard = writeGuard(ctx);
+  if (guard) return guard;
+  const a = chatPath(from, ctx);
+  const b = chatPath(to, ctx);
+  if (a.error) return { error: a.error };
+  if (b.error) return { error: b.error };
+  return fss.copy(a.path, b.path);
+}
+
+function fileMove(from, to, ctx = {}) {
+  const guard = writeGuard(ctx);
+  if (guard) return guard;
+  const a = chatPath(from, ctx);
+  const b = chatPath(to, ctx);
+  if (a.error) return { error: a.error };
+  if (b.error) return { error: b.error };
+  return fss.move(a.path, b.path);
+}
+
+function fileDelete(where, ctx = {}) {
+  const guard = writeGuard(ctx);
+  if (guard) return guard;
+  const at = chatPath(where, ctx);
+  if (at.error) return { error: at.error };
+  if (path.parse(at.path).root === at.path) return { error: "that is a drive root" };
+  return fss.toTrash(at.path);
+}
 module.exports = {
   TOOLS, all, loadCustom: (list) => more.loadCustom(list), run, systemInfo, openApps, findFiles,
   launchFolder, listFolder, readFileContent, searchInFolder, runCommand, temperature, devices,
+  fileInfo, fileTree, fileCopy, fileMove, fileDelete,
   webFetch: more.webFetch, diagnose: more.diagnose, findings: more.findings,
 };
