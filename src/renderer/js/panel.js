@@ -71,6 +71,10 @@ export class Panel {
 
     // talking to her (chat.js): a line to type in, under her answer
     this.chatForm = panel.querySelector('.panel__chat');
+    this.chatFiles = panel.querySelector('.panel__files');
+    this.chatAttach = panel.querySelector('.panel__attach');
+    this.chatPencil = panel.querySelector('.panel__pencil');
+    this.chatMenu = panel.querySelector('.panel__menu');
     this.chatInput = panel.querySelector('.panel__input');
     this.chatSend = panel.querySelector('.panel__send');
     this.chatClose = panel.querySelector('.panel__close');
@@ -79,12 +83,20 @@ export class Panel {
     this.chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = this.chatInput.value.trim();
-      if (!text || this.chatInput.disabled) return;
+      const files = this.current?.files?.() || [];
+      if ((!text && !files.length) || this.chatInput.disabled) return;
       this.chatInput.value = '';
-      this.current?.onSend?.(text);
+      this.current?.onSend?.(text, files);
     });
     this.chatInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.hide();
+      if (e.key === 'Escape') {
+        this.hide();
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        this.chatForm.requestSubmit();
+      }
     });
     this.chatClose.addEventListener('click', () => this.hide());
 

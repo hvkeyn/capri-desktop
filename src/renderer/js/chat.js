@@ -253,6 +253,16 @@ export class Chat {
     this.onMessage = null; // () => void: you said something to her
     this.waitingWhen = null; // a reminder you asked for without saying when: { text, until }
     this.skin = null;      // who's on the desktop when it isn't her (characters.js, app.js): name, badge, persona
+    this.composer = new Composer({
+      form: panel.chatForm,
+      input: panel.chatInput,
+      files: panel.chatFiles,
+      attach: panel.chatAttach,
+      pencil: panel.chatPencil,
+      menu: panel.chatMenu,
+      host,
+      onSend: (text, files) => this.send(text, files),
+    });
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
     // what she is doing while she does it: her narration, and every tool she reaches for
     host.onChatEvent((event) => this.onEvent(event));
@@ -333,7 +343,8 @@ export class Chat {
         noteTag: t.noteTag,
         note: status.local ? t.note : t.noteCloud,
       },
-      onSend: (text) => this.send(text),
+      onSend: (text, files) => this.send(text, files),
+      files: () => this.composer?.files || [],
       onLeave: () => this.close(),
       hold: null,
     });
@@ -357,24 +368,31 @@ export class Chat {
     this.capri.nextGaze = performance.now() + 60000;
   }
 
-  async send(text) {
+  async send(text, files = []) {
     if (this.turn || !this.open) return;
     const id = Date.now();
     this.turn = id;
     this.answer = '';
-    this.history.push({ role: 'user', content: text });
+    // what came with the message: a picture is read by the same eyes as the screen, a text file is read
+    // whole (main.js), and both are handed to the model as part of what you said
+    const attached = files.filter((file) => file && file.name);
+    const context = fileContext(attached);
+    const said = text || attached.map((file) => file.name).join(', ');
+    const payload = said + context;
+    this.history.push({ role: 'user', content: payload });
+    this.panel.chatTurn({ quote: said, face: 'aside' });
+    this.composer?.reset();
     this.panel.setChatBusy(true);
     this.panel.setActions([]); // a close button she offered before goes with a new message
-    this.panel.chatTurn({ quote: text, face: 'aside' });
     this.panel.setActivity('wait'); // before the first token, the panel says she is thinking
     this.capri.pulse();
     this.onMessage?.();
     // what you asked for plainly happens right away (the music, the volume, an app you named): her
     // line about it comes under her answer (Claude Code, answering her chat, does things its own way)
-    const asked = this.agent ? null : this.asked(text);
-    if (asked?.kind === 'look') return this.sendLook(text, id);
+    const asked = this.agent ? null : this.asked(said);
+    if (asked?.kind === 'look') return this.sendLook(said, id);
     const early = asked && asked.kind !== 'close' ? this.doNow(asked) : null;
-    this.bond?.heard(text); // "sorry": she lets it go
+    this.bond?.heard(said); // "sorry": she lets it go
     await Promise.race([this.appsReady, new Promise((r) => setTimeout(r, 1500))]);
     // what she greeted you with (angry, sulking…), in the conversation before your message, so her
     // answer carries on from it (after another answer of hers: added to that one, never two in a row)
@@ -404,7 +422,7 @@ export class Chat {
     clearTimeout(slow);
     if (this.turn !== id) {
       // closed meanwhile: your message goes too, or the next answer would answer it as well
-      if (this.history.at(-1)?.content === text) this.history.pop();
+      if (this.history.at(-1)?.content === payload) this.history.pop();
       return;
     }
     this.turn = 0;

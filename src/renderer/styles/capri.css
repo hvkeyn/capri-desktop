@@ -1515,3 +1515,169 @@ html[data-motion='reduced'] .intro-shot {
 .panel__thought-text {
   display: block;
 }
+
+
+/* ---- the composer: more than one line --------------------------------------------------------------
+   A box that grows with what you write, files as chips you can remove, a pencil for undo/redo, and a right
+   click menu that gives back the cut/copy/paste a text box should never withhold. */
+
+.panel__chat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  position: relative;
+}
+
+.panel__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 32px;
+  max-height: 150px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in oklch, var(--paper-3) 65%, transparent);
+  background: oklch(0.22 0.012 100 / 0.9);
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: hidden;
+  border-radius: 2px;
+}
+
+.panel__input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.panel__input::placeholder {
+  color: var(--paper-3);
+}
+
+.panel__attach,
+.panel__pencil {
+  flex: none;
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid color-mix(in oklch, var(--paper-3) 60%, transparent);
+  background: transparent;
+  color: var(--paper-2);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.panel__attach::before {
+  content: '＋';
+}
+
+.panel__pencil::before {
+  content: '✎';
+  color: var(--red);
+}
+
+.panel__attach:hover,
+.panel__pencil:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.panel__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel__file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 4px 3px 7px;
+  border: 1px solid color-mix(in oklch, var(--cyan) 45%, transparent);
+  background: color-mix(in oklch, var(--cyan) 8%, transparent);
+  font-size: 10.5px;
+}
+
+.panel__file-icon {
+  color: var(--cyan);
+}
+
+.panel__file-name {
+  overflow: hidden;
+  max-width: 180px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--paper);
+}
+
+.panel__file-size {
+  color: var(--paper-3);
+}
+
+.panel__file-remove {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--paper-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.panel__file-remove:hover {
+  color: var(--red);
+}
+
+.panel__menu {
+  position: absolute;
+  z-index: 5;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid color-mix(in oklch, var(--accent) 55%, transparent);
+  background: oklch(0.19 0.012 100 / 0.98);
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.55);
+}
+
+.panel__menu-item {
+  display: block;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel__menu-item:hover {
+  background: color-mix(in oklch, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.panel__menu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: color-mix(in oklch, var(--paper-3) 45%, transparent);
+}
+
+.panel__chat.is-drop {
+  outline: 1px dashed var(--accent);
+  outline-offset: 3px;
+}

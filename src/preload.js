@@ -1,6 +1,6 @@
 'use strict';
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const on = (channel) => (fn) => {
   const listener = (_e, payload) => fn(payload);
@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('host', {
   // lines the character writes for itself, in its own voice, from the recent chat (voice/improv.js)
   voiceLines: (request) => ipcRenderer.invoke('voice:lines', request),
   // more of a character's own lines: the ones kept on disk, and a fresh batch from the model
+  chatPick: () => ipcRenderer.invoke('chat:pick'),
+  // Electron 44 has no File.path any more: the preload is where a dropped file still knows its place
+  filePath: (file) => {
+    try { return webUtils.getPathForFile(file) || null; } catch { return null; }
+  },
+  chatAttach: (paths) => ipcRenderer.invoke('chat:attach', { paths }),
   linesExtra: () => ipcRenderer.invoke('lines:extra'),
   linesGenerate: (request) => ipcRenderer.invoke('lines:generate', request),
   onChatDelta: on('chat:delta'),

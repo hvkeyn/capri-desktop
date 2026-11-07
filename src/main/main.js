@@ -1405,6 +1405,41 @@ function registerIpc() {
     return { ok: true, character, lang, packs: merged.packs, counts: linesStore.count(linesBase(), character, lang), model };
   });
 
+
+  // What you hand her in the chat: a file, or a picture (read with the same eyes as the screen).
+  ipcMain.handle('chat:pick', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Files for her',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Anything', extensions: ['*'] }],
+    });
+    return canceled ? { ok: false, canceled: true } : { ok: true, paths: filePaths };
+  });
+  ipcMain.handle('chat:attach', async (_e, { paths } = {}) => {
+    const wanted = (Array.isArray(paths) ? paths : []).slice(0, 6);
+    const files = [];
+    for (const one of wanted) {
+      try {
+        const stat = fs.statSync(one);
+        if (!stat.isFile()) continue;
+        const ext = path.extname(one).toLowerCase();
+        const image = /^\.(png|jpe?g|webp|bmp|gif)$/.test(ext);
+        let text = '';
+        if (image) {
+          const read = await ocr.recognize(one);
+          if (read.ok) text = `[text on the picture]\n${read.text}`;
+        } else if (stat.size <= 2 * 1024 * 1024) {
+          const buffer = fs.readFileSync(one);
+          if (!buffer.includes(0)) text = buffer.toString('utf8').slice(0, 20000);
+        }
+        files.push({ name: path.basename(one), path: one, image, bytes: stat.size, text });
+      } catch {
+        // a file that vanished between the pick and the read is not worth a message
+      }
+    }
+    return { ok: true, files };
+  });
+
   // A work order (src/main/agent): the board asks, main starts it, and every change comes back on
   // `work:state` as the whole state, so the board never has to reconstruct anything.
   ipcMain.handle('work:start', async (_e, { goal, workspace, attachments } = {}) => {
