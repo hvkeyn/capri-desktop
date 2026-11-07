@@ -32,11 +32,11 @@ function loadImage(src) {
 // A character's entrance. If it brought an intro (skin.json's "intro"): frame by frame — it walks up,
 // leans in, the close-ups, the glitch — and then it folds into the little avatar. Otherwise its figure
 // comes down over the whole screen and does the same.
-async function skinArrival(capri, skin, panel) {
+async function skinArrival(capri, skin, panel, lang) {
   const avatar = document.getElementById('capri');
   if (reducedMotion.matches) return capri.materialize(capri.spot('post'));
   const intro = skin?.intro;
-  if (intro?.frames?.length) return playIntro(capri, skin, intro, avatar, panel);
+  if (intro?.frames?.length) return playIntro(capri, skin, intro, avatar, panel, lang);
 
   const big = document.createElement('img');
   big.className = 'arrival';
@@ -63,7 +63,7 @@ async function skinArrival(capri, skin, panel) {
 
 // The storyboard entrance: its frames cross-fading on screen, its captions, a glitch that dissolves
 // it, and then the avatar. skin.json's "intro": frames, where the close-ups start, durations, captions.
-async function playIntro(capri, skin, intro, avatar, panel) {
+async function playIntro(capri, skin, intro, avatar, panel, lang) {
   const stage = document.createElement('div');
   stage.className = 'intro-stage';
   const layers = [document.createElement('img'), document.createElement('img')];
@@ -90,11 +90,11 @@ async function playIntro(capri, skin, intro, avatar, panel) {
     ? intro.durations
     : intro.frames.map((_, i) => (i < closeupFrom ? 320 : intro.frameMs || 460));
   // the captions follow the language of the app, not the language of the skin
-  const lang = String(config.lang && config.lang !== 'auto' ? config.lang : (navigator.language || 'en')).slice(0, 2).toLowerCase();
+  const langKey = String(lang && lang !== 'auto' ? lang : (navigator.language || 'en')).slice(0, 2).toLowerCase();
   const spoken = intro.captionsByLang || {};
-  const captions = ((spoken[lang] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
+  const captions = ((spoken[langKey] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
   const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
-  const closing = (intro.lineByLang && (intro.lineByLang[lang] || intro.lineByLang.en)) || intro.line;
+  const closing = (intro.lineByLang && (intro.lineByLang[langKey] || intro.lineByLang.en)) || intro.line;
 
   let front = 0;
   const geometry = intro.cover ? 'is-cover' : null;
@@ -1158,7 +1158,7 @@ async function boot() {
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip; started with Windows: no show, she's just there)
   if (config.visible === false) capri.stowNow();
-  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin, panel);
+  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin, panel, config.lang);
   else if (intro && !config.startedAtLogin) await capri.intro(capri.spot('post'));
   else await capri.materialize(capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she
