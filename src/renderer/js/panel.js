@@ -484,6 +484,7 @@ export class Panel {
         }
         const node = document.createElement(seg.type === 'b' ? 'b' : seg.type === 'code' ? 'code' : 'span');
         if (seg.type === 'num') node.className = 'panel__num';
+        if (seg.type === 'key') node.className = 'panel__key';
         node.textContent = seg.text;
         p.append(node);
       }

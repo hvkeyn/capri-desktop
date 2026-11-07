@@ -1372,3 +1372,104 @@ html[data-motion='reduced'] .intro-shot {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- the thinking stream, read as a story ----------------------------------------------------------
+   Her remark is a quiet italic line; a tool is a row on a coloured rail: glyph, verb, what it touched, how
+   long it took. The colour belongs to the kind of work, so reading, running and failing look different at a
+   glance. These rules come last on purpose: they are the ones that win. */
+
+.panel__thoughts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 10px 0 8px;
+  padding: 8px 0 8px 16px;
+  border-left: 1px solid color-mix(in oklch, var(--paper-3) 55%, transparent);
+  list-style: none;
+}
+
+.panel__thought {
+  padding: 2px 10px 2px 0;
+  font-size: 11.5px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--paper-2);
+}
+
+.panel__thought-text {
+  display: block;
+  text-wrap: pretty;
+}
+
+.panel__act {
+  display: grid;
+  grid-template-columns: 16px 62px minmax(0, 1fr) 40px;
+  align-items: baseline;
+  column-gap: 9px;
+  padding: 3px 8px 3px 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, color-mix(in oklch, var(--activity, var(--cyan)) 9%, transparent), transparent 72%);
+}
+
+.panel__act-glyph {
+  color: var(--activity, var(--cyan));
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 0 8px color-mix(in oklch, var(--activity, var(--cyan)) 55%, transparent);
+}
+
+.panel__act-verb {
+  color: var(--activity, var(--cyan));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.95;
+}
+
+.panel__act-target {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.92;
+}
+
+.panel__act-ms {
+  color: var(--paper-3);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.panel__act.is-bad {
+  background: linear-gradient(90deg, color-mix(in oklch, var(--red) 16%, transparent), transparent 72%);
+}
+
+.panel__act.is-pending .panel__act-glyph {
+  animation: act-blink 0.9s steps(2, end) infinite;
+}
+
+@keyframes act-blink {
+  50% { opacity: 0.25; }
+}
+
+/* key words: the bold she wrote, the phrases in «quotes», the numbers with units */
+.panel.is-chat .panel__line b {
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+.panel.is-chat .panel__line .panel__key {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.panel.is-chat .panel__line .panel__num {
+  color: var(--yellow);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

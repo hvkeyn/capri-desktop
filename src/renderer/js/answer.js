@@ -25,7 +25,7 @@ function textRun(out, text) {
 export function segments(text) {
   const out = [];
   let rest = String(text || '');
-  const mark = /(\*\*[^*]+\*\*|`[^`]+`)/;
+  const mark = /(\*\*[^*]+\*\*|`[^`]+`|«[^»]{1,80}»)/;
   while (rest) {
     const m = mark.exec(rest);
     if (!m) {
@@ -35,6 +35,7 @@ export function segments(text) {
     if (m.index > 0) textRun(out, rest.slice(0, m.index));
     const token = m[0];
     if (token.startsWith('**')) out.push({ type: 'b', text: token.slice(2, -2).trim() });
+    else if (token.startsWith('«')) out.push({ type: 'key', text: token.slice(1, -1) });
     else out.push({ type: 'code', text: token.slice(1, -1) });
     rest = rest.slice(m.index + token.length);
   }

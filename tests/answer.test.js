@@ -47,6 +47,14 @@ test('bold and code from her own text are marked, not shown as punctuation', asy
   assert.equal(odd.segments.some((s) => s.type === 'b'), false);
 });
 
+test('a phrase in quotes is a key word, not punctuation', async () => {
+  const { paragraphs } = await load();
+  const [part] = paragraphs('Держи «Тибериум» под контролем: 3 базы.');
+  const key = part.segments.find((s) => s.type === 'key');
+  assert.equal(key.text, 'Тибериум');
+  assert.equal(part.segments[0].text, 'Держи ');
+});
+
 test('a bear of an answer with markdown headings is still just text', async () => {
   const { paragraphs } = await load();
   const parts = paragraphs('## Сводка\n\n- первый\n- второй');

@@ -59,6 +59,7 @@ function messages({ character = 'Capri', persona = [], lang = 'ru', kinds = Obje
         `Write them in ${LANGUAGE[lang] || 'English'}. One sentence each, fifteen words at most.`,
         'No numbering, no quotes, no explanations. Never mention being an AI or a model. Do not repeat a line.',
         'One short sentence each, no semicolons, no emoji, no stage directions.',
+        'The lines must be about different things — work, tech, music, food, sleep, money, their habits, the city, a joke — not the same subject in every one.',
         'Answer with JSON only: {"kind": ["line", "line"], …} using exactly the kind names above.',
       ].join('\n\n'),
     },
