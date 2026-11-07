@@ -1,6 +1,35 @@
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const rand = (a, b) => a + Math.random() * (b - a);
-export const pick = (list) => list[Math.floor(Math.random() * list.length)];
+// A random pick that doesn't repeat itself: each list gets a shuffled bag, drawn from until it is empty,
+// then refilled so the last line doesn't come back immediately. The old plain random gave the same line
+// twice in a row often enough to notice — and on a pool of four, it read as a catchphrase.
+const bags = new WeakMap();
+
+export const pick = (list) => {
+  if (!Array.isArray(list) || !list.length) return undefined;
+  if (list.length === 1) return list[0];
+  let state = bags.get(list);
+  if (!state) {
+    state = { bag: [], last: -1 };
+    bags.set(list, state);
+  }
+  if (!state.bag.length) {
+    const order = list.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    const tail = order.length - 1; // pop() draws from the end
+    if (order[tail] === state.last) {
+      const at = order.findIndex((i) => i !== state.last);
+      [order[tail], order[at]] = [order[at], order[tail]];
+    }
+    state.bag = order;
+  }
+  const index = state.bag.pop();
+  state.last = index;
+  return list[index];
+};
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const lerp = (a, b, t) => a + (b - a) * t;
 

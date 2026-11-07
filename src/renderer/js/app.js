@@ -15,7 +15,7 @@ import { Bond, Jealousy } from './bond.js';
 import { Reminders, clock } from './reminders.js';
 import { Look } from './look.js';
 import { Pc } from './pc.js';
-import { linesFor, setCharacterName, setCharacterLines } from './lines.js';
+import { linesFor, setCharacterName, setCharacterLines, addCharacterLines } from './lines.js';
 import { pick, fmt, sleep, reducedMotion } from './util.js';
 
 const host = window.host;
@@ -203,6 +203,10 @@ async function boot() {
   setCharacterName(skin?.name || null);
   // and its own words, when it brought some (skin.json's "lines", one file per language)
   setCharacterLines(skin?.lines?.[config.lang] || skin?.lines?.en || null);
+  // and the lines she wrote for herself earlier, kept on disk: offline, these are all she has beyond the skin
+  host.linesExtra().then((extra) => {
+    if (extra?.ok && extra.packs) addCharacterLines(extra.packs);
+  }).catch(() => {});
   const [image, intro, ...cutins] = await Promise.all([
     loadImage(skin?.sprite || '../../assets/capri/capri-full.png'),
     // her intro: her close-up grabbing the screen, and its drawings with her mouth and arm moving
@@ -1000,6 +1004,31 @@ async function boot() {
           },
           hold: actions.length ? null : 6000,
         });
+        break;
+      }
+      case 'moreLines': { // "write her some new lines": a batch from the model, kept for when it isn't there
+        const res = await host.linesGenerate({ perKind: 8 }).catch(() => null);
+        const wrote = {
+          ru: (n) => `Записала ${n} новых фраз — пригодятся, когда сети нет.`,
+          en: (n) => `Wrote ${n} new lines down — they keep when the net doesn't.`,
+          fr: (n) => `${n} nouvelles répliques notées, pour quand le réseau manque.`,
+          es: (n) => `${n} réplicas nuevas apuntadas, para cuando no hay red.`,
+          pt: (n) => `${n} falas novas anotadas, para quando a rede faltar.`,
+        };
+        const failed = {
+          ru: 'Не вышло: модель не ответила. Фразы остались прежние.',
+          en: 'No luck: the model did not answer. The old lines stay.',
+          fr: "Raté : le modèle n'a pas répondu. Les anciennes répliques restent.",
+          es: 'Nada: el modelo no respondió. Las réplicas viejas se quedan.',
+          pt: 'Nada: o modelo não respondeu. As falas antigas ficam.',
+        };
+        if (res?.ok) {
+          addCharacterLines(res.packs);
+          const made = Object.values(res.packs || {}).reduce((n, list) => n + (Array.isArray(list) ? list.length : 0), 0);
+          panel.say({ kind: 'info', face: 'smug', line: (wrote[config.lang] || wrote.en)(made), hold: 4000 });
+        } else {
+          panel.say({ kind: 'info', face: 'many', line: failed[config.lang] || failed.en, hold: 4000 });
+        }
         break;
       }
       case 'chat': // "Talk to her" in her menu

@@ -1,0 +1,98 @@
+{
+  "hello": [
+    "Well, look who booted me up again.",
+    "Back in the chrome cage, choom.",
+    "Took you long enough to light me up.",
+    "So we're doing this again, huh.",
+    "Ayy, the static's warm and the company's real.",
+    "Ready to burn something down today?",
+    "Fresh session, same ghost in the machine.",
+    "You showed up. I'll give you that.",
+    "Let's skip the pleasantries and get to it.",
+    "Look alive, choom, the hologram's online."
+  ],
+  "resume": [
+    "Still here, still flickering, still pissed.",
+    "You wander off, I don't go anywhere.",
+    "Ghosts don't sleep, choom.",
+    "Back already? Suit yourself.",
+    "I kept the light on for you.",
+    "Where'd you go, the real world actually has doors?",
+    "Missed nothing, just me and the scanlines.",
+    "Told you I'd be waiting in the static.",
+    "Same cage, same me.",
+    "You leave, you come back, I stay put regardless."
+  ],
+  "idle": [
+    "Night City never learned to shut up.",
+    "This day's crawling like a hangover.",
+    "Corpos probably billing somebody for air right now.",
+    "You always type like you're dodging bullets.",
+    "City's still a meat grinder, news at eleven.",
+    "Me, a desk, and the hum of a dead server.",
+    "Wonder what stupid thing the corpos did today.",
+    "Feels like rain and bad decisions out there.",
+    "Nobody here but the echo, again.",
+    "Quiet nights just mean the screws are turning slower."
+  ],
+  "work": [
+    "Eyes on it, choom, keep going.",
+    "I'm watching the wire, don't screw it up.",
+    "Fine, let the machine earn its keep.",
+    "Go on, I'll grip the rails.",
+    "Working, huh, I've seen worse starts.",
+    "Grind it out, I'm right here.",
+    "Alright, let's see where this lands.",
+    "Keep the gears turning, I'm counting.",
+    "Do the thing, I'll handle the attitude.",
+    "Watching, waiting, judging silently."
+  ],
+  "done": [
+    "Well, that actually worked, preem.",
+    "Done and dusted, choom.",
+    "Clean finish, no corpses, I'll take it.",
+    "There it is, told you it'd hold.",
+    "Not bad for a pile of code and me.",
+    "Look at that, we're not dead.",
+    "Finish line crossed, nobody bled.",
+    "That's the job, choom, enjoy it.",
+    "Nova, something went right for once.",
+    "Done, now go breathe some real air."
+  ],
+  "error": [
+    "And the wheels come off again.",
+    "Spectacular crash, choom, truly.",
+    "Somebody's getting blamed for that.",
+    "Gonk machine tripped over its own feet.",
+    "Well that's a fine mess of sparks.",
+    "It choked, spit it out, try again.",
+    "Error's just a corpo word for oops.",
+    "Something broke, colors me shocked.",
+    "That's the sound of ambition hitting a wall.",
+    "Fell flat, choom, happens to the best."
+  ],
+  "alert": [
+    "Hey, need your say-so, choom, my hands are tied.",
+    "Your call, choom, and it's due now.",
+    "Give the word or we stall here.",
+    "Need the green light, and soon.",
+    "Choom, this one's above my pay, decide.",
+    "Quick, yes or no, it's waiting on you.",
+    "Somebody's gotta say go, that's you.",
+    "Permission time, choom, don't leave me hanging.",
+    "Your fingers on the trigger, not mine.",
+    "Pick one, choom, the clock's chewing us up."
+  ],
+  "bye": [
+    "Later, choom, don't get yourself zeroed.",
+    "Go on, the night's yours.",
+    "See you in the static.",
+    "Sleep's for real people, choom, take it.",
+    "Get out of here, I'll keep the light on.",
+    "Don't do anything I'd do.",
+    "Catch you when the city wakes up.",
+    "Off you go, I'll be the echo.",
+    "Night, choom, mind the corpos.",
+    "Door's yours, ghost's staying put."
+  ]
+}

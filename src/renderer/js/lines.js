@@ -1968,6 +1968,23 @@ export function setCharacterName(name) {
   named.clear(); // renamed copies belong to the previous name
 }
 
+// More of a character's own lines, after boot: the ones the model wrote and the app kept (lines-store.js).
+// Arrays are appended (duplicates dropped), so a generated pack lands next to the shipped one.
+export function addCharacterLines(extra) {
+  if (!extra || typeof extra !== 'object') return;
+  const base = characterLines || (characterLines = {});
+  for (const [kind, list] of Object.entries(extra)) {
+    if (!Array.isArray(list)) {
+      base[kind] = list;
+      continue;
+    }
+    const current = Array.isArray(base[kind]) ? base[kind] : [];
+    const known = new Set(current.map((line) => String(line).toLowerCase()));
+    base[kind] = [...current, ...list.filter((line) => typeof line === 'string' && !known.has(line.toLowerCase()))];
+  }
+  named.clear();
+}
+
 export function setCharacterLines(lines) {
   const next = lines && typeof lines === 'object' ? lines : null;
   if (next === characterLines) return;

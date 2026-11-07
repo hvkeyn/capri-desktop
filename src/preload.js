@@ -42,6 +42,9 @@ contextBridge.exposeInMainWorld('host', {
   chatRemember: (history) => ipcRenderer.send('chat:remember', history),
   // lines the character writes for itself, in its own voice, from the recent chat (voice/improv.js)
   voiceLines: (request) => ipcRenderer.invoke('voice:lines', request),
+  // more of a character's own lines: the ones kept on disk, and a fresh batch from the model
+  linesExtra: () => ipcRenderer.invoke('lines:extra'),
+  linesGenerate: (request) => ipcRenderer.invoke('lines:generate', request),
   onChatDelta: on('chat:delta'),
   // what she is doing while she answers: her narration, and each tool starting and ending
   onChatEvent: on('chat:event'),

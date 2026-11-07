@@ -27,6 +27,8 @@ const files = require('./files');
 const { Agent } = require('./agent');
 const updater = require('./update');
 const ocr = require('./ocr');
+const linesStore = require('./lines-store');
+const linesGen = require('./lines-gen');
 const attach = require('./agent/attach');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
@@ -562,6 +564,7 @@ function rebuildTray() {
     { label: t.help, click: () => sendCommand('welcome') },
     ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
     { label: t.talk, click: () => sendCommand('chat') },
+    { label: t.moreLines, click: () => sendCommand('moreLines') },
     {
       // the working half: a work order in a folder of yours, and the rounds where she learns from you
       label: t.work,
@@ -1367,6 +1370,41 @@ function registerIpc() {
       clearTimeout(timer);
     }
   });
+
+  // More of a character's own lines: kept on disk (offline needs them), written by the model on demand.
+  const linesBase = () => path.join(app.getPath('userData'), 'agent');
+  ipcMain.handle('lines:extra', () => {
+    const cfg = config.load();
+    const character = cfg.character || 'capri';
+    const lang = resolveLang(cfg.lang);
+    return { ok: true, character, lang, packs: linesStore.load(linesBase(), character, lang) };
+  });
+  ipcMain.handle('lines:generate', async (_e, request = {}) => {
+    const cfg = config.load();
+    const character = cfg.character || 'capri';
+    const lang = resolveLang(cfg.lang);
+    const voice = characterVoice();
+    const perKind = Math.max(1, Math.min(12, Number(request.perKind) || 6));
+    const kinds = Array.isArray(request.kinds) && request.kinds.length ? request.kinds : Object.keys(linesGen.KINDS);
+    if (!chatModels?.length) await refreshModels();
+    const model = pickModel(cfg);
+    if (!model) return { ok: false, code: 'noai', error: 'no AI model set up' };
+    const ask = async (messages) => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 90000);
+      try {
+        return await llm.chat(cfg.provider, llmConfig(cfg), { model, messages }, () => {}, ctrl.signal);
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+    const made = await linesGen.generate({ ask, character: voice.name, persona: voice.persona, lang, kinds, perKind });
+    if (!made.ok) return made;
+    const merged = linesStore.merge(linesBase(), character, lang, made.packs);
+    if (!merged.ok) return merged;
+    return { ok: true, character, lang, packs: merged.packs, counts: linesStore.count(linesBase(), character, lang), model };
+  });
+
   // A work order (src/main/agent): the board asks, main starts it, and every change comes back on
   // `work:state` as the whole state, so the board never has to reconstruct anything.
   ipcMain.handle('work:start', async (_e, { goal, workspace, attachments } = {}) => {
