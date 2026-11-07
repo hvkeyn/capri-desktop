@@ -1016,6 +1016,7 @@ html[data-motion='reduced'] .arrival {
    right before it folds into the little avatar */
 .intro-shot {
   position: fixed;
+  transition: none !important;
   left: 50%;
   bottom: 0;
   pointer-events: none;
