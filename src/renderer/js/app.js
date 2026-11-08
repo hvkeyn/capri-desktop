@@ -472,6 +472,8 @@ async function boot() {
   // a skin can draw her being handled: hanging from the hand that holds her, falling ("stances")
   capri.stancePictures = skin?.stances || {};
   capri.skinPoses = skin?.poses || {};
+  capri.skinLanding = skin?.landing || [];
+  capri.skinSprite = skin?.sprite || '';
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
   // the drawing it starts in: one of its poses, if that's what was picked last time

@@ -179,5 +179,10 @@
       "dir": "motions/sit",
       "fps": 12
     }
-  }
+  },
+  "landing": [
+    "poses1/04.png",
+    "poses1/05.png",
+    "poses1/08.png"
+  ]
 }

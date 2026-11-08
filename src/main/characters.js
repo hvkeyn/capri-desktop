@@ -164,6 +164,8 @@ function read(dir, base) {
     cutins: map(base, raw.cutins),
     // other drawings of the same character, one per pose ("crossed", "smoke"…): her menu switches them
     poses: map(base, raw.poses),
+    // the frames she goes through landing (a couch, then up), from the sheet the art came in
+    landing: Array.isArray(raw.landing) ? raw.landing.map((f) => picture(base, f)).filter(Boolean) : [],
     // the drawings it wears in a stance of the app's instead of the pose: picked up by the pointer
     // ("held", hung from the hand at "at", in the sheet's pixels) or in the air ("fall")
     stances: Object.fromEntries(Object.entries(raw.stances || {})

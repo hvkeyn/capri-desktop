@@ -354,6 +354,28 @@ export class Capri {
     this.facing = this.pos.x > this.view.w / 2 ? 1 : -1;
   }
 
+
+  // Landing frames from the skin's own sheet: down on one knee, then up. A drawing, not a stance, so it
+  // only runs when she is thrown or dropped, and it hands her back to the ordinary drawing afterwards.
+  async landCrouch() {
+    const shots = Array.isArray(this.skinLanding) ? this.skinLanding : [];
+    if (!shots.length || reducedMotion.matches || this.stance !== 'stand') return;
+    const id = this.throwId;
+    const holds = [220, 320, 320];
+    this.busy = true;
+    try {
+      for (let i = 0; i < shots.length; i++) {
+        if (id !== this.throwId) return;
+        const ok = await this.setPose(shots[i]);
+        if (!ok) break;
+        await sleep(holds[i] ?? 260);
+      }
+      if (id === this.throwId && this.skinSprite) await this.setPose(this.skinSprite);
+    } finally {
+      this.busy = false;
+    }
+  }
+
   // Which way is the middle of the screen from her, -1 or 1.
   towardCenter() {
     return this.pos.x > this.view.w / 2 ? -1 : 1;
@@ -1811,7 +1833,7 @@ export class Capri {
     if (target.stance === 'sit') {
       this.perform('plop');
     } else {
-      this.perform('land');
+      this.perform('land').then(() => this.landCrouch());
       this.fx.burst(this.pos.x, this.pos.y - 20 * s, { count: 12, power: 0.6, spread: 60 * s });
     }
     this.voice.play('land');
@@ -2395,6 +2417,7 @@ export class Capri {
     this.perform('plop').then(async () => {
       if (id !== this.throwId) return;
       await this.settle();
+      this.landCrouch();
       this.onThrown?.({ how: 'ledge', hard: f.hard, hits: f.hits });
     });
   }
@@ -2416,6 +2439,7 @@ export class Capri {
       if (id !== this.throwId) return;
       this.skid = null;
       await this.settle();
+      this.landCrouch();
       this.onThrown?.({ how: f.kind === 'leap' ? 'leap' : 'feet', hard: f.hard, hits: f.hits });
     });
   }
