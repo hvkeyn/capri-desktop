@@ -1790,3 +1790,9 @@ html[data-motion='reduced'] .intro-shot {
   100% { opacity: 1; filter: none; }
 }
 
+
+
+/* the entrance takes the screen: her panel, chip, board and chat wait until she is standing there */
+body.intro-live > *:not(.intro-stage):not(.intro-caption) {
+  visibility: hidden !important;
+}

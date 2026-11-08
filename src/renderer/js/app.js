@@ -77,6 +77,9 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   caption.className = 'intro-caption';
   document.body.appendChild(caption); // above the frames: inside the stage they cover it
   if (avatar) avatar.style.visibility = 'hidden';
+  // nothing of hers shows through the entrance: no panel, no chip, no board — the screen is the roll
+  document.body.classList.add('intro-live');
+  panel?.suspend?.();
   document.body.appendChild(stage);
 
   const load = (img, src) => new Promise((resolve) => {
@@ -172,6 +175,8 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   await capri.materialize(capri.spot('post'));
   await sleep(520);
   stage.remove();
+  document.body.classList.remove('intro-live');
+  panel?.resume?.();
   if (closing) panel?.say({ kind: 'info', face: 'smug', line: closing, hold: 7000 });
 }
 
