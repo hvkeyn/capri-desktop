@@ -488,16 +488,7 @@ async function boot() {
     e.stopPropagation();
     openHerMenu();
   }, true);
-  // fallback for a machine where the right button never arrives: hold the left button on her for half a
-  // second and the same menu opens. Nothing changes for the normal right-click.
-  let pressTimer = 0;
-  window.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    clearTimeout(pressTimer);
-    pressTimer = setTimeout(() => openHerMenu(), 520);
-  });
-  window.addEventListener('pointerup', () => clearTimeout(pressTimer));
-  window.addEventListener('pointermove', () => clearTimeout(pressTimer));
+
   window.addEventListener('click', (e) => {
     if (chip.visible && chip.contains(e.clientX, e.clientY, 0)) comeOut();
   });

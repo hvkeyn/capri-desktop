@@ -12,7 +12,7 @@ const {
 const { randomUUID } = require('node:crypto');
 
 const config = require('./config');
-const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK, UPDATE, ACCESS } = require('./labels');
+const { TRAY, TRAY_M, POSE_LABELS, LANGS, WORK, UPDATE, ACCESS, GUITAR } = require('./labels');
 const { createBridge } = require('./bridge');
 const { startWindowWatch } = require('./windows');
 const llm = require('./llm');
@@ -781,8 +781,7 @@ function rebuildTray() {
     { type: 'separator' },
     { label: t.quit, click: () => app.quit() },
   ]);
-  // shown by us on either button (see createTray): a menu Windows owns never fired here
-  tray.setContextMenu(null);
+  tray.setContextMenu(menu);
   trayMenu = menu;
 }
 
@@ -1114,8 +1113,7 @@ function createTray() {
   const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   tray = new Tray(icon);
   tray.setToolTip(characterName());
-  tray.on('click', () => { rebuildTray(); trayMenu?.popup(); });
-  tray.on('right-click', () => { rebuildTray(); trayMenu?.popup(); });
+  tray.on('click', () => sendCommand('status'));
   rebuildTray();
 }
 
