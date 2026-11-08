@@ -52,6 +52,9 @@
     "fall": "poses/fall.png",
     "peek": {
       "image": "poses/lean.png"
+    },
+    "down": {
+      "image": "poses1/01.png"
     }
   },
   "auto": {
