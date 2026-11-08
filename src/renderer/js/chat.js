@@ -326,6 +326,7 @@ export class Chat {
     const hello = moody ? fmt(pick(moody), this.bond.mood.vars) : (this.brain.improv?.take('hello') || pick(this.history.length ? t.again : t.hello));
     this.opening = moody ? hello : null;
     host.focusOverlay(true); // the keyboard, for typing to her
+    window.__capriKeyboard?.(true); // and clicks that land on the field, whatever the pointer hook does
     const shown = this.panel.say({
       kind: 'chat',
       face: moody ? MOOD_FACE[feeling] : 'look',
@@ -351,6 +352,7 @@ export class Chat {
     });
     if (!shown) {
       host.focusOverlay(false); // something more important is on (a permission prompt)
+      window.__capriKeyboard?.(false);
       return;
     }
     this.open = true;
@@ -367,6 +369,7 @@ export class Chat {
     if (this.turn) this.host.chatStop(this.turn);
     this.turn = 0;
     this.host.focusOverlay(false);
+    window.__capriKeyboard?.(false);
     this.capri.nextMove = performance.now() + 30000;
     this.capri.nextGaze = performance.now() + 60000;
   }

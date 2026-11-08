@@ -233,6 +233,7 @@ export class Board {
     this.el.hidden = false;
     this.el.classList.remove('is-leaving');
     this.host.focusOverlay?.(true); // the keyboard, for the sentence you type
+    window.__capriKeyboard?.(true);
     this.render();
     this.place();
     if (!reducedMotion.matches) this.el.classList.add('is-arriving');
@@ -246,6 +247,7 @@ export class Board {
     this.open = false;
     this.el.classList.add('is-leaving');
     this.host.focusOverlay?.(false);
+    window.__capriKeyboard?.(false);
     clearInterval(this.timer);
     this.timer = null;
     setTimeout(() => {

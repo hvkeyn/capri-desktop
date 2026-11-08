@@ -544,6 +544,13 @@ async function boot() {
 
   // Click-through everywhere except on her body, the panel and her biochip.
   let interactive = null;
+  // A panel with a field in it (her chat, her guide, the work order) takes the keyboard, and the click
+  // that makes Windows hand a window its keyboard has to reach that field. The moves come from the
+  // hook main.js keeps alive, and Windows drops that hook now and then without a word: then the panel
+  // stays click-through until the slow watch below notices, which is two seconds of clicking at
+  // nothing. So while a field is up, the pointer is asked for four times a second instead.
+  let keyboard = false;
+  let keyboardTimer = 0;
   let mouse = null;
   const setInteractive = (on) => {
     if (on === interactive) return; // talking to the window on every mouse move kills its focus
@@ -555,10 +562,25 @@ async function boot() {
     if (capri.dragging) return setInteractive(true);
     if (!mouse) return setInteractive(false);
     const r = panel.rect();
-    const onPanel = r && mouse.x >= r.left && mouse.x <= r.right && mouse.y >= r.top && mouse.y <= r.bottom;
+    const onPanel = Boolean(r && mouse.x >= r.left && mouse.x <= r.right && mouse.y >= r.top && mouse.y <= r.bottom);
     const onBoard = board.contains(mouse.x, mouse.y);
     document.body.style.cursor = onChip() || onBoard ? 'pointer' : '';
     return setInteractive(Boolean(onPanel || onBoard || capri.hit(mouse.x, mouse.y) || onChip()));
+  };
+  // for the panels that take a keyboard (chat.js, guide.js, board.js): keep the pointer fresh
+  window.__capriKeyboard = (on) => {
+    keyboard = Boolean(on);
+    clearInterval(keyboardTimer);
+    keyboardTimer = 0;
+    if (!keyboard) return;
+    const look = () => host.cursor().then((at) => {
+      if (!keyboard) return;
+      mouse = at?.inside ? { x: at.x, y: at.y } : null;
+      refreshHit();
+      hoverChip();
+    }).catch(() => {});
+    look();
+    keyboardTimer = setInterval(look, 250);
   };
   // Her biochip: her eyes on it follow the pointer over it, and she comes out when you click it
   // (only then, so the pointer passing through that corner doesn't call her back).

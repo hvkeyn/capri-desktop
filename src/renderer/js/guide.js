@@ -54,6 +54,7 @@ export class Guide {
         over = true;
         if (this.waiting?.token === token) this.waiting = null;
         this.host.focusOverlay(false);
+        window.__capriKeyboard?.(false);
         resolve(value);
       };
       // like ask(): the next panel of a scene, or answer(id), ends it
@@ -68,6 +69,7 @@ export class Guide {
       });
       if (!shown) return finish(null);
       this.host.focusOverlay(true); // the keyboard, to type in it
+      window.__capriKeyboard?.(true);
     });
   }
 
