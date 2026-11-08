@@ -18,10 +18,20 @@ const exec = require('./exec');
 const spec = require('./spec');
 const prompts = require('./prompts');
 const attach = require('./attach');
+const more = require('../tools-more'); // a page off the web, the same reader her chat has
 const { Plan } = require('./plan');
 
 const TOOL_ROUNDS = 8; // one task may take this many model turns before it is called stuck
 const FENCE = /^\s*```[a-z]*\s*\n([\s\S]*?)\n\s*```\s*$/i;
+// A step title that means "put something on paper": it is told, in so many words, that the record is a
+// file — and told again while it hasn't written one (a model that answers in the chat instead of
+// writing is the way a work order dies at the second step).
+const RECORD = /запи|зафикс|сохран|отч[её]т|отчет|сводк|итог|report|summary|note|save|write|record|log/i;
+// The tools that are looking rather than doing, and how many times a record step may use them before the
+// file is the only move left.
+const READERS = new Set(['read_file', 'list_dir', 'search_files', 'web_fetch']);
+const READS_BEFORE_WRITE = 4;
+const FETCH_CAP = 6000; // a page, cut to what a step can hold: titles and the first paragraphs
 
 // What the model may do inside the folder, as function-calling schemas.
 const TOOLS = [
@@ -100,6 +110,18 @@ const TOOLS = [
         type: 'object',
         properties: { command: { type: 'string', description: 'e.g. "npm test" or "git status --short"' } },
         required: ['command'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'web_fetch',
+      description: 'Read a page on the web as text: its title and the words on it, tags gone. Use it for news, an RSS feed, documentation — anything with an address. A site that refuses is a site to leave: try another, or its feed.',
+      parameters: {
+        type: 'object',
+        properties: { url: { type: 'string', description: 'http(s) address' } },
+        required: ['url'],
       },
     },
   },
@@ -272,14 +294,23 @@ class Runner {
     const log = [];
     let repeats = 0;
     let lastCall = '';
+    let wrote = false; // a file has been written in this step: a record that lives only in the chat isn't one
+    const records = RECORD.test(step.title || '');
+    this.stepReads = 0; // looking, on a step whose whole point is to write something down: counted, and capped
+    this.stepWrote = false;
     for (let round = 0; round < this.maxToolRounds; round++) {
       this.throwIfStopped();
       // a weak model can keep reading the same folder forever: after a couple of rounds it is told,
       // in plain words, that the information is in and the only useful call left is update_plan
-      const nudge = round >= 2
-        ? 'You have already looked at the folder. Do not call read_file, list_dir or search_files again. '
-          + 'If the task is done, call update_plan now with status "done"; if it is impossible, call it with "failed".'
-        : '';
+      let nudge = '';
+      if (records && !wrote) {
+        nudge = 'This step leaves a record, and no file has been written yet: call write_file with a path (if the step '
+          + 'names none, `report.md` in the folder of the work order) and the whole text, then update_plan.';
+      }
+      if (round >= 2) {
+        nudge += (nudge ? ' ' : '') + 'You have already looked at the folder. Do not call read_file, list_dir or search_files again. '
+          + 'If the task is done, call update_plan now with status "done"; if it is impossible, call it with "failed".';
+      }
       const messages = prompts.stepMessages({
         task: step, spec: this.specText, plan: this.planText, notes: this.notes, log, autonomy: this.autonomy, nudge,
         narrator: this.narrator, attachments: this.attachments, where: this.where,
@@ -304,10 +335,22 @@ class Runner {
       }
       for (const call of res.toolCalls) {
         const result = await this.use(call, step);
+        if (!result?.error && (call.name === 'write_file' || call.name === 'patch_file')) wrote = true;
         log.push(`${call.name}: ${JSON.stringify(result).slice(0, 300)}`);
         if (step.status !== 'running') break;
       }
       if (step.status !== 'running') break;
+    }
+    if (step.status === 'running' && !this.stepWrote) {
+      // nothing on disk: one turn with the pencil and the decision, and nothing to read with
+      const forced = await this.turn(
+        prompts.recordMessages({ task: step, notes: this.notes, log, narrator: this.narrator }),
+        TOOLS.filter((tool) => tool.function.name === 'write_file' || tool.function.name === 'update_plan'),
+      );
+      for (const call of forced.toolCalls || []) {
+        await this.use(call, step);
+        if (step.status !== 'running') break;
+      }
     }
     if (step.status === 'running') {
       // Out of rounds, or a model that keeps reading instead of deciding. The last turn is not "do more":
@@ -351,6 +394,16 @@ class Runner {
     try { args = JSON.parse(call.arguments || '{}'); } catch { /* no arguments */ }
     const name = call.name;
     const root = this.plan.workspace;
+    // A step whose point is to write something down gets a floor under it: it may look a few times, and
+    // then the looking is over and the file is the only move left. A model that keeps fetching feeds and
+    // never writes is the way a research step dies with the material in hand and nothing on disk.
+    if (RECORD.test(step.title || '') && !this.stepWrote && READERS.has(name)) {
+      this.stepReads = (this.stepReads || 0) + 1;
+      if (this.stepReads > READS_BEFORE_WRITE) {
+        return { error: 'You have looked enough for this step and no record exists yet. Call write_file now with the path '
+          + '(if the step names none, `report.md` in the folder of the work order) and the whole text, then update_plan.' };
+      }
+    }
     let out;
     switch (name) {
       case 'read_file':
@@ -359,10 +412,12 @@ class Runner {
         break;
       case 'write_file':
         out = fsx.write(root, args.path, args.content);
+        if (out.ok) this.stepWrote = true;
         if (out.ok) this.plan.note(`WRITES ${args.path}`, 'file');
         break;
       case 'patch_file':
         out = fsx.patch(root, args.path, args.find, args.replace);
+        if (out.ok) this.stepWrote = true;
         if (out.ok) this.plan.note(`PATCHES ${args.path}`, 'file');
         break;
       case 'list_dir':
@@ -373,6 +428,14 @@ class Runner {
         out = fsx.search(root, args.pattern, { rel: args.path || '.' });
         if (out.ok) this.plan.note(`GREPS ${JSON.stringify(args.pattern)}`, 'file');
         break;
+      case 'web_fetch': {
+        this.plan.note(`FETCHES ${args.url}`, 'run');
+        out = await more.webFetch(args.url);
+        // a feed is a page of titles: enough to pick from, and a 20 KB page would spend the step's context
+        // before it ever reaches the file
+        if (out?.text && out.text.length > FETCH_CAP) out = { ...out, text: out.text.slice(0, FETCH_CAP), more: true };
+        break;
+      }
       case 'run_command': {
         const shown = guard.show(guard.parseCommand(args.command).argv || [args.command]);
         this.plan.note(`RUNS ${shown}`, 'run');

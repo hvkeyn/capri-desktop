@@ -412,3 +412,75 @@ test('a work order reads what you gave it and reports in the character voice', a
   assert.ok(fs.existsSync(path.join(root, 'specs', '001-fix-it', 'attachments', 'notes.txt')));
   assert.match(done.summary, /choom/);
 });
+
+// ---- a step that records something is told the record is a file ---------------------------------
+
+test('a step that records something is told to write a file, and told again', async (t) => {
+  const root = scratch(t);
+  const sent = [];
+  let round = 0;
+  const ask = async ({ messages }) => {
+    const last = String(messages[messages.length - 1].content || '');
+    sent.push(messages.map((m) => String(m.content || '')).join('\n')); // the system line counts too
+    if (/Write `spec\.md`/.test(last)) return { text: '## Goal\nrecord the time\n' };
+    if (/Write `plan\.md`/.test(last)) return { text: '## Approach\nwrite it down\n' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '## Phase 1: Write\n- [ ] T001 record the time\n' };
+    if (/Write `report\.md`/.test(last)) return { text: '## Done\n- T001\n---\none line.' };
+    if (/T001/.test(last)) {
+      round += 1;
+      // the first answer is a sentence in the chat: no tool, no record — exactly the way a work
+      // order used to die at the second step
+      if (round === 1) return { text: 'I captured the time.' };
+      return { text: '', toolCalls: [{ id: '1', name: 'update_plan', arguments: JSON.stringify({ status: 'failed', note: 'no file' }) }] };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({ ask, store: { savePlan() {}, observe() {} }, emit() {}, autonomy: 'guard' });
+  runner.start({ goal: 'record the time', workspace: root });
+  await runner.completion;
+  // the rule is in what the model reads with the step, and the nudge names the file when it hasn't written one
+  assert.ok(sent.some((m) => /A record is a file/.test(m)), 'the step says a record is a file');
+  assert.ok(sent.some((m) => /no file has been written yet/.test(m)), 'the second turn asks for the write_file');
+});
+
+test('a work order can read the web, not only the folder', () => {
+  const { TOOLS } = require('../src/main/agent/runner');
+  assert.ok(TOOLS.some((tool) => tool.function.name === 'web_fetch'), 'web_fetch is offered in a work order');
+});
+
+test('a step that ends with nothing on disk gets one turn with the pencil', async (t) => {
+  const root = scratch(t);
+  const sent = [];
+  let asked = 0;
+  const ask = async ({ messages, tools }) => {
+    const last = String(messages[messages.length - 1].content || '');
+    sent.push({ last, tools: (tools || []).map((x) => x.function.name) });
+    if (/Write `spec\.md`/.test(last)) return { text: '## Goal\ncollect and write\n' };
+    if (/Write `plan\.md`/.test(last)) return { text: '## Approach\nread, then write\n' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '## Phase 1: Gather\n- [ ] T001 collect the news\n' };
+    if (/Write `report\.md`/.test(last)) return { text: '## Done\n- T001\n---\none line.' };
+    if (/T001/.test(last)) {
+      asked += 1;
+      const names = (tools || []).map((x) => x.function.name);
+      // while a reader is on the table this model only reads: the same read, every round, no write
+      if (names.includes('read_file')) return { toolCalls: [{ id: `r${asked}`, name: 'read_file', arguments: JSON.stringify({ path: 'news.txt' }) }] };
+      // the forced turn has nothing to read with, so the only moves are the write and the decision
+      return {
+        toolCalls: [
+          { id: 'w1', name: 'write_file', arguments: JSON.stringify({ path: 'report.md', content: 'the news, written down\n' }) },
+          { id: 'u1', name: 'update_plan', arguments: JSON.stringify({ status: 'done', note: 'wrote it' }) },
+        ],
+      };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({ ask, store: { savePlan() {}, observe() {} }, emit() {}, autonomy: 'guard' });
+  runner.start({ goal: 'collect the news', workspace: root });
+  const done = await runner.completion;
+  assert.equal(done.steps[0].status, 'done');
+  // the turn that saved it had the pencil on the table, and no reader
+  const saving = sent.find((m) => /write the record now/.test(m.last));
+  assert.ok(saving, 'the step is asked for the record');
+  assert.deepEqual(saving.tools.sort(), ['update_plan', 'write_file']);
+  assert.match(fs.readFileSync(path.join(root, 'report.md'), 'utf8'), /the news, written down/);
+});

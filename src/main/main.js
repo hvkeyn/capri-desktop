@@ -197,7 +197,7 @@ async function prepareAttachments(list, goal) {
 async function askModel({ messages, tools = [], signal }) {
   const cfg = config.load(true);
   if (!chatModels?.length) await refreshModels();
-  const model = pickModel(cfg);
+  const model = pickWorkModel(cfg);
   if (!model) throw Object.assign(new Error('no AI model to work with (set one up in her menu)'), { code: 'noai' });
   const request = { model, messages };
   if (tools.length) {
@@ -906,6 +906,17 @@ function pickModel(cfg = config.load()) {
   if (!chatModels?.length) return null;
   if (chatModels.includes(cfg.chatModel)) return cfg.chatModel;
   return chatModels.find((m) => !ollama.isCloud(m)) || chatModels[0];
+}
+
+// The model a work order runs on. A work order is the mechanical end of her job — a dozen turns of tools,
+// writing files, checking them — and a fast chat model is where one dies at the second step with "I
+// captured it but never wrote it down". So: the one picked for work in her menu, else the strongest model
+// on the table (a fast one stays the chat's), else the chat's own.
+const STRONG = /pro|large|max|opus|sonnet|gpt-5|qwen3|kimi-k2/i;
+function pickWorkModel(cfg = config.load()) {
+  if (!chatModels?.length) return pickModel(cfg);
+  if (cfg.workModel && chatModels.includes(cfg.workModel)) return cfg.workModel;
+  return chatModels.find((m) => STRONG.test(m) && !ollama.isCloud(m)) || pickModel(cfg);
 }
 
 async function refreshModels() {

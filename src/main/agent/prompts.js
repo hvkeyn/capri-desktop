@@ -119,8 +119,12 @@ function tasksMessages({ goal, spec, plan, narrator, attachments = [], where = '
       'Write `tasks.md`, in Markdown, with this shape:\n\n'
       + '## Phase 1: <name>\n- [ ] T001 <one step, in the imperative>\n- [ ] T002 [P] <a step that could run parallel>\n\n'
       + '## Phase 2: <name>\n- [ ] T003 <one step>\n\n'
-      + 'Five to twelve steps in total. Each step is one thing, done and checkable on its own. '
-      + 'The last step is always the check: running the project\'s own tests or build. '
+      + 'As few steps as the work really needs — three to five for most work orders, eight at the very most. '
+      + 'A step is one thing done, and it leaves something behind: a file with the answer, a change in the folder, a check that ran. '
+      + 'No bookkeeping steps: registering the date, listing sources or keeping a log of what was checked is the report\'s work, '
+      + 'not a step, and a step like that is how a work order dies at the second move. '
+      + 'If this is code, the last step is the project\'s own check (its tests or its build); if it is research or writing, '
+      + 'the last step is the file with the answer in it. '
       + 'Write in the language they wrote to you in. Answer with the file only.',
     ].filter(Boolean).join('\n\n')),
   ];
@@ -134,7 +138,12 @@ function stepMessages({ task, spec, plan, notes, log, autonomy, nudge = '', narr
       : "only a project's own tools (node, npm, git, python…)";
   return [
     system(`${voice(narrator)}\n\n${notes}\n\nYou have tools. Use them: read before you write, run the check after a change that could break something. `
-      + `At this level you may run ${mayRun}. A command may be refused; the refusal says why, and it is a rule, not an obstacle.`),
+      + `At this level you may run ${mayRun}. A command may be refused; the refusal says why, and it is a rule, not an obstacle.\n\n`
+      + 'A record is a file. When the step says record, note, save, summarise or write something down, call write_file '
+      + '(or patch_file for a small change) with the path and the whole text. What you say in the chat is not a record and '
+      + 'does not count as done: a step that recorded nothing did nothing. If the step names no file, use `report.md` in the '
+      + 'folder of the work order. A source that refuses you is not a failed step: say which ones did not answer and go on '
+      + 'with the ones that did.'),
     user([
       `The spec (what is wanted):\n\n${spec}`,
       `The plan (how):\n\n${plan}`,
@@ -177,6 +186,22 @@ function retryMessages({ task, error, notes, narrator }) {
   ];
 }
 
+// A step that is about to end with nothing on disk gets one turn with exactly two tools: the write and
+// the decision. The material is already in what it read — a model that fetched five feeds and then said
+// "but I never wrote it down" needs the pencil, not another page.
+function recordMessages({ task, notes, log = [], narrator }) {
+  return [
+    system(`${voice(narrator)}\n\n${notes}\n\nWhat this task is for is something on disk, and nothing has been written yet.`),
+    user([
+      `The task — ${task.id}: ${task.title}`,
+      `What you read and did, in order:\n${log.slice(-12).map((line) => `- ${String(line).slice(0, 300)}`).join('\n') || '- (nothing yet)'}`,
+      'You have the material above. Do not read, fetch or run anything else: write the record now — one write_file call with '
+      + 'the path and the whole text (if the task names no file, `report.md` in the folder of the work order) — then update_plan '
+      + 'with status "done" and one sentence. Only if the task truly has nothing to write, call update_plan with "failed".',
+    ].join('\n\n')),
+  ];
+}
+
 // The last thing a stuck step is asked: not "do more", but "decide". With update_plan as the only tool
 // on the table, a weak model has nothing left to read the folder with, and the board gets its answer.
 function decideMessages({ task, notes, log = [], narrator }) {
@@ -193,5 +218,5 @@ function decideMessages({ task, notes, log = [], narrator }) {
 
 module.exports = {
   bundled, workNotes, personaNote, voice, brief,
-  specMessages, planMessages, tasksMessages, stepMessages, reportMessages, retryMessages, decideMessages,
+  specMessages, planMessages, tasksMessages, stepMessages, reportMessages, retryMessages, recordMessages, decideMessages,
 };
