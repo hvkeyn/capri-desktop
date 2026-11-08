@@ -102,6 +102,7 @@ export class Capri {
     this.skinHolo = 0; // how strongly a character wears the projection look *while it appears or goes*
     this.skinFlat = false; // art that isn't hers: no rig deformation, only its own animation
     this.skinRim = 1; // her violet misregistration behind the figure (a skin can turn it off)
+    this.skinSquash = true; // her rig's squash and stretch: a skin drawn as a photograph drops it
     // a drawing per stance, for a skin that drew her being handled (skin.json's "stances"): held by
     // the pointer, in the air. They are worn for the whole stance and taken off after it.
     this.stancePictures = {};
@@ -677,6 +678,23 @@ export class Capri {
     if (this.stance === 'fly') this.flyPose(pose);
     else if (this.stance === 'held') this.heldPose(pose);
     if (this.override) Object.assign(pose, this.override);
+    // A stance drawing is already the pose, drawn (hanging, falling, down on her knees): the rig's
+    // stretch, squash, lean, smear and bob would only bend the picture. What is kept is the swing
+    // below — the whole drawing turning on the hand that holds it.
+    if (this.stancePicture) {
+      pose.bob = 0;
+      pose.tilt = 0;
+      pose.sx = 1;
+      pose.sy = 1;
+      pose.smear = [0, 0];
+      pose.echo = [0, 0];
+    }
+    // a skin that is a photograph of someone (skin.json's "squash": false) is not squashed by a
+    // landing or stretched by a jump: the drawing keeps its own proportions
+    if (!this.skinSquash) {
+      pose.sx = 1;
+      pose.sy = 1;
+    }
 
     p.head = pose.head;
     p.mane = pose.mane;
@@ -2458,18 +2476,29 @@ export class Capri {
   }
 
   // Knocked down: on her side on the floor, seeing stars, until she gets back up (or you pick her
-  // up). Just tossed onto it (nothing hit hard), she's back up in a moment, no stars.
+  // up). Just tossed onto it (nothing hit hard), she's back up in a moment, no stars. A skin that
+  // drew her down (skin.json's "stances", "down") puts her on her knees instead: upright, on the
+  // floor, and there is nothing to turn.
   knockedDown() {
     const f = this.flight;
     const side = norm(f.a) >= 0 ? 1 : -1;
     const soft = f.hard < 0.15;
     this.flight = null;
     this.setStance('down');
-    this.spin = side * 90;
-    this.lying = { c: { ...f.c }, side };
-    this.layDown();
+    if (this.stancePictures?.down) {
+      this.spin = 0;
+      this.lying = null; // nothing on the floor to be lying on: she is down on her knees
+      this.pos = { x: clamp(this.pos.x, 60, this.view.w - 60), y: this.floor };
+    } else {
+      this.spin = side * 90;
+      this.lying = { c: { ...f.c }, side };
+      this.layDown();
+    }
     this.place();
-    if (!soft) this.fx.dizzy(() => this.screenPoint(SPRITE.head.x, SPRITE.head.y - 20), { life: 2400 });
+    // the stars are over her head, wherever her head is: a drawing of her down says where it is, and
+    // on her knees it is higher up the sheet than a standing head
+    const head = this.stancePictures?.down?.head || SPRITE.head;
+    if (!soft) this.fx.dizzy(() => this.screenPoint(head.x, head.y - 20), { life: 2400 });
     this.koSequence(f.id, side, { hard: f.hard, hits: f.hits, soft });
   }
 
@@ -2489,6 +2518,18 @@ export class Capri {
       await sleep(ON_TWOS * 4);
       if (id !== this.throwId) return;
       if (Math.random() < 0.3) this.twitch();
+    }
+    // back up: with her knees on the floor, nothing to turn: she is up off them, upright
+    if (this.stancePictures?.down) {
+      this.voice.play('rise');
+      this.setStance('stand');
+      this.pos = { x: clamp(this.pos.x, 60, this.view.w - 60), y: this.floor };
+      this.place();
+      await this.perform('shake');
+      if (id !== this.throwId) return;
+      await this.settle();
+      this.onThrown?.({ how: 'ko', ...outcome });
+      return;
     }
     // back up: she curls up a little further first, springs up past upright, lands on her feet
     const steps = [

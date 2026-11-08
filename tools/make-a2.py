@@ -10,8 +10,8 @@ rig, unchanged in every way that matters:
 - one figure is fitted to the 240 x 420 sheet her own art uses — feet on the floor line, the body's
   own axis on the sheet's middle — and every pose is fitted at the *same* scale, so a sitting pose
   really is lower than a standing one;
-- the two of being handled are the exception: the one hanging from her own raised hand is anchored on
-  that hand (the point the pointer holds her by), the falling one on her feet like the rest;
+- the drawings of being handled are the exception: the one hanging from her own raised hand is anchored
+  on that hand (the point the pointer holds her by), the falling one on her feet like the rest;
 - the head is squared off for her panels, and five close-ups are cut for her cut-ins;
 - two loops are made from the drawings, the way Johnny's were: a standing breath and a seated one.
 
@@ -59,8 +59,8 @@ POSES = [
 # hanging from the hand that holds her (picked up with the pointer) and falling (dropped, teleporting
 # in). They are not in her menu: they are stances, not poses.
 STANCES = [
-    ('poses3.png', 1, 'held'),   # hanging from one raised arm
-    ('poses3.png', 2, 'fall'),   # in the air, arms up, legs tucked
+    ('poses3.png', 1, 'held'),    # hanging from one raised arm
+    ('poses3.png', 2, 'fall'),    # in the air, arms up, legs tucked
 ]
 
 # Where the hand she hangs from sits on the sheet, in its pixels: skin.json gives the same point as the

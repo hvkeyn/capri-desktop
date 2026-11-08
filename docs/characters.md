@@ -45,10 +45,12 @@ characters/
   `"glasses": ["poses/glasses1.png", "poses/glasses2.png", "poses/glasses3.png"]` plays in her menu as
   **Take off his sunglasses**.
 - `stances` (optional) are the drawings it wears while it is being handled, instead of the pose: the
-  app's own stance names, `held` (picked up with the pointer) and `fall` (in the air), one picture each —
-  `{"held": {"image": "poses/held.png", "at": [118, 24]}, "fall": "poses/fall.png"}`. `at` is the point
-  of the picture the pointer holds (a raised hand, in the sheet's pixels): it stays under the cursor and
-  she swings around it. The pose, or the loop, the stance covered comes back when she is on her feet.
+  app's own stance names, one picture each — `held` (picked up with the pointer), `fall` (in the air),
+  `down` (knocked down), `peek` (leaning over a window's edge) —
+  `{"held": {"image": "poses/held.png", "at": [118, 24]}, "down": {"image": "poses/floor.png", "head": [121, 274]}}`.
+  `at` is the point of the picture the pointer holds (a raised hand, in the sheet's pixels): it stays
+  under the cursor and she swings around it. `head` is where her head is on a drawing of her down, for
+  the stars over it. The pose, or the loop, the stance covered comes back when she is on her feet.
 - `gender` (`"m"` or `"f"`, optional) is how the menu talks about them: "Talk to him" instead of "her".
 - `holo` (0 to 1, optional) makes them flicker like a projection while they appear, vanish or change.
 - `persona` (optional) replaces Capri's own lines in her chat: the character's voice.
@@ -62,6 +64,9 @@ characters/
   smooth; the menu lists them, and `auto.idle` can name them for the idle rotation.
 - `flat` (`true`, optional) turns her rig off for art that isn't drawn for it: no mane flare, no arm
   reaching, no knee bends — just the character's own frames. Use it for a skin with real animation.
+- `squash` (`false`, optional) drops the rig's squash and stretch too — a landing flattening her, a jump
+  stretching her. Art that is a photograph of someone reads as broken when it is flattened, so a skin
+  like that turns it off; drawn art keeps it, because there it is the impact.
 - `rim` (0 to 1, optional) is the violet copy knocked out of register behind the figure. It is part of her
   own art's look; art drawn without it looks better with `"rim": 0`.
 - `theme` (optional) is the look of her windows while this character is on the desktop: one of the app's
@@ -130,6 +135,11 @@ music fading out over the last two seconds. Her voice is hers — `lines/ru.json
 written in A2's own clipped way, and her `persona` keeps the model in the same register. She brings the
 **YoRHa** windows with her (`theme: "yorha"`): warm black plates, cream type, one hairline and a corner
 tick at each corner, and no neon at all. Pick anyone else and your own theme comes back.
+
+She is worn, not bent: `flat` and `squash: false` keep her photographic art out of the rig, and the
+drawings of being handled (`stances`) take over while she is picked up, falling or knocked out — hung
+from her own hand, in the air, and sitting on her legs with the stars over her head, instead of lying on
+her side.
 
 Her art is fan work for this noncommercial fork; NieR: Automata, A2 and everything with its name on it
 belong to Square Enix and PlatinumGames.

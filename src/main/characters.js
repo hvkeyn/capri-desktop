@@ -167,14 +167,16 @@ function read(dir, base) {
     // the frames she goes through landing (a couch, then up), from the sheet the art came in
     landing: Array.isArray(raw.landing) ? raw.landing.map((f) => picture(base, f)).filter(Boolean) : [],
     // the drawings it wears in a stance of the app's instead of the pose: picked up by the pointer
-    // ("held", hung from the hand at "at", in the sheet's pixels) or in the air ("fall")
+    // ("held", hung from the hand at "at", in the sheet's pixels) or in the air ("fall"), or down
+    // ("down", with "head" where her head is on it, for the stars)
     stances: Object.fromEntries(Object.entries(raw.stances || {})
       .map(([name, value]) => {
         const url = picture(base, typeof value === 'string' ? value : value?.image);
         if (!url) return [name, null];
-        const at = Array.isArray(value?.at) && value.at.length === 2 ? value.at.map(Number) : [];
-        const point = at.length === 2 && at.every(Number.isFinite) ? { x: at[0], y: at[1] } : null;
-        return [name, { image: url, at: point }];
+        const pointOf = (v) => (Array.isArray(v) && v.length === 2 && v.every(Number.isFinite)
+          ? { x: Number(v[0]), y: Number(v[1]) }
+          : null);
+        return [name, { image: url, at: pointOf(value?.at), head: pointOf(value?.head) }];
       })
       .filter(([, value]) => value)),
     // a few drawings played once, as a little animation ("glasses": glasses on → taking them off → off)
@@ -215,6 +217,9 @@ function read(dir, base) {
     rim: Number.isFinite(rim) ? Math.min(1, Math.max(0, rim)) : null,
     // art that isn't hers: no rig deformation (its own animation already moves it)
     flat: raw.flat === true,
+    // her rig's squash and stretch (a landing flattening her, a jump stretching her): off for art
+    // that is a photograph of someone and cannot survive being squashed
+    squash: raw.squash !== false,
   };
 }
 

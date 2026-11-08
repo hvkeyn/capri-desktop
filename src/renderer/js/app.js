@@ -469,6 +469,8 @@ async function boot() {
   capri.skinFlat = Boolean(skin?.flat);
   // the violet copy behind her is her own art's: someone else's drawing can turn it off ("rim": 0)
   capri.skinRim = typeof skin?.rim === 'number' ? skin.rim : 1;
+  // and its landing: a photograph of someone flattened like a cel is a bug, not an impact
+  capri.skinSquash = skin ? skin.squash !== false : true;
   // a skin can draw her being handled: hanging from the hand that holds her, falling ("stances")
   capri.stancePictures = skin?.stances || {};
   capri.skinPoses = skin?.poses || {};

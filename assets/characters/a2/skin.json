@@ -12,6 +12,7 @@
   ],
   "scale": 1.4,
   "flat": true,
+  "squash": false,
   "rim": 0,
   "floorOffset": 0,
   "faces": {
@@ -54,7 +55,11 @@
       "image": "poses/lean.png"
     },
     "down": {
-      "image": "poses1/01.png"
+      "image": "poses/floor.png",
+      "head": [
+        121,
+        274
+      ]
     }
   },
   "auto": {

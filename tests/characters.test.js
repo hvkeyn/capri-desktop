@@ -106,6 +106,8 @@ test('the entrance a skin brings keeps its captions and its line in every langua
   // the two of being handled: she hangs from her own hand, and falls
   assert.deepEqual(skin.stances.held.at, { x: 118, y: 24 });
   assert.ok(skin.stances.fall.image.endsWith('/poses/fall.png'));
+  // and the drawing she is down in says where her head is, for the stars over it
+  assert.ok(skin.stances.down.head && skin.stances.down.head.y > 200);
   assert.equal(new Set(Object.values(skin.poses)).size, Object.keys(skin.poses).length);
   // its loops are real loops, and its words are its own
   for (const loop of Object.values(skin.animations)) assert.ok(loop.frames.length > 2, 'a loop of drawings');
@@ -118,16 +120,23 @@ test('being handled is drawn too: hanging from the hand, and falling', () => {
     stances: { held: { image: 'poses/held.png', at: [120, 20] }, fall: 'poses/fall.png' },
   }, ['full.png', 'poses/held.png', 'poses/fall.png']);
   const skin = characters.get('one', dirs(dir));
-  assert.deepEqual(skin.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: { x: 120, y: 20 } });
-  assert.deepEqual(skin.stances.fall, { image: 'capri://app/characters/one/poses/fall.png', at: null });
+  assert.deepEqual(skin.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: { x: 120, y: 20 }, head: null });
+  assert.deepEqual(skin.stances.fall, { image: 'capri://app/characters/one/poses/fall.png', at: null, head: null });
   // a point of the drawing is two numbers or it is nothing, and a picture is a picture
   fs.writeFileSync(path.join(dir, 'skin.json'), JSON.stringify({
     label: 'Test',
     stances: { held: { image: 'poses/held.png', at: ['x', 2] }, fall: 'poses/fall.exe' },
   }));
   const bare = characters.get('one', dirs(dir));
-  assert.deepEqual(bare.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: null });
+  assert.deepEqual(bare.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: null, head: null });
   assert.equal(bare.stances.fall, undefined);
+});
+
+test('a skin can drop the rig squash, and her own art keeps it', () => {
+  const dir = folder({ label: 'Test', squash: false });
+  assert.equal(characters.get('one', dirs(dir)).squash, false);
+  fs.writeFileSync(path.join(dir, 'skin.json'), JSON.stringify({ label: 'Test' }));
+  assert.equal(characters.get('one', dirs(dir)).squash, true); // hers, unless the art says otherwise
 });
 
 test('a character with a theme is offered with it, and her own are untouched', () => {
@@ -139,5 +148,6 @@ test('a character with a theme is offered with it, and her own are untouched', (
   assert.equal(johnny.intro.video, '');
   assert.ok(johnny.intro.frames.length > 90); // his entrance is still the storyboard it was
 });
+
 
 
