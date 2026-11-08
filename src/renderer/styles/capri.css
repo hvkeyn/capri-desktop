@@ -1790,3 +1790,5 @@ html[data-motion='reduced'] .intro-shot {
   55% { opacity: 0.85; filter: hue-rotate(-25deg) saturate(1.5); }
   100% { opacity: 1; filter: none; }
 }
+
+.guitar { z-index: 55 !important; }
