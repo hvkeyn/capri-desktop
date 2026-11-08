@@ -1114,8 +1114,6 @@ function createTray() {
   tray = new Tray(icon);
   tray.setToolTip(characterName());
   tray.on('click', () => sendCommand('status'));
-  // the tray answers the right button too: Windows shows a context menu there by habit
-  tray.on('right-click', () => trayMenu?.popup());
   rebuildTray();
 }
 
