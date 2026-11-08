@@ -781,7 +781,8 @@ function rebuildTray() {
     { type: 'separator' },
     { label: t.quit, click: () => app.quit() },
   ]);
-  tray.setContextMenu(menu);
+  // shown by us on either button (see createTray): a menu Windows owns never fired here
+  tray.setContextMenu(null);
   trayMenu = menu;
 }
 
@@ -1113,7 +1114,8 @@ function createTray() {
   const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   tray = new Tray(icon);
   tray.setToolTip(characterName());
-  tray.on('click', () => sendCommand('status'));
+  tray.on('click', () => { rebuildTray(); trayMenu?.popup(); });
+  tray.on('right-click', () => { rebuildTray(); trayMenu?.popup(); });
   rebuildTray();
 }
 
