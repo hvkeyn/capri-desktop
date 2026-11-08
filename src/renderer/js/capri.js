@@ -151,6 +151,7 @@ export class Capri {
 
     this.alphaMap = this.buildAlphaMap(image);
     this.hull = buildHull(this.alphaMap);
+    this.bodyBox = alphaBox(this.alphaMap);
     this.setScale(this.scale);
     this.bindPointer();
     this.loop = this.loop.bind(this);
@@ -338,11 +339,14 @@ export class Capri {
       const c = lerp(1, 0.3, this.p.sit);
       sy = sy <= SPRITE.hip + THIGH * c ? SPRITE.hip + (sy - SPRITE.hip) / c : sy + THIGH * (1 - c);
     }
-    for (const [dx, dy] of [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4]]) {
+    for (const [dx, dy] of [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4], [8, 0], [-8, 0], [0, 8], [0, -8]]) {
       const px = Math.round(sx + dx), py = Math.round(sy + dy);
       if (px < 0 || py < 0 || px >= SPRITE.width || py >= SPRITE.height) continue;
       if (this.alphaMap[(py * SPRITE.width + px) * 4 + 3] > 40) return true;
     }
+    // the cut-out has gaps (arms, the space between her legs): inside her own outline she is still her
+    const box = this.bodyBox;
+    if (box && sx >= box.x0 && sx <= box.x1 && sy >= box.y0 && sy <= box.y1) return true;
     return false;
   }
 
@@ -2833,6 +2837,22 @@ function norm(deg) {
 
 // Her outline at rest (the alpha map), as a convex hull around her middle, in sprite px: how far
 // she reaches in any direction once she's turned (reachAt). Her mane is most of it.
+// The rectangle her drawing occupies, in sprite px: the forgiving half of the hit test.
+function alphaBox(alpha) {
+  const { width: w, height: h } = SPRITE;
+  let x0 = w, x1 = -1, y0 = h, y1 = -1;
+  for (let y = 0; y < h; y += 2) {
+    for (let x = 0; x < w; x += 2) {
+      if (alpha[(y * w + x) * 4 + 3] <= 40) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  return x1 > x0 ? { x0, x1, y0, y1 } : null;
+}
+
 function buildHull(alpha) {
   const { width: w, height: h } = SPRITE;
   const pts = [];
