@@ -2,7 +2,9 @@
 // or one chord when nothing is happening. He is drawn at the size of the character he sits beside — never
 // bigger — and when you cut him off he comes apart in a glitch instead of vanishing.
 
-const STRUM_MS = 240; // two drawings, alternating like a slow strum
+const STRUM_MS = 70; // twenty-four drawings: a whole strumming cycle in 1.7 seconds
+// a sitting man is shorter than the same man standing: this keeps him from looking like a giant
+const SIT_SCALE = 0.78;
 const GLITCH_MS = 320;
 
 export class Guitar {
@@ -35,7 +37,7 @@ export class Guitar {
     const avatar = document.getElementById('capri');
     const rect = avatar?.getBoundingClientRect();
     const floor = this.capri?.view?.floor || window.innerHeight;
-    const height = Math.round(rect?.height || Math.floor(window.innerHeight * 0.36));
+    const height = Math.round((rect?.height || Math.floor(window.innerHeight * 0.36)) * SIT_SCALE);
     const width = Math.round((height * img.naturalWidth) / (img.naturalHeight || 1));
     const bottom = Math.max(0, Math.round(window.innerHeight - (rect?.bottom ?? floor)));
     const left = Math.round((rect?.left ?? window.innerWidth - width - 10) + ((rect?.width ?? width) - width) / 2);
