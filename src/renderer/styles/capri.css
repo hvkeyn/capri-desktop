@@ -1767,3 +1767,25 @@ html[data-motion='reduced'] .intro-shot {
   70% { opacity: 0.4; transform: translateX(5px); filter: hue-rotate(-30deg) saturate(2); clip-path: inset(46% 0 8% 0); }
   100% { opacity: 0; transform: translateX(0); filter: none; clip-path: inset(0 0 0 0); }
 }
+
+
+/* he does not appear out of nowhere: the glitch carries him in, and out again */
+.guitar.is-arriving {
+  animation: guitar-arrive 260ms steps(3, end) 1;
+}
+
+@keyframes guitar-arrive {
+  0% { opacity: 0; transform: translateY(10px); filter: hue-rotate(60deg) saturate(2); clip-path: inset(0 0 46% 0); }
+  60% { opacity: 0.8; transform: translateY(2px); filter: hue-rotate(-30deg) saturate(1.6); clip-path: inset(30% 0 12% 0); }
+  100% { opacity: 1; transform: translateY(0); filter: none; clip-path: inset(0 0 0 0); }
+}
+
+#capri.is-reappearing {
+  animation: capri-return 320ms steps(3, end) 1;
+}
+
+@keyframes capri-return {
+  0% { opacity: 0; filter: hue-rotate(50deg) saturate(2); }
+  55% { opacity: 0.85; filter: hue-rotate(-25deg) saturate(1.5); }
+  100% { opacity: 1; filter: none; }
+}

@@ -36,14 +36,14 @@ export class Guitar {
     const rect = avatar?.getBoundingClientRect();
     const floor = this.capri?.view?.floor || window.innerHeight;
     const height = Math.round(rect?.height || Math.floor(window.innerHeight * 0.36));
-    const bottom = Math.max(0, Math.round(window.innerHeight - floor));
     const width = Math.round((height * img.naturalWidth) / (img.naturalHeight || 1));
-    const right = 10;
+    const bottom = Math.max(0, Math.round(window.innerHeight - (rect?.bottom ?? floor)));
+    const left = Math.round((rect?.left ?? window.innerWidth - width - 10) + ((rect?.width ?? width) - width) / 2);
     img.style.height = `${height}px`;
     img.style.width = `${width}px`;
     img.style.bottom = `${bottom}px`;
-    img.style.right = `${right}px`;
-    img.style.left = 'auto';
+    img.style.left = `${Math.max(0, left)}px`;
+    img.style.right = 'auto';
   }
 
   async start({ seconds = 0, volume = 0.55, track = null } = {}) {
@@ -68,7 +68,16 @@ export class Guitar {
     document.body.appendChild(img);
     this.el = img;
     this.place(img);
-    requestAnimationFrame(() => img.classList.add('is-here'));
+    img.classList.add('is-arriving');
+    const avatarEl = document.getElementById('capri');
+    if (avatarEl) {
+      avatarEl.dataset.wasVisible = avatarEl.style.visibility || '';
+      avatarEl.style.visibility = 'hidden';
+    }
+    requestAnimationFrame(() => {
+      img.classList.remove('is-arriving');
+      img.classList.add('is-here');
+    });
     this.frame = 0;
     this.frameTimer = setInterval(() => {
       if (!this.el || this.frames.length < 2) return;
@@ -116,13 +125,21 @@ export class Guitar {
     if (!this.el) return;
     const el = this.el;
     this.el = null;
+    const avatarEl = document.getElementById('capri');
+    // he comes back as the character appears again, out of the same glitch
     if (glitch) {
       el.classList.add('is-glitching');
-      setTimeout(() => el.remove(), GLITCH_MS + 40);
     } else {
       el.classList.remove('is-here');
-      setTimeout(() => el.remove(), 260);
     }
+    setTimeout(() => {
+      el.remove();
+      if (avatarEl) {
+        avatarEl.style.visibility = avatarEl.dataset.wasVisible || '';
+        avatarEl.classList.add('is-reappearing');
+        setTimeout(() => avatarEl.classList.remove('is-reappearing'), 320);
+      }
+    }, glitch ? GLITCH_MS + 40 : 260);
     this.onChange?.(false);
   }
 
