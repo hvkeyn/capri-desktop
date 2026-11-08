@@ -1,10 +1,10 @@
-// The guitar: he sits on the edge or in the corner, leans back and plays. A whole song from his playlist,
-// or one chord when nothing is happening. He is drawn at the size of the character he sits beside — never
-// bigger — and when you cut him off he comes apart in a glitch instead of vanishing.
+// The guitar: he sits where the character stands, at the character's own size, and plays a whole song.
+//
+// The drawing is a canvas, not an <img> that is re-pointed every 70 ms: all 24 frames are decoded once, and
+// the loop paints the current one into the same surface. Nothing re-layouts, nothing flickers, and the
+// head sway reads as one long wave instead of a slideshow.
 
-const STRUM_MS = 70; // twenty-four drawings: a whole strumming cycle in 1.7 seconds
-// a sitting man is shorter than the same man standing: this keeps him from looking like a giant
-const SIT_SCALE = 0.78;
+const FRAME_MS = 70;
 const GLITCH_MS = 320;
 
 export class Guitar {
@@ -15,11 +15,14 @@ export class Guitar {
     this.frames = Array.isArray(skin?.guitar?.frames) ? skin.guitar.frames : [];
     this.tracks = Array.isArray(skin?.guitar?.tracks) ? skin.guitar.tracks : [];
     this.audio = null;
-    this.el = null;
+    this.canvas = null;
+    this.ctx = null;
+    this.images = [];
     this.timer = 0;
-    this.frameTimer = 0;
+    this.raf = 0;
     this.frame = 0;
     this.last = -1;
+    this.started = 0;
     this.onChange = null;
   }
 
@@ -28,24 +31,37 @@ export class Guitar {
   }
 
   get playing() {
-    return Boolean(this.el);
+    return Boolean(this.canvas);
   }
 
-  // The place: on the window edge under him when there is one, otherwise the corner of the screen, and
-  // no taller than the character himself.
-  place(img) {
+  loadFrames() {
+    if (this.images.length) return Promise.resolve(this.images);
+    return Promise.all(this.frames.map((src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    }))).then((list) => {
+      this.images = list.filter(Boolean);
+      return this.images;
+    });
+  }
+
+  // Exactly the avatar's size, centred on the avatar's place: the same person, sitting down.
+  place(target = this.canvas) {
+    if (!target) return;
     const avatar = document.getElementById('capri');
     const rect = avatar?.getBoundingClientRect();
-    const floor = this.capri?.view?.floor || window.innerHeight;
-    const height = Math.round((rect?.height || Math.floor(window.innerHeight * 0.36)) * SIT_SCALE);
-    const width = Math.round((height * img.naturalWidth) / (img.naturalHeight || 1));
-    const bottom = Math.max(0, Math.round(window.innerHeight - (rect?.bottom ?? floor)));
+    const height = Math.round(rect?.height || window.innerHeight * 0.36);
+    const ratio = (this.images[0]?.naturalWidth || 972) / (this.images[0]?.naturalHeight || 1417);
+    const width = Math.round(height * ratio);
+    const bottom = Math.max(0, Math.round(window.innerHeight - (rect?.bottom ?? window.innerHeight)));
     const left = Math.round((rect?.left ?? window.innerWidth - width - 10) + ((rect?.width ?? width) - width) / 2);
-    img.style.height = `${height}px`;
-    img.style.width = `${width}px`;
-    img.style.bottom = `${bottom}px`;
-    img.style.left = `${Math.max(0, left)}px`;
-    img.style.right = 'auto';
+    target.style.height = `${height}px`;
+    target.style.width = `${width}px`;
+    target.style.bottom = `${bottom}px`;
+    target.style.left = `${Math.max(0, left)}px`;
+    target.style.right = 'auto';
   }
 
   async start({ seconds = 0, volume = 0.55, track = null } = {}) {
@@ -54,40 +70,39 @@ export class Guitar {
     const src = this.tracks[index];
     if (!src) return false;
 
-    // decode both drawings before showing anything: swapping them later must not flicker
-    await Promise.all(this.frames.map((frame) => new Promise((resolve) => {
-      const probe = new Image();
-      probe.onload = probe.onerror = resolve;
-      probe.src = frame;
-    })));
+    const images = await this.loadFrames();
+    if (!images.length) return false;
 
-    const img = document.createElement('img');
-    img.className = 'guitar';
-    img.src = this.frames[0];
-    img.alt = '';
-    img.decoding = 'async';
-    img.addEventListener('load', () => this.place(img), { once: true });
-    document.body.appendChild(img);
-    this.el = img;
-    this.place(img);
-    img.style.opacity = '1';
-    img.style.transform = 'none';
-    img.classList.add('is-arriving');
+    const canvas = document.createElement('canvas');
+    canvas.className = 'guitar';
+    canvas.width = images[0].naturalWidth;
+    canvas.height = images[0].naturalHeight;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.place(canvas);
+    this.paint(0);
+
     const avatarEl = document.getElementById('capri');
     if (avatarEl) {
       avatarEl.dataset.wasVisible = avatarEl.style.visibility || '';
       avatarEl.style.visibility = 'hidden';
     }
-    requestAnimationFrame(() => {
-      img.classList.remove('is-arriving');
-      img.classList.add('is-here');
-    });
+    document.body.appendChild(canvas);
+    canvas.style.opacity = '1';
+    canvas.classList.add('is-here');
+
     this.frame = 0;
-    this.frameTimer = setInterval(() => {
-      if (!this.el || this.frames.length < 2) return;
-      this.frame = (this.frame + 1) % this.frames.length;
-      this.el.src = this.frames[this.frame];
-    }, STRUM_MS);
+    this.started = performance.now();
+    const tick = () => {
+      if (!this.canvas) return;
+      const want = Math.floor((performance.now() - this.started) / FRAME_MS) % images.length;
+      if (want !== this.frame) {
+        this.frame = want;
+        this.paint(want);
+      }
+      this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
 
     const audio = new Audio(src);
     audio.volume = volume;
@@ -101,12 +116,17 @@ export class Guitar {
     return true;
   }
 
-  // A song ran out: he puts the guitar down, no glitch, it was meant to end.
+  paint(index) {
+    const img = this.images[index];
+    if (!img || !this.ctx) return;
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+  }
+
   finish() {
     this.teardown(false);
   }
 
-  // Cut off in the middle: a short glitch, then gone.
   interrupt() {
     if (!this.playing) return;
     this.teardown(true);
@@ -114,9 +134,9 @@ export class Guitar {
 
   teardown(glitch) {
     clearTimeout(this.timer);
-    clearInterval(this.frameTimer);
+    cancelAnimationFrame(this.raf);
     this.timer = 0;
-    this.frameTimer = 0;
+    this.raf = 0;
     if (this.audio) {
       try {
         this.audio.pause();
@@ -126,16 +146,13 @@ export class Guitar {
       }
       this.audio = null;
     }
-    if (!this.el) return;
-    const el = this.el;
-    this.el = null;
+    if (!this.canvas) return;
+    const el = this.canvas;
+    this.canvas = null;
+    this.ctx = null;
     const avatarEl = document.getElementById('capri');
-    // he comes back as the character appears again, out of the same glitch
-    if (glitch) {
-      el.classList.add('is-glitching');
-    } else {
-      el.classList.remove('is-here');
-    }
+    if (glitch) el.classList.add('is-glitching');
+    else el.classList.remove('is-here');
     setTimeout(() => {
       el.remove();
       if (avatarEl) {
