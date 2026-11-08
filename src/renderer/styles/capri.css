@@ -1743,7 +1743,6 @@ html[data-motion='reduced'] .intro-shot {
   z-index: 2;
   will-change: transform, opacity;
   contain: layout paint;
-  z-index: 32;
   pointer-events: none;
   opacity: 0;
   transform: translateY(24px) rotate(1.5deg);
