@@ -1884,6 +1884,8 @@ function main() {
     createOverlay();
     createTray();
     loadCustomTools(); // the ones the user wrote in harness/tools.json, if any
+    getAgent(); // her harness on disk is seeded here, at the start, not at the first work order: the
+                // skills shelf must be there before she is asked to choose from it
     tools.setScreenReader(readScreen); // "what is on my screen" is a tool now, like the rest
     // once, a little after she is up: update.js caches the answer for 12 hours, and a quiet check says
     // nothing when there is nothing to say (an update that exists is always shown)
