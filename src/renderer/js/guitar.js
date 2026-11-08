@@ -4,7 +4,7 @@
 // the loop paints the current one into the same surface. Nothing re-layouts, nothing flickers, and the
 // head sway reads as one long wave instead of a slideshow.
 
-const FRAME_MS = 70;
+const FRAME_MS = 115; // a slow, tired strum: the head sways, it does not shake
 const GLITCH_MS = 320;
 
 export class Guitar {
@@ -89,6 +89,11 @@ export class Guitar {
       avatarEl.dataset.wasVisible = avatarEl.style.visibility || '';
       avatarEl.style.visibility = 'hidden';
     }
+    // she is sitting, not wandering: no teleports, no idle stunts while the guitar is out
+    this.wasBusy = this.capri.busy;
+    this.capri.busy = true;
+    this.capri.nextMove = Infinity;
+    this.capri.nextGaze = Infinity;
     document.body.appendChild(canvas);
     canvas.classList.add('is-arriving');
     setTimeout(() => {
@@ -173,6 +178,7 @@ export class Guitar {
         setTimeout(() => avatarEl.classList.remove('is-reappearing'), 320);
       }
     }, glitch ? GLITCH_MS + 40 : 260);
+    this.capri.busy = this.wasBusy || false;
     this.onChange?.(false);
   }
 
