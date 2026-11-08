@@ -13,6 +13,8 @@ export class Guitar {
     this.panel = panel;
     this.host = host;
     this.frames = Array.isArray(skin?.guitar?.frames) ? skin.guitar.frames : [];
+    this.source = skin?.guitar?.source || '';
+    this.scale = Number(skin?.guitar?.scale) || 0.75;
     this.tracks = Array.isArray(skin?.guitar?.tracks) ? skin.guitar.tracks : [];
     this.audio = null;
     this.canvas = null;
@@ -27,7 +29,7 @@ export class Guitar {
   }
 
   get available() {
-    return Boolean(this.frames.length && this.tracks.length);
+    return Boolean(this.frames.length && this.source && this.tracks.length);
   }
 
   get playing() {
@@ -52,7 +54,7 @@ export class Guitar {
     if (!target) return;
     const avatar = document.getElementById('capri');
     const rect = avatar?.getBoundingClientRect();
-    const height = Math.round(rect?.height || window.innerHeight * 0.36);
+    const height = Math.round((rect?.height || window.innerHeight * 0.36) * this.scale);
     const ratio = (this.images[0]?.naturalWidth || 972) / (this.images[0]?.naturalHeight || 1417);
     const width = Math.round(height * ratio);
     const bottom = Math.max(0, Math.round(window.innerHeight - (rect?.bottom ?? window.innerHeight)));
@@ -67,8 +69,8 @@ export class Guitar {
   async start({ seconds = 0, volume = 0.55, track = null } = {}) {
     if (!this.available || this.playing) return false;
     const index = track ?? this.nextTrack();
-    const src = this.tracks[index];
-    if (!src) return false;
+    const segment = this.tracks[index];
+    if (!segment) return false;
 
     const images = await this.loadFrames();
     if (!images.length) return false;
@@ -104,12 +106,19 @@ export class Guitar {
     };
     this.raf = requestAnimationFrame(tick);
 
-    const audio = new Audio(src);
+    // one file, seeked to this song, stopped exactly at its end: no cut files that end early
+    const audio = new Audio(this.source);
     audio.volume = volume;
     audio.preload = 'auto';
     this.audio = audio;
     audio.addEventListener('ended', () => this.finish());
-    audio.play().catch(() => {});
+    audio.addEventListener('loadedmetadata', () => {
+      audio.currentTime = segment.at;
+      audio.play().catch(() => {});
+    }, { once: true });
+    audio.addEventListener('timeupdate', () => {
+      if (segment.end && audio.currentTime >= segment.end - 0.15) this.finish();
+    });
 
     if (seconds > 0) this.timer = setTimeout(() => this.interrupt(), seconds * 1000);
     this.onChange?.(true);

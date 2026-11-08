@@ -150,8 +150,13 @@ function read(dir, base) {
     intro: introOf(base, raw.intro),
     guitar: raw.guitar && typeof raw.guitar === 'object' ? {
       image: typeof raw.guitar.image === 'string' && raw.guitar.image ? `${base}${raw.guitar.image}` : '',
+      // one file and a list of moments in it: a whole song plays, the next one is a seek away
+      source: typeof raw.guitar.source === 'string' && raw.guitar.source ? `${base}${raw.guitar.source}` : '',
+      scale: Number(raw.guitar.scale) > 0 && Number(raw.guitar.scale) <= 1.5 ? Number(raw.guitar.scale) : 0.75,
       frames: Array.isArray(raw.guitar.frames) ? raw.guitar.frames.filter((f) => typeof f === 'string').map((f) => `${base}${f}`) : [],
-      tracks: Array.isArray(raw.guitar.tracks) ? raw.guitar.tracks.filter((t) => typeof t === 'string').map((t) => `${base}${t}`) : [],
+      tracks: Array.isArray(raw.guitar.tracks) ? raw.guitar.tracks
+        .filter((t) => t && typeof t === 'object')
+        .map((t) => ({ at: Math.max(0, Number(t.at) || 0), end: Math.max(0, Number(t.end) || 0) })) : [],
     } : null,
 
     // loops that play by themselves: smoking, sadness, guitar, idle breathing
