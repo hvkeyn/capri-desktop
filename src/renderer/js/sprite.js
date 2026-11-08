@@ -50,6 +50,7 @@ uniform float uPx; // sprite pixels per screen pixel
 uniform float uHolo; // 0: her own art; 1: a projection (cyan, scanlines, flicker)
 uniform float uTime; // seconds, for the projection's flicker
 uniform float uFlat; // 1: a character's own art — no rig, just the drawing
+uniform float uRimOn; // 1: the violet misregistration behind her; 0: none (someone else's art)
 
 // landmarks, in sprite pixels (capri-full.png is 240x420, see tools/build-sprite.py)
 const vec2 NECK = vec2(118.0, 152.0);   // the head tilts around this
@@ -319,8 +320,8 @@ void main() {
     a += e2;
   }
 
-  // violet misregistration behind the figure
-  float rim = rigAlpha(q - uMisreg) * (1.0 - a);
+  // violet misregistration behind the figure (a skin whose art was not drawn for it can turn it off)
+  float rim = rigAlpha(q - uMisreg) * (1.0 - a) * uRimOn;
   col += uRim * rim;
   a += rim;
 
@@ -348,7 +349,7 @@ const UNIFORMS = [
   'uView', 'uPad', 'uTex', 'uSize', 'uSeed', 'uBoil', 'uHair', 'uHead', 'uMane', 'uArmL', 'uArmR', 'uLongL', 'uLongR',
   'uSit', 'uBend', 'uKickL', 'uKickR',
   'uSmear', 'uEcho', 'uGlitch', 'uGlitchSeed',
-  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uAlpha', 'uPx', 'uHolo', 'uTime', 'uFlat',
+  'uSplit', 'uCollapse', 'uDissolve', 'uSparkle', 'uGrade', 'uSil', 'uMisreg', 'uRim', 'uRimOn', 'uAlpha', 'uPx', 'uHolo', 'uTime', 'uFlat',
 ];
 
 export const SPRITE = {
@@ -484,6 +485,7 @@ export class SpriteRenderer {
     gl.uniform4f(u.uSil, s.sil[0], s.sil[1], s.sil[2], s.silAmount);
     gl.uniform2f(u.uMisreg, s.misreg[0], s.misreg[1]);
     gl.uniform3f(u.uRim, 0.48, 0.24, 1.0);
+    gl.uniform1f(u.uRimOn, s.rim ?? 1);
     gl.uniform1f(u.uAlpha, s.alpha);
     gl.uniform1f(u.uHolo, s.holo || 0);
     gl.uniform1f(u.uTime, s.time || 0);

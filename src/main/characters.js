@@ -60,19 +60,32 @@ function animationOf(base, dir, raw) {
   };
 }
 
-// The storyboard it walks in with: frames, where the close-ups start, how long each stays, and the
-// captions in the corner of the screen
+// The storyboard it walks in with: frame by frame, or a film of its own. Either way: where the
+// close-ups start, how long each stays, and the captions in the corner of the screen.
+const VIDEO = /\.(mp4|webm|ogv|m4v)$/i;
 function introOf(base, raw) {
-  if (!raw || !Array.isArray(raw.frames)) return null;
-  const frames = raw.frames.map((file) => picture(base, file)).filter(Boolean);
-  if (!frames.length) return null;
+  if (!raw || typeof raw !== 'object') return null;
+  const frames = Array.isArray(raw.frames) ? raw.frames.map((file) => picture(base, file)).filter(Boolean) : [];
+  // the film is not a picture: picture() would refuse it, so the file is addressed directly
+  const video = typeof raw.video === 'string' && VIDEO.test(raw.video) && !raw.video.includes('..') && !raw.video.startsWith('/')
+    ? `${base}${raw.video}`
+    : '';
+  if (!frames.length && !video) return null;
   const closeupFrom = Number(raw.closeupFrom);
   const frameMs = Number(raw.frameMs);
   const durations = Array.isArray(raw.durations)
     ? raw.durations.map((ms) => Math.min(4000, Math.max(80, Number(ms) || 0)))
     : [];
   const clean = (list) => (Array.isArray(list) ? list : [])
-    .map((c) => ({ from: Math.max(0, Number(c?.from) || 0), text: String(c?.text || '').trim().slice(0, 90) }))
+    .map((c) => {
+      const at = Number(c?.at);
+      return {
+        from: Math.max(0, Number(c?.from) || 0),
+        // a film counts in seconds, a storyboard in frames: `at` is for the film
+        at: Number.isFinite(at) && at >= 0 ? Math.min(600, at) : null,
+        text: String(c?.text || '').trim().slice(0, 90),
+      };
+    })
     .filter((c) => c.text);
   const captions = clean(raw.captions);
   // the same two lines in every language the app speaks: the caption follows the menu, not the skin
@@ -81,6 +94,8 @@ function introOf(base, raw) {
     : {};
   const soundFrom = Number(raw.soundFrom);
   const soundVolume = Number(raw.soundVolume);
+  const volume = Number(raw.volume);
+  const fade = Number(raw.fade);
   const lineByLang = raw.lineByLang && typeof raw.lineByLang === 'object'
     ? Object.fromEntries(Object.entries(raw.lineByLang).map(([lang, text]) => [lang, String(text || '').trim().slice(0, 200)]).filter(([, text]) => text))
     : {};
@@ -100,6 +115,10 @@ function introOf(base, raw) {
     soundFrom: Number.isFinite(soundFrom) ? Math.max(0, Math.min(frames.length - 1, soundFrom)) : -1,
     soundVolume: Number.isFinite(soundVolume) ? Math.min(1, Math.max(0, soundVolume)) : 0.7,
     captionAt: Array.isArray(raw.captionAt) ? raw.captionAt.map((v) => Math.min(1, Math.max(0, Number(v) || 0))) : [],
+    // a film instead of frames: the whole screen, its own sound, and the seconds of it that fade out
+    video,
+    volume: Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 0.85,
+    fade: Number.isFinite(fade) ? Math.min(8, Math.max(0.2, fade)) : 2,
     // frames that are full pictures (a room behind him) fill the screen; transparent ones float
     cover: raw.cover === true,
     // a sheet that dissolves by itself doesn't need the app's dissolve on top of it
@@ -123,7 +142,12 @@ function read(dir, base) {
   const scale = Number(raw.scale);
   const grade = Number(raw.grade);
   const holo = Number(raw.holo);
+  const rim = Number(raw.rim);
   const persona = Array.isArray(raw.persona) ? raw.persona.filter((line) => typeof line === 'string') : (typeof raw.persona === 'string' ? [raw.persona] : []);
+  // the windows a character brings with it, when it comes from a world with its own look (yorha.css)
+  const theme = typeof raw.theme === 'string' && /^[a-z][a-z0-9-]{1,23}$/.test(raw.theme.trim().toLowerCase())
+    ? raw.theme.trim().toLowerCase()
+    : '';
   return {
     label: String(raw.label || '').trim().slice(0, 40),
     // who they are to her chat and her panels (a character can be someone else entirely)
@@ -132,6 +156,8 @@ function read(dir, base) {
     persona: persona.slice(0, 20),
     // how her menu calls them: "her" (a she) or "him" (a he)
     gender: raw.gender === 'm' ? 'm' : 'f',
+    // the look of the windows that character should come with ('yorha'), if it names one
+    theme,
     base,
     sprite: url,
     faces: map(base, raw.faces),
@@ -171,6 +197,9 @@ function read(dir, base) {
     grade: Number.isFinite(grade) ? Math.min(1, Math.max(0, grade)) : null,
     // a projection, like the relic's: cyan, translucent, scanlines (sprite.js)
     holo: Number.isFinite(holo) ? Math.min(1, Math.max(0, holo)) : (raw.holo === true ? 1 : null),
+    // the violet copy knocked out of register behind the figure: her own art's, and off for art that
+    // was drawn without it ("rim": 0)
+    rim: Number.isFinite(rim) ? Math.min(1, Math.max(0, rim)) : null,
     // art that isn't hers: no rig deformation (its own animation already moves it)
     flat: raw.flat === true,
   };
@@ -214,4 +243,19 @@ function get(id, dirs) {
   return skin && { id, source: hit.source, label: skin.label || id, ...skin };
 }
 
-module.exports = { list, get, BUILTIN };
+// The file behind a character's face, for the tray icon (a path, not a url): null when it has none
+function faceFile(id, dirs) {
+  if (!id || id === BUILTIN.id) return null;
+  const hit = list(dirs).find((c) => c.id === id && c.source !== 'builtin');
+  if (!hit) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(rootFor(hit.source, dirs), id, 'skin.json'), 'utf8'));
+    const name = raw?.faces && typeof raw.faces === 'object' ? Object.values(raw.faces).find((n) => typeof n === 'string') : null;
+    const file = path.join(rootFor(hit.source, dirs), id, name || 'face.png');
+    return fs.existsSync(file) ? file : null;
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { list, get, faceFile, BUILTIN };

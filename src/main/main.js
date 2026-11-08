@@ -239,8 +239,65 @@ function forgetChats() {
 // capri://app/characters/... -> the characters you dropped in (characters.js), served as if they were
 //                           inside the app: same origin, so her shader may use them as a texture
 // capri://usersounds/... -> the user's own sound overrides
+const MEDIA = {
+  '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.webm': 'video/webm', '.ogv': 'video/ogg',
+  '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+};
+const MAX_RANGE = 48 * 1024 * 1024; // one answer this big is a film, and read whole off the disk
+
+// A film sits in a <video> (a character's entrance): Chromium asks for it in pieces so it can seek and
+// know how long it is. `net.fetch` over a file:// URL only answers whole files, so the piece is read
+// out of the file here; anything else still goes through it.
+function mediaResponse(target, type, range) {
+  let size;
+  try {
+    size = fs.statSync(target).size;
+  } catch {
+    return new Response('not found', { status: 404 });
+  }
+  const match = /^bytes=(\d*)-(\d*)$/.exec(String(range || '').trim());
+  if (!match) return null; // no piece asked for: net.fetch all of it, as every song already is
+  const [, from, to] = match;
+  let start = from === '' ? null : Number(from);
+  let end = to === '' ? null : Number(to);
+  if (start === null && end === null) return null;
+  if (start === null) {
+    start = Math.max(0, size - end);
+    end = size - 1;
+  } else if (end === null || end >= size) {
+    end = size - 1;
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
+    return new Response('', { status: 416, headers: { 'content-range': `bytes */${size}` } });
+  }
+  const length = end - start + 1;
+  if (length > MAX_RANGE) return null; // whole film in one go: net.fetch streams it instead
+  let fd;
+  try {
+    fd = fs.openSync(target, 'r');
+    const buffer = Buffer.allocUnsafe(length);
+    fs.readSync(fd, buffer, 0, length, start);
+    return new Response(buffer, {
+      status: 206,
+      headers: {
+        'content-type': type,
+        'content-length': String(length),
+        'content-range': `bytes ${start}-${end}/${size}`,
+        'accept-ranges': 'bytes',
+        'cache-control': 'no-store',
+      },
+    });
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch { /* already gone */ }
+    }
+  }
+}
+
 function serveProtocol() {
-  protocol.handle('capri', (request) => {
+  protocol.handle('capri', async (request) => {
     const url = new URL(request.url);
     let base = ROOT;
     let pathname = decodeURIComponent(url.pathname);
@@ -253,6 +310,11 @@ function serveProtocol() {
     const target = path.resolve(base, '.' + pathname);
     if (target !== base && !target.startsWith(base + path.sep)) {
       return new Response('forbidden', { status: 403 });
+    }
+    const type = MEDIA[path.extname(target).toLowerCase()];
+    if (type) {
+      const piece = mediaResponse(target, type, request.headers.get('range'));
+      if (piece) return piece;
     }
     return net.fetch(pathToFileURL(target).toString());
   });
@@ -463,9 +525,23 @@ function openCharactersFolder() {
 }
 
 function pickCharacter(id) {
-  if ((config.load().character || 'capri') === id) return;
-  updateConfig({ character: id, pose: '' }); // a pose belongs to one character
+  const cfg = config.load();
+  if ((cfg.character || 'capri') === id) return;
+  const skin = characters.get(id, characterDirs());
+  const patch = { character: id, pose: '' }; // a pose belongs to one character
+  // A character from a world with a look of its own brings its windows with it (skin.json's "theme"),
+  // and the ones you had are put back when someone else takes the desktop.
+  if (skin?.theme && skin.theme !== cfg.theme) {
+    patch.themeBefore = cfg.theme;
+    patch.theme = skin.theme;
+  } else if (!skin?.theme && cfg.themeBefore) {
+    patch.theme = cfg.themeBefore;
+    patch.themeBefore = '';
+  }
+  updateConfig(patch);
   overlay?.webContents.reload();
+  // the tray wears the face of whoever is on the desktop now
+  tray?.setImage(trayIcon());
   rebuildTray();
 }
 
@@ -514,6 +590,8 @@ function t_default(lang) {
 
 function updateConfig(patch) {
   if ('autostart' in patch) registerAutostart(patch.autostart); // her Run entry follows the setting
+  // a theme picked by hand is yours from now on: whatever a character had put aside is forgotten
+  if ('theme' in patch && !('themeBefore' in patch)) patch = { ...patch, themeBefore: '' };
   config.save(patch);
   if ('rest' in patch) {
     fitOverlay(); // the taskbar in her window or not
@@ -735,7 +813,7 @@ function rebuildTray() {
     },
     {
       label: t.theme,
-      submenu: [['nightcity', 'Night City'], ['classic', t.themeClassic]].map(([theme, label]) => ({
+      submenu: [['nightcity', 'Night City'], ['classic', t.themeClassic], ['yorha', 'YoRHa']].map(([theme, label]) => ({
         label, type: 'radio', checked: cfg.theme === theme, click: () => updateConfig({ theme }),
       })),
     },
@@ -1109,9 +1187,17 @@ function loadCustomTools() {
   return count;
 }
 
+// Her icon in the tray: her own, or the face of whoever is on the desktop (a character's own face.png)
+function trayIcon() {
+  const own = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
+  const face = characters.faceFile(config.load().character, characterDirs());
+  if (!face) return own;
+  const image = nativeImage.createFromPath(face);
+  return image.isEmpty() ? own : image;
+}
+
 function createTray() {
-  const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
-  tray = new Tray(icon);
+  tray = new Tray(trayIcon());
   tray.setToolTip(characterName());
   tray.on('click', () => sendCommand('status'));
   rebuildTray();

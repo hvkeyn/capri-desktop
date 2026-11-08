@@ -29,7 +29,7 @@ VoiceOver/TalkBack, springs instead of linear tweens).
 | The convention | Here |
 |---|---|
 | **Components you own, not a library** | `board.js` + `board.css` are plain files in the repo, built from the tokens already in `capri.css` (`--ink`, `--yellow`, `--cyan`, `--cut`, `--ease-out`). Nothing imported, nothing to upgrade. |
-| **One theme re-skins everything** | The board uses only the existing custom properties, so her Night City theme and the classic one both apply without a second palette. |
+| **One theme re-skins everything** | The board uses only the existing custom properties, so her Night City theme, the classic one and a character's own one (`yorha`, `styles/yorha.css`) all apply without a second palette. |
 | **44pt touch targets** | Every board control is ≥44px tall (`board__action`, `board__icon`, `board__pick`, the input). Her panel keeps 32px: it's a pointer target on a desktop overlay, and making the speech bubble chunky would cost more than it gains — but nothing in it is under 32px either (`interface.css`). |
 | **Accessible roles, states and labels** | The board is a `region` with an `aria-label`; the close button has one; the phase list is an `ol`; the fields have real `<label for>`; the board is `aria-live="polite"` so a screen reader hears the status change. |
 | **Motion you can turn off** | `reducedMotion` (Windows' animation setting, or her menu) skips the board's entrance; a `prefers-reduced-motion` media query covers the CSS-only animations; `scroll-behavior: smooth` only when motion is allowed. |
@@ -46,6 +46,19 @@ VoiceOver/TalkBack, springs instead of linear tweens).
 - **A scrollbar you can see** in her answer panel, smooth only when motion is allowed.
 - **Forced colours / high contrast**: her hairlines become real lines, her fill becomes the system
   highlight, so the board doesn't disappear in high-contrast mode.
+
+## A character's own windows (`styles/yorha.css`)
+
+A character can bring the look of its windows with it (`skin.json`'s `theme`), the way A2 brings
+YoRHa's. The stylesheet is written like the classic one and for the same reason: it is loaded last, every
+selector is wrapped in `:where(html[data-theme='yorha'])` so it is exactly as specific as the rule in
+`capri.css` it replaces, and it only ever *replaces* — no new structure, no markup of its own.
+
+The theme is mostly the palette: `--yellow` and `--cyan` are set to the two creams, `--red` becomes rust,
+`--cut` goes to `0`, and the whole interface turns monochrome before a single rule is overridden. What is
+left is the handful of places where the Night City *shape* is the look — the knockout copy behind the
+panel, the chamfered corners, the slab of a state, the broadcast caption — and those get a square,
+hairline, no-glow replacement. NieR's interface is quiet: one rule, four corner ticks, and room.
 
 ## What was deliberately not done
 

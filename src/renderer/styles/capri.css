@@ -1128,6 +1128,37 @@ html[data-motion='reduced'] .intro-shot {
   object-position: center 32%;
 }
 
+/* A character's entrance as a film (skin.json's "intro.video", app.js playVideoIntro): the whole
+   screen, letterboxed like the cutscene it is, its own sound. Laid over everything and click-through
+   like the stage it sits in. */
+.intro-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--ink);
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+}
+
+/* the last picture comes apart in slices, the way a frame of hers does */
+.intro-video.is-dissolving {
+  animation: intro-film-dissolve 760ms steps(7, end) forwards;
+}
+
+@keyframes intro-film-dissolve {
+  0% { opacity: 1; clip-path: inset(0 0 0 0); filter: none; }
+  24% { opacity: 0.94; clip-path: inset(6% 0 46% 0); filter: contrast(1.35) brightness(1.06); transform: translateX(4px); }
+  48% { opacity: 0.68; clip-path: inset(40% 0 14% 0); filter: contrast(1.7) brightness(1.02); transform: translateX(-6px); }
+  72% { opacity: 0.34; clip-path: inset(72% 0 4% 0); filter: contrast(1.4); }
+  100% { opacity: 0; clip-path: inset(100% 0 0 0); filter: none; }
+}
+
+html[data-motion='reduced'] .intro-video.is-dissolving {
+  animation-duration: 200ms;
+}
+
 /* ---- her thinking, above the answer ---------------------------------------------------------------
    A thin timeline, not a wall: one line of her own narration, then each tool as a step with a glyph,
    a verb, the thing it touches and its time. Mono, 9-10 px, dim; the frame takes the colour of the work

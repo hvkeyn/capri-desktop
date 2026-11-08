@@ -18,7 +18,7 @@ characters/
     cutin-grin.png ...   close-ups for her cut-ins: 360 x 240 (optional)
     poses/        other drawings of the same figure (optional)
     motions/      frame folders for loops: smoke/000.png ...
-    intro/        the frames it comes in with
+    intro/        the frames it comes in with, or one film of it (optional)
     lines/        its own words: ru.json, en.json ...
 ```
 
@@ -57,13 +57,26 @@ characters/
   smooth; the menu lists them, and `auto.idle` can name them for the idle rotation.
 - `flat` (`true`, optional) turns her rig off for art that isn't drawn for it: no mane flare, no arm
   reaching, no knee bends — just the character's own frames. Use it for a skin with real animation.
-- `intro` (optional) is how it comes in — frames, played once at start:
+- `rim` (0 to 1, optional) is the violet copy knocked out of register behind the figure. It is part of her
+  own art's look; art drawn without it looks better with `"rim": 0`.
+- `theme` (optional) is the look of her windows while this character is on the desktop: one of the app's
+  themes, `"yorha"` in the tray's Style menu (`styles/yorha.css`), or her own `nightcity` / `classic`. The
+  one you had is put back when you pick someone else.
+- `intro` (optional) is how it comes in, played once at start. Frames, played as a storyboard:
   `{"frames": ["intro/01.png", "…"], "closeupFrom": 6, "durations": [230, 220, …],
     "captions": [{"from": 6, "text": "WAKE UP"}, {"from": 9, "text": "WE HAVE A CITY TO BURN"}],
     "cover": false, "dissolve": true, "line": "…"}`.
   Frames cross-fade; `cover` fills the screen with whole pictures (a room behind them) instead of floating
   a cut-out; `dissolve: false` switches off the app's own dissolving exit for a sheet that already
   dissolves; `captions` are the yellow slabs; `line` is what it says once it's the little avatar.
+  Or one film of it, instead of frames:
+  `{"video": "intro/entrance.mp4", "volume": 0.9, "fade": 2.2,
+    "captionsByLang": {"en": [{"at": 3, "text": "COMMAND IS THE ONE WHO BETRAYED YOU"}]},
+    "lineByLang": {"en": "A2. Don't stand in my way."}}`.
+  The film fills the screen (`object-fit: cover`) and brings its own sound; `fade` is how many seconds of
+  that sound are taken down to silence at the end, so a cut doesn't stop the music mid-note. Its captions
+  say *when* in seconds (`at`), not which frame. It plays whole, like her own entrance; it is not played
+  when the app is started with Windows, nor with Windows' animations off.
 
 Two places are read, yours first:
 
@@ -92,6 +105,28 @@ the smoking and sadness loops and his intro. It is freely licensed and lives in 
 not the Desktop Girlfriend NEO addon and does not use its files. To make him yours, replace the pictures
 in `assets/characters/johnny/` (or copy the folder into `%APPDATA%\capri-desktop\characters\johnny\`)
 and keep or edit the `skin.json` beside them.
+
+## About A2
+
+The `a2` folder is the other character this fork ships: YoRHa Type A No. 2 from **NieR: Automata**,
+built from the renders in the `A2` folder beside this repository — one standing figure and two pose
+sheets on a green screen. `tools/make-a2.py` does the whole cut: it keys the green out (and takes it back
+out of the edges, so no halo shows on a dark desktop), puts every pose on her 240 x 420 rig at one scale
+(a crouch really is lower than a stand), cuts her head for the panels, five close-ups for the cut-ins,
+and the two breathing loops. Regenerate it with:
+
+```bash
+python tools/make-a2.py            # ../A2 -> assets/characters/a2, needs Pillow, numpy, OpenCV
+```
+
+The entrance is a film (`intro/entrance.mp4`): she walks in, lands, and turns to the camera, with its
+music fading out over the last two seconds. Her voice is hers — `lines/ru.json` and `lines/en.json` are
+written in A2's own clipped way, and her `persona` keeps the model in the same register. She brings the
+**YoRHa** windows with her (`theme: "yorha"`): warm black plates, cream type, one hairline and a corner
+tick at each corner, and no neon at all. Pick anyone else and your own theme comes back.
+
+Her art is fan work for this noncommercial fork; NieR: Automata, A2 and everything with its name on it
+belong to Square Enix and PlatinumGames.
 
 ## From a 3D model (a Unity `.char`)
 

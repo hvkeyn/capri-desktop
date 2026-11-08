@@ -30,13 +30,17 @@ function loadImage(src) {
   });
 }
 
-// A character's entrance. If it brought an intro (skin.json's "intro"): frame by frame — it walks up,
-// leans in, the close-ups, the glitch — and then it folds into the little avatar. Otherwise its figure
-// comes down over the whole screen and does the same.
+// A character's entrance. If it brought an intro (skin.json's "intro"): a film of its own, or frame
+// by frame — it walks up, leans in, the close-ups, the glitch — and then it folds into the little
+// avatar. Otherwise its figure comes down over the whole screen and does the same.
 async function skinArrival(capri, skin, panel, lang) {
   const avatar = document.getElementById('capri');
   if (reducedMotion.matches) return capri.materialize(capri.spot('post'));
   const intro = skin?.intro;
+  if (intro?.video) {
+    const shown = await playVideoIntro(capri, intro, avatar, panel, lang).catch(() => false);
+    if (shown) return true;
+  }
   if (intro?.frames?.length) return playIntro(capri, skin, intro, avatar, panel, lang);
 
   const big = document.createElement('img');
@@ -178,6 +182,116 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   document.body.classList.remove('intro-live');
   panel?.resume?.();
   if (closing) panel?.say({ kind: 'info', face: 'smug', line: closing, hold: 7000 });
+  return true;
+}
+
+// An entrance that came as a film (skin.json's "intro.video"): the whole screen, the film's own sound,
+// captions at the seconds it names, and the music taken down over its last few seconds instead of
+// stopping on a cut. It is played, not skipped: the overlay is click-through while it runs.
+async function playVideoIntro(capri, intro, avatar, panel, lang) {
+  const stage = document.createElement('div');
+  stage.className = 'intro-stage';
+  const video = document.createElement('video');
+  video.className = 'intro-video';
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.disablePictureInPicture = true;
+  video.src = intro.video;
+  // the whole film, from its first frame: the music is what the entrance is, so it starts at full
+  video.volume = intro.volume ?? 0.85;
+  stage.appendChild(video);
+  const caption = document.createElement('div');
+  caption.className = 'intro-caption';
+  document.body.appendChild(caption);
+  if (avatar) avatar.style.visibility = 'hidden';
+  document.body.classList.add('intro-live');
+  panel?.suspend?.();
+  document.body.appendChild(stage);
+
+  const langKey = String(lang && lang !== 'auto' ? lang : (navigator.language || 'en')).slice(0, 2).toLowerCase();
+  const spoken = intro.captionsByLang || {};
+  const captions = ((spoken[langKey] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
+  const closing = (intro.lineByLang && (intro.lineByLang[langKey] || intro.lineByLang.en)) || intro.line;
+
+  // the film is shown whether or not Chromium says it may play: without its length there is nothing to
+  // time the captions and the fade by, and that is the one case where the entrance is skipped
+  const ready = await new Promise((resolve) => {
+    if (video.readyState >= 1) return resolve(true);
+    const timer = setTimeout(() => resolve(false), 5000);
+    const done = (ok) => () => { clearTimeout(timer); resolve(ok); };
+    video.addEventListener('loadedmetadata', done(true), { once: true });
+    video.addEventListener('error', done(false), { once: true });
+  });
+  const duration = ready && Number.isFinite(video.duration) && video.duration > 1 ? video.duration : 0;
+  const tidy = () => {
+    video.pause();
+    video.removeAttribute('src');
+    try { video.load(); } catch { /* nothing to unload */ }
+    stage.remove();
+    caption.remove();
+    document.body.classList.remove('intro-live');
+    if (avatar) avatar.style.visibility = '';
+    panel?.resume?.();
+  };
+  if (!duration) {
+    tidy();
+    return false;
+  }
+
+  // a caption with `at` says when, in seconds of the film; the rest are spread over it, early enough
+  // to be read before the end
+  const lines = captions.map((c, i) => ({
+    text: c.text,
+    time: Number.isFinite(c.at)
+      ? Math.min(Math.max(0, c.at), Math.max(0, duration - 1.2))
+      : duration * (intro.captionAt?.[i] ?? (0.18 + (i * 0.6) / Math.max(1, captions.length))),
+  })).sort((a, b) => a.time - b.time);
+  let said = -1;
+  let captionTimer = 0;
+  const showCaption = (text) => {
+    caption.textContent = text;
+    caption.classList.remove('is-on');
+    void caption.offsetWidth; // restart the flicker
+    caption.classList.add('is-on');
+    clearTimeout(captionTimer);
+    captionTimer = setTimeout(() => caption.classList.remove('is-on'), 2600);
+  };
+
+  const level = intro.volume ?? 0.85;
+  const fade = Math.min(intro.fade ?? 2, duration * 0.6);
+  let ended = false;
+  video.addEventListener('ended', () => { ended = true; }, { once: true });
+  video.play().catch(() => {});
+  const startedAt = performance.now();
+  // the film's own clock: the captions and the fade follow what is on screen, not a stopwatch
+  while (!ended) {
+    const t = video.currentTime;
+    if (video.ended) break;
+    while (said + 1 < lines.length && t >= lines[said + 1].time) {
+      said += 1;
+      showCaption(lines[said].text);
+    }
+    const left = duration - t;
+    video.volume = Math.max(0, Math.min(level, (level * left) / fade));
+    if (left <= 0.06) break;
+    // a film that never started (a refused play(), a decoder that gave up) is not one to wait out
+    if (video.paused && t === 0 && performance.now() - startedAt > 2500) break;
+    if (performance.now() - startedAt > (duration + 10) * 1000) break; // a stall, not a film
+    await sleep(80);
+  }
+  video.volume = 0;
+
+  // the last picture comes apart and the avatar shows up in the middle of it
+  video.classList.add('is-dissolving');
+  clearTimeout(captionTimer);
+  caption.classList.add('is-fading');
+  if (avatar) avatar.style.visibility = '';
+  await sleep(240);
+  await capri.materialize(capri.spot('post'));
+  await sleep(520);
+  tidy();
+  if (closing) panel?.say({ kind: 'info', face: 'smug', line: closing, hold: 7000 });
+  return true;
 }
 
 // A character with several drawings can move through them by itself (skin.json's "auto"): one while
@@ -342,6 +456,8 @@ async function boot() {
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
   capri.skinFlat = Boolean(skin?.flat);
+  // the violet copy behind her is her own art's: someone else's drawing can turn it off ("rim": 0)
+  capri.skinRim = typeof skin?.rim === 'number' ? skin.rim : 1;
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
   // the drawing it starts in: one of its poses, if that's what was picked last time
@@ -1249,8 +1365,9 @@ async function boot() {
 
   // entrance: her face big in the corner says hi, then she dives down to her spot
   // (put away last time: she starts in her biochip; started with Windows: no show, she's just there)
+  let arrived = false; // an entrance that ended with its own line: it keeps the last word
   if (config.visible === false) capri.stowNow();
-  else if (skin && !config.startedAtLogin) await skinArrival(capri, skin, panel, config.lang);
+  else if (skin && !config.startedAtLogin) arrived = await skinArrival(capri, skin, panel, config.lang);
   else if (intro && !config.startedAtLogin) await capri.intro(capri.spot('post'));
   else await capri.materialize(capri.spot('post'));
   // Windows has its animations off and she's following it: she barely moves. The first time, she
@@ -1283,7 +1400,7 @@ async function boot() {
     guitar, capri, panel, brain, chat, board, mission };
   // her welcome: the first time, or while she's meant to watch Claude Code and isn't plugged into it
   if (!config.welcomed || (config.claude && !hooks.installed)) guide.welcome();
-  else panel.say({ kind: 'info', line: brain.onlineLine(), hold: 4000 });
+  else if (!arrived) panel.say({ kind: 'info', line: brain.onlineLine(), hold: 4000 });
 
   // In the evening, after a real day's work, she brings you her report card once, on her own,
   // at a quiet moment.

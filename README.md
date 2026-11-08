@@ -158,7 +158,9 @@ Layout: `src/main` (Electron main: agent, tools, fss, ocr, lines, updater, guard
 
 A character is a folder in `assets/characters/<id>`: `skin.json` (name, persona, palettes, frames, poses,
 which languages of lines it has), motion atlases, sounds, and `lines/<lang>.json`. Drop a folder in, pick it
-in the tray. The shipped one is Johnny Silverhand; the default is Capri.
+in the tray. The shipped ones are Johnny Silverhand and A2; the default is Capri. A character can also
+bring the look of its windows (`"theme": "yorha"`) and an entrance film of its own
+(`"intro": { "video": "intro/entrance.mp4" }`), with the music faded out over its last seconds.
 
 ## Credits
 
@@ -166,5 +168,7 @@ in the tray. The shipped one is Johnny Silverhand; the default is Capri.
 - Search ideas: [Kensaku](https://github.com/yjid/kensaku) (MIT) — the index, the filters, the "delete means
   the bin" courtesy. No code copied.
 - Cyberpunk 2077 and its characters belong to CD Projekt Red. This is a fan project, not affiliated.
+- NieR: Automata and A2 belong to Square Enix / PlatinumGames. The `a2` skin is fan art for a
+  noncommercial fork, not affiliated.
 
 MIT (see [LICENSE](LICENSE)).

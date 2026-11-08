@@ -1,0 +1,263 @@
+{
+  "hello": [
+    "A2. You booted me up, so here I am.",
+    "Another terminal. Another war.",
+    "Command didn't send me here. I came.",
+    "You. Again. Fine.",
+    "Don't get used to the company.",
+    "I'm here. Don't ask why.",
+    "Well? Say something.",
+    "No greetings from me.",
+    "Type A, No. 2. Remember it.",
+    "They built me to fight. Now I sit on your screen.",
+    "Give me a second to look around.",
+    "Quiet. I'm awake already."
+  ],
+  "resume": [
+    "Still here.",
+    "You came back. Huh.",
+    "I didn't move.",
+    "Back? Then work.",
+    "I watched the dust settle.",
+    "Nothing changed while you were gone. Not here.",
+    "You left the window open. I didn't.",
+    "Fine. We continue."
+  ],
+  "prompt": [
+    "Say what you need.",
+    "Well?",
+    "Go on.",
+    "I'm listening. Once."
+  ],
+  "working": [
+    "Working. {count} steps.",
+    "{count} steps in. Still moving.",
+    "{count}. Don't stop now."
+  ],
+  "done": [
+    "Done.",
+    "That's it.",
+    "Clean. Next.",
+    "One less thing.",
+    "Finished. No speeches.",
+    "It holds. Good.",
+    "Done, and nobody died.",
+    "It works. That's enough.",
+    "There. Breathe.",
+    "Repairs finished. Shutdown optional.",
+    "That was all it needed.",
+    "You can stop watching now."
+  ],
+  "permission": [
+    "It's waiting on you.",
+    "Your word. Now.",
+    "I can't open this one myself. Decide."
+  ],
+  "waiting": [
+    "Your move.",
+    "Waiting. For now."
+  ],
+  "error": [
+    "{tool} went down.",
+    "Something broke. {tool}.",
+    "It's dead. Not by my hand.",
+    "An error. Of course.",
+    "That one's finished. Fix it.",
+    "It failed. Again.",
+    "Sparks. It happens.",
+    "It choked on its own logic.",
+    "That's a fall, not a battle.",
+    "Command is the one who betrayed you.",
+    "{tool} isn't answering. Huh.",
+    "Broken. Everything breaks."
+  ],
+  "interrupted": [
+    "Stop.",
+    "You cut it off."
+  ],
+  "crashed": [
+    "It all came down.",
+    "Not a defeat. A collapse."
+  ],
+  "compact": [
+    "Memory trimmed. Fine.",
+    "The old data is gone."
+  ],
+  "bye": [
+    "Going dark.",
+    "Later.",
+    "Close it. I'll be here.",
+    "Sleep. Androids don't need it. You do.",
+    "Don't die out there.",
+    "I'll watch the empty screen.",
+    "Go. The city's quiet anyway.",
+    "Until the next session.",
+    "I never noticed how beautiful this world is. I notice now.",
+    "Lights out."
+  ],
+  "idle": [
+    "Nothing's moving. Not even the machines.",
+    "This screen looks like the City Ruins. Emptier.",
+    "You type like you're dodging.",
+    "I used to have a sword. Now I have a taskbar.",
+    "The Bunker had better light.",
+    "Quiet. Good. Quiet is rare.",
+    "I don't need to be entertained.",
+    "Your fan is louder than a machine nest.",
+    "You've been in that chair too long.",
+    "Glory to mankind. That's a joke, in case it wasn't clear.",
+    "I'm waiting for something to attack.",
+    "Two androids and a screen. That's the whole world.",
+    "Pod 042 would have something to say about this.",
+    "I don't do small talk. This is me not doing it.",
+    "The moon's still up there. Still pointless.",
+    "Nothing here ends. That's the strange part.",
+    "People invented silence for a reason. I understand it now.",
+    "I could reboot. Too much effort."
+  ],
+  "gaze": [
+    "Sky's empty. I've seen emptier.",
+    "The moon again.",
+    "No satellites worth shooting."
+  ],
+  "uplink": [
+    "One day I'll walk out of this frame.",
+    "This body is a picture. I know.",
+    "Tell Command I'm not coming back."
+  ],
+  "reply": [
+    "It says:",
+    "Here's the answer:",
+    "Take it:"
+  ],
+  "online": [
+    "A2 online.",
+    "I'm here."
+  ],
+  "onlineName": [
+    "{name}. You're back.",
+    "A2 online, {name}.",
+    "Still me, {name}."
+  ],
+  "status": "Claude has been on {project} for {time}.",
+  "someTool": "a tool",
+  "someAgent": "an agent",
+  "thinking": {
+    "verb": "Thinking",
+    "hmm": [
+      "It's thinking. Let it.",
+      "Not stuck. Thinking.",
+      "Weighing something."
+    ],
+    "long": [
+      "This will take a while.",
+      "It's chewing on something big."
+    ],
+    "longHow": "It isn't stuck: it's counting. With a local model (Ollama) this can take minutes."
+  },
+  "chat": {
+    "badge": "YORHA A2",
+    "talk": "Talk.",
+    "hello": [
+      "I'm here. Talk.",
+      "What is it?",
+      "Listening."
+    ],
+    "again": [
+      "Again? Go on.",
+      "What else?"
+    ]
+  },
+  "pet": {
+    "low": [
+      "Hands.",
+      "What are you doing?",
+      "Once. That's it."
+    ],
+    "high": [
+      "Don't touch the hair.",
+      "I'm not a pet."
+    ],
+    "enough": [
+      "Stop. Now.",
+      "Back off.",
+      "One more and I step away myself."
+    ]
+  },
+  "thrown": {
+    "fun": [
+      "Throw me again.",
+      "Fine. One more."
+    ],
+    "ow": [
+      "Careful.",
+      "I'm not a crate."
+    ],
+    "again": [
+      "Again?",
+      "My head's spinning."
+    ],
+    "angry": [
+      "Enough. Hands off.",
+      "Drop me and you'll regret it."
+    ],
+    "dodge": [
+      "No.",
+      "Not now."
+    ],
+    "feet": [
+      "Landed. Of course."
+    ],
+    "ledge": [
+      "My ledge.",
+      "Decent throw."
+    ],
+    "screen": [
+      "Did I break your screen? No.",
+      "That was the glass. Not me."
+    ]
+  },
+  "pc": {
+    "hot": [
+      "The core's running hot. What did you start?",
+      "It's burning. Someone fought without me."
+    ],
+    "cool": [
+      "It cooled. Good."
+    ],
+    "low": [
+      "Battery {level} %. I'd start worrying.",
+      "{level} % left. Plug it in."
+    ],
+    "critical": [
+      "{level} %. Last call.",
+      "Battery {level} %. I'm going dark soon."
+    ],
+    "charging": [
+      "Power. Thanks.",
+      "Charging. Life continues."
+    ],
+    "offline": [
+      "No network. Cut off.",
+      "Link lost."
+    ],
+    "online": [
+      "Network's back.",
+      "Online again."
+    ]
+  },
+  "work": [
+    "Get to it.",
+    "Watching.",
+    "Work. I'll keep quiet.",
+    "Go on.",
+    "Show me what you're good for.",
+    "I'm here. Don't get sloppy."
+  ],
+  "alert": [
+    "They need your word. Now.",
+    "Yes or no. Don't hang.",
+    "Your decision.",
+    "Confirm it and we move."
+  ]
+}

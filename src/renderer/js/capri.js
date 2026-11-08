@@ -94,13 +94,14 @@ export class Capri {
       seed: 0, boil: 0.9, hair: 0, head: 0, mane: 0, armL: 0, armR: 0, longL: 1, longR: 1, sit: 0, bend: 0, kickL: 0, kickR: 0,
       smear: [0, 0], echo: [0, 0],
       glitch: 0, glitchSeed: 0, split: 0, collapse: 0, dissolve: 0, sparkle: 1, grade: 1,
-      sil: INK, silAmount: 0, misreg: [-2.6, 2.2], alpha: 1,
+      sil: INK, silAmount: 0, misreg: [-2.6, 2.2], rim: 1, alpha: 1,
     };
     // her shader pulls pinks and greens toward her palette: a character's own art keeps its colours
     // (app.js: 1 for her, the skin's "grade" or 0 for anyone else)
     this.skinGrade = 1;
     this.skinHolo = 0; // how strongly a character wears the projection look *while it appears or goes*
     this.skinFlat = false; // art that isn't hers: no rig deformation, only its own animation
+    this.skinRim = 1; // her violet misregistration behind the figure (a skin can turn it off)
     this.holoUntil = 0; // until when (performance.now) that moment lasts
     this.loopId = 0;    // bumped to stop an animation loop (startLoop, setPose, playSequence)
     this.loopTimer = 0;
@@ -484,6 +485,7 @@ export class Capri {
     this.p.holo = left > 0 && this.skinHolo ? Math.min(1, this.skinHolo * Math.min(1, 0.35 + left / 260)) : 0;
     this.p.time = now / 1000;
     this.p.flat = this.skinFlat ? 1 : 0;
+    this.p.rim = this.skinRim ?? 1; // the violet copy behind her: hers, unless the art says otherwise
     this.sprite.draw(this.p);
     this.place();
   }
@@ -654,7 +656,8 @@ export class Capri {
     // a shard of her mane breaks off now and then and drifts away
     if (now > this.nextShed) {
       this.nextShed = now + rand(4000, 11000) * (this.mode === 'sleep' ? 2.5 : 1);
-      if (!reducedMotion.matches && this.stance !== 'peek') this.shed();
+      // the glitter off her mane: hers, like the flare and the reach (a character's own art has neither)
+      if (!reducedMotion.matches && !this.skinFlat && this.stance !== 'peek') this.shed();
     }
 
     if (this.mode === 'idle' && this.stance !== 'peek' && now > this.nextGaze) {

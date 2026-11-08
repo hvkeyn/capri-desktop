@@ -1,0 +1,417 @@
+/* ------------------------------------------------------------------
+   YoRHa, "A2" in her menu (app.js sets data-theme, a character
+   brings it in its skin.json): the windows of NieR: Automata, not
+   Night City.
+
+   What it is drawn from: an interface with no colour at all — warm
+   black plates, cream type, one hairline round them and a corner
+   tick at each of the four, everything a little wider than it needs
+   to be (the game's menus breathe). No neon, no knockout copy, no
+   chamfers: nothing here is shouted, and nothing glows.
+
+   Only what differs from the Night City windows of capri.css: each
+   :where() keeps its selector as specific as the rule it replaces,
+   so the rest of capri.css still wins where it did.
+------------------------------------------------------------------- */
+
+html[data-theme='yorha'] {
+  --ink: oklch(0.16 0.008 95);      /* the warm black of the plates */
+  --ink-2: oklch(0.225 0.01 95);
+  --paper: oklch(0.885 0.018 92);   /* cream, the only colour there is */
+  --paper-2: oklch(0.735 0.016 92);
+  --paper-3: oklch(0.545 0.014 92);
+  --yellow: oklch(0.885 0.018 92);  /* the accent: cream, so every frame turns monochrome */
+  --cyan: oklch(0.7 0.014 92);
+  --red: oklch(0.53 0.09 40);       /* danger is rust, not neon */
+  --green: oklch(0.82 0.02 92);
+  --violet: oklch(0.62 0.014 92);
+  --blue: oklch(0.68 0.01 220);
+  --line: oklch(0.885 0.018 92 / 0.14);
+  --cut: 0px;
+  --hair: oklch(0.885 0.018 92 / 0.3);
+}
+
+/* ---------- the panel: a black plate with a hairline and four ticks ---------- */
+
+:where(html[data-theme='yorha']) .panel {
+  --accent: var(--paper);
+  --frame: var(--paper-3);
+  --echo: transparent;
+  width: clamp(300px, 21vw, 392px);
+}
+
+/* no outline, no knocked-out copy: one hairline, drawn by the plate itself */
+:where(html[data-theme='yorha']) .panel__frame {
+  filter: none;
+}
+
+/* the two bottom ticks, on the frame; the two top ones are on the panel itself */
+:where(html[data-theme='yorha']) .panel__frame::before,
+:where(html[data-theme='yorha']) .panel__frame::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  width: 15px;
+  height: 15px;
+  border: 0 solid var(--paper-3);
+  border-width: 0 0 1px 1px;
+  pointer-events: none;
+}
+
+:where(html[data-theme='yorha']) .panel__frame::before {
+  left: -7px;
+}
+
+:where(html[data-theme='yorha']) .panel__frame::after {
+  right: -7px;
+  border-width: 0 1px 1px 0;
+}
+
+/* the ticks at the corners, the way the game frames a menu (opaque: they have to read on a light
+   desktop and on a dark one) */
+:where(html[data-theme='yorha']) .panel::before,
+:where(html[data-theme='yorha']) .panel::after {
+  top: -7px;
+  width: 15px;
+  height: 15px;
+  border-width: 1px 0 0 1px;
+  border-color: var(--paper-3);
+}
+
+:where(html[data-theme='yorha']) .panel::after {
+  border-width: 1px 1px 0 0;
+}
+
+:where(html[data-theme='yorha']) .panel[data-below='true']::before,
+:where(html[data-theme='yorha']) .panel[data-below='true']::after {
+  border-width: 0 0 1px 1px;
+}
+
+:where(html[data-theme='yorha']) .panel[data-below='true']::after {
+  border-width: 0 1px 1px 0;
+}
+
+/* the plate: square, hairline, a little more room and a faint grain over it */
+:where(html[data-theme='yorha']) .panel__plate {
+  padding: 15px 18px 17px 14px;
+  background:
+    repeating-linear-gradient(0deg, oklch(0.885 0.018 92 / 0.035) 0 1px, transparent 1px 3px),
+    var(--ink);
+  background-blend-mode: overlay;
+  clip-path: none;
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+:where(html[data-theme='yorha']) .panel__face {
+  width: 58px;
+  height: 58px;
+  margin-top: 1px;
+  background: var(--ink-2);
+  clip-path: none;
+  box-shadow: inset 0 0 0 1px var(--paper-3);
+}
+
+:where(html[data-theme='yorha']) .panel__face img {
+  clip-path: none;
+  filter: saturate(0.35) contrast(1.04) brightness(0.98);
+}
+
+/* the name in square brackets, the tag after a slash */
+:where(html[data-theme='yorha']) .panel__who {
+  color: var(--paper);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+}
+
+:where(html[data-theme='yorha']) .panel__who::before {
+  content: '[';
+  color: var(--paper-3);
+  letter-spacing: 0;
+}
+
+:where(html[data-theme='yorha']) .panel__who::after {
+  content: ']';
+  color: var(--paper-3);
+  letter-spacing: 0;
+}
+
+:where(html[data-theme='yorha']) .panel__tag::before {
+  content: '/ ';
+  color: var(--paper-3);
+}
+
+/* a rule under the name, and a state in a box instead of a slab of yellow */
+:where(html[data-theme='yorha']) .panel__meta {
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+:where(html[data-theme='yorha']) .panel__state {
+  padding: 1px 7px 0;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 45%, transparent);
+  clip-path: none;
+}
+
+:where(html[data-theme='yorha']) .panel[data-kind='alert'] .panel__state {
+  color: var(--red);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--red) 60%, transparent);
+}
+
+:where(html[data-theme='yorha']) .panel__line {
+  color: var(--paper);
+  letter-spacing: 0.005em;
+}
+
+/* the answer and the quote she reads from: a hairline, not a bar */
+:where(html[data-theme='yorha']) .panel__quote,
+:where(html[data-theme='yorha']) .panel__reply {
+  padding-left: 10px;
+  border-left: 1px solid var(--paper-3);
+  color: var(--paper-2);
+}
+
+:where(html[data-theme='yorha']) .panel__progress {
+  height: 2px;
+  margin: 12px 0 3px;
+  background: var(--ink-2);
+  mask: none;
+}
+
+:where(html[data-theme='yorha']) .panel__bar {
+  background: var(--accent);
+}
+
+:where(html[data-theme='yorha']) .panel__summary {
+  color: var(--paper-2);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+:where(html[data-theme='yorha']) .panel__summary::before {
+  content: '▪ ';
+}
+
+:where(html[data-theme='yorha']) .panel__log {
+  border-top-color: var(--line);
+}
+
+:where(html[data-theme='yorha']) .panel__verb {
+  color: var(--paper);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+}
+
+/* every button: a hairline box, wide type, and the accent only on the one that matters */
+:where(html[data-theme='yorha']) .panel__action {
+  --btn: var(--paper-2);
+  padding: 6px 13px 5px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--btn);
+  color: var(--btn);
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  clip-path: none;
+}
+
+:where(html[data-theme='yorha']) .panel__action::before {
+  content: none;
+}
+
+:where(html[data-theme='yorha']) .panel__action:hover {
+  background: var(--paper);
+  color: var(--ink);
+  --btn: var(--paper);
+}
+
+:where(html[data-theme='yorha']) .panel__action.is-primary {
+  --btn: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:where(html[data-theme='yorha']) .panel__action.is-primary:hover {
+  background: var(--paper-2);
+  --btn: var(--paper-2);
+}
+
+:where(html[data-theme='yorha']) .panel__action:focus-visible {
+  outline: 1px solid var(--paper);
+  outline-offset: 3px;
+}
+
+:where(html[data-theme='yorha']) .panel__note b {
+  background: transparent;
+  color: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--paper-3);
+  letter-spacing: 0.16em;
+}
+
+/* the tail: the same plate, thinning to a point */
+:where(html[data-theme='yorha']) .panel__tail {
+  width: 16px;
+  height: 11px;
+  margin-left: -8px;
+  background: var(--ink);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  box-shadow: none;
+}
+
+/* the conversation: a field and a hairline, nothing louder */
+:where(html[data-theme='yorha']) .panel__input {
+  padding: 7px 10px 6px 13px;
+  border-bottom-width: 1px;
+  background: var(--ink-2);
+  color: var(--paper);
+  font-size: var(--text-data);
+  letter-spacing: 0.02em;
+}
+
+:where(html[data-theme='yorha']) .panel__input:focus {
+  background-color: oklch(0.265 0.01 95);
+}
+
+:where(html[data-theme='yorha']) .panel__menu-item:hover {
+  background: color-mix(in oklch, var(--paper) 12%, transparent);
+  color: var(--paper);
+}
+
+/* ---------- the report card ---------- */
+
+:where(html[data-theme='yorha']) .panel__report {
+  background: var(--ink-2);
+  clip-path: none;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* the band flips: cream on ink, like the game's own headers */
+:where(html[data-theme='yorha']) .report__head {
+  background: var(--paper);
+  color: var(--ink);
+  letter-spacing: 0.2em;
+}
+
+:where(html[data-theme='yorha']) .report__title::before {
+  content: '';
+}
+
+:where(html[data-theme='yorha']) .report__big {
+  color: var(--paper);
+  text-shadow: none;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+:where(html[data-theme='yorha']) .report__sign {
+  color: var(--paper-3);
+}
+
+:where(html[data-theme='yorha']) .report__foot {
+  color: var(--paper-3);
+  letter-spacing: 0.16em;
+}
+
+/* ---------- the ticker: a thin strip of the same plate ---------- */
+
+:where(html[data-theme='yorha']) .ticker {
+  --frame: var(--paper-3);
+  filter: none;
+}
+
+:where(html[data-theme='yorha']) .ticker[data-error='true'],
+:where(html[data-theme='yorha']) .ticker[data-thinking='true'] {
+  --frame: var(--paper-3);
+}
+
+:where(html[data-theme='yorha']) .ticker__plate {
+  padding: 6px 12px 5px;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  clip-path: none;
+  letter-spacing: 0.06em;
+}
+
+:where(html[data-theme='yorha']) .ticker__dot {
+  width: 5px;
+  height: 5px;
+  background: var(--paper);
+}
+
+:where(html[data-theme='yorha']) .ticker__verb {
+  color: var(--paper);
+  font-weight: 400;
+  letter-spacing: 0.16em;
+}
+
+:where(html[data-theme='yorha']) .ticker[data-thinking='true'] .ticker__verb {
+  color: var(--paper-2);
+}
+
+/* ---------- the work order ---------- */
+
+:where(html[data-theme='yorha']) .board__frame {
+  border-width: 1px;
+  border-color: var(--paper-3);
+  clip-path: none;
+  animation: none;
+}
+
+:where(html[data-theme='yorha']) .board__frame::after {
+  background: var(--paper-3);
+}
+
+:where(html[data-theme='yorha']) .board__chip[data-state='running'],
+:where(html[data-theme='yorha']) .board__chip[data-state='done'] {
+  color: var(--paper);
+  border-color: color-mix(in oklch, var(--paper) 45%, transparent);
+}
+
+/* ---------- the words of the entrance: a caption, not a broadcast ---------- */
+
+:where(html[data-theme='yorha']) .intro-caption {
+  padding: 11px 15px 10px;
+  background: oklch(0.14 0.008 95 / 0.9);
+  border: 1px solid var(--paper-3);
+  color: var(--paper);
+  font-weight: 400;
+  letter-spacing: 0.26em;
+  box-shadow: none;
+}
+
+:where(html[data-theme='yorha']) .intro-caption::before {
+  content: '';
+}
+
+:where(html[data-theme='yorha']) .intro-caption::after {
+  content: '_';
+  color: var(--paper-2);
+}
+
+/* ---------- type and selection, in cream ---------- */
+
+:where(html[data-theme='yorha']) ::selection {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:where(html[data-theme='yorha']) :where(button, input, a, [tabindex]):focus-visible {
+  outline-color: var(--paper-2);
+}
+
+/* the one thing that still flickers: a state you have to see, dimmed instead of red */
+:where(html[data-theme='yorha']) .panel__line.is-glitching {
+  animation-name: line-glitch-yorha;
+}
+
+@keyframes line-glitch-yorha {
+  0% { opacity: 0.4; clip-path: inset(0 0 58% 0); }
+  22% { opacity: 1; clip-path: inset(34% 0 0 0); }
+  40% { opacity: 0.7; clip-path: none; }
+  62% { opacity: 1; clip-path: inset(12% 0 22% 0); }
+  100% { opacity: 1; clip-path: none; }
+}
