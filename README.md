@@ -153,6 +153,40 @@ part of the query: `ext:pdf`, `in:projects`, `modified:>7d`, `size:>10mb`, `last
   `%APPDATA%\capri-desktop\agent\lines\<character>-<lang>.json`. Those are used at once and **at the next
   start, offline included**.
 
+## Her voice, out loud
+
+Right-click her › **Her voice**. She says her lines and her chat's answers aloud; a new line cuts off the
+last one, her blips keep quiet while she talks, and her volume and mute apply.
+
+| What | What it is | What you need |
+| --- | --- | --- |
+| **Windows voices** (free) | the voices already on your PC | nothing — *Set her voice…* picks one |
+| **On my PC** (Kokoro…) | a speech server you run, much better sounding, still free | its address (`http://127.0.0.1:8880/v1` by default) |
+| **OpenAI** | OpenAI's voices, told how she sounds | your OpenAI key |
+| **ElevenLabs** | a voice you design for her | your ElevenLabs key and the voice's ID |
+
+**On your PC, free:** [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI) speaks the same language as
+OpenAI's speech service. Start it, then pick *On my PC* and leave the address empty. Voices: `af_bella`,
+`af_nicole`, `af_sky` in English, `ff_siwis` in French, `ef_dora` in Spanish, `pf_dora` in Portuguese.
+
+**A voice made for her (ElevenLabs Voice Design):** open *Voice Design*, paste the text below, generate, keep
+the take you like and save it. Copy its *Voice ID*, then in Capri: *Her voice* › *ElevenLabs*, your key, and
+the ID.
+
+```
+A young woman in her early twenties. Cool, a little teasing, with a dry sense of humor and a confident,
+relaxed delivery. Low-to-mid pitch, slightly husky, clear diction, unhurried. She sounds amused more than
+excited, never bubbly, never childish. A faint electronic edge, as if she comes through a speaker. Studio
+quality, no background.
+```
+
+It makes a new, synthetic voice. Don't clone a real person's voice (an actress, a streamer, a friend) without
+their clear consent: it's against the services' rules, and against Capri's.
+
+What she says out loud goes to the service you picked (nothing at all with Windows voices or a server on your
+PC). The keys stay in the main process, encrypted, and her last 40 lines are kept, so the ones she says often
+aren't asked for twice.
+
 ## Reading the panel
 
 - **The thinking stream**: her remark in italic, then each tool as a coloured row — glyph, verb, target,
