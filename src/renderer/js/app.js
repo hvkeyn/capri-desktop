@@ -1262,6 +1262,7 @@ async function boot() {
         break;
       }
       case 'guitar': // "Play the guitar" in the tray: a whole song, sitting on the edge
+      if (!guitar.available) break; // a character without one simply has no such mode
         guitar.toggle();
         break;
       case 'chat': // "Talk to her" in her menu

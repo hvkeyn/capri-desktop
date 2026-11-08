@@ -643,7 +643,10 @@ function rebuildTray() {
     ...(cfg.claude ? [{ label: t.report, click: () => sendCommand('report') }] : []),
     { label: t.talk, click: () => sendCommand('chat') },
     { label: t.moreLines, click: () => sendCommand('moreLines') },
-    { label: (GUITAR[lang] || GUITAR.en), click: () => sendCommand('guitar') },
+    // only a character who has a guitar and a playlist of his own gets the item
+    ...(skin?.guitar?.frames?.length && skin?.guitar?.tracks?.length
+      ? [{ label: (GUITAR[lang] || GUITAR.en), click: () => sendCommand('guitar') }]
+      : []),
     {
       // the working half: a work order in a folder of yours, and the rounds where she learns from you
       label: t.work,
