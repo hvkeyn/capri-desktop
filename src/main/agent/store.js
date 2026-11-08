@@ -25,9 +25,17 @@ function ensure(base, defaults = {}) {
   for (const [name, text] of Object.entries(defaults)) {
     const file = at(base, 'harness', ...name.split('/'));
     try {
+      const shipped = String(text);
       if (!fs.existsSync(file)) {
         fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, String(text));
+        fs.writeFileSync(file, shipped);
+        continue;
+      }
+      // a skill from before the shelf had a catalog (no front matter) could not be chosen by anything:
+      // it is replaced by the shipped one, once. A skill that already has front matter is hers.
+      if (name.startsWith('skills/') && /^---\s*\r?\n/.test(shipped)) {
+        const mine = fs.readFileSync(file, 'utf8');
+        if (!/^---\s*\r?\n/.test(mine)) fs.writeFileSync(file, shipped);
       }
     } catch { /* read-only */ }
   }

@@ -450,6 +450,53 @@ test('a work order can read the web, not only the folder', () => {
   assert.ok(TOOLS.some((tool) => tool.function.name === 'delegate'), 'a work order can hand a narrower job to a sub-team');
 });
 
+test('skills: the catalog is in the prompt, the text comes when she takes one', async (t) => {
+  const skills = require('../src/main/agent/skills');
+  const prompts = require('../src/main/agent/prompts');
+  const files = prompts.bundled();
+  const shelf = skills.catalog(files);
+  assert.ok(shelf.length >= 2, 'the shipped skills are on the shelf');
+  const research = skills.find(files, 'research');
+  assert.ok(research, 'a skill is found by name');
+  assert.match(research.body, /Search before you guess/);
+  // what every step reads is the catalog; the checklist itself stays on the shelf until it is taken
+  const notes = prompts.workNotes(files);
+  assert.match(notes, /\*\*research\*\*/);
+  assert.ok(!notes.includes('Search before you guess'), 'the body is not in the prompt');
+  // a news step points at the research skill
+  assert.ok(skills.suggest(files, 'Собрать мировые новости за сутки').some((s) => s.name === 'research'));
+
+  const root = scratch(t);
+  let asked = 0;
+  const sent = [];
+  const ask = async ({ messages }) => {
+    const last = String(messages[messages.length - 1].content || '');
+    sent.push(last);
+    if (/Write `spec\.md`/.test(last)) return { text: '# spec' };
+    if (/Write `plan\.md`/.test(last)) return { text: '# plan' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '## Phase 1\n- [ ] T001 gather the news\n' };
+    if (/Write `report\.md`/.test(last)) return { text: '# report\n---\nreported.' };
+    if (/T001/.test(last)) {
+      asked += 1;
+      if (asked === 1) return { toolCalls: [{ id: 's1', name: 'use_skill', arguments: JSON.stringify({ name: 'research' }) }] };
+      return {
+        toolCalls: [
+          { id: 'w', name: 'write_file', arguments: JSON.stringify({ path: 'news.md', content: 'facts\n' }) },
+          { id: 'u', name: 'update_plan', arguments: JSON.stringify({ status: 'done', note: 'read the skill, wrote it' }) },
+        ],
+      };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({ ask, store: { savePlan() {}, observe() {} }, emit() {}, autonomy: 'guard' });
+  runner.start({ goal: 'the news', workspace: root });
+  const done = await runner.completion;
+  assert.equal(done.steps[0].status, 'done');
+  // the checklist reached the model, and the board says it was taken
+  assert.ok(sent.some((m) => /Search before you guess/.test(m)), 'the skill text was returned to the model');
+  assert.ok(done.log.some((line) => /TAKES the research skill/.test(line.text)), 'the board shows the skill');
+});
+
 test('a failed step does not take the rest of the plan with it', async (t) => {
   const root = scratch(t);
   const ask = async ({ messages }) => {

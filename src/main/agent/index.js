@@ -103,6 +103,7 @@ class Agent {
       autonomy: this.autonomyLevel,
       clock: this.clock,
       narrator,
+      harness: store.harness(this.base), // her own shelf of skills, seeded from the app and hers to edit
     });
     this.plan = this.runner.start({ goal: String(goal || '').trim() || 'What they asked for', workspace: root, attachments, narrator });
     this.observe({ kind: 'work', text: `Work order started: ${this.plan.goal}`, meta: { id: this.plan.id, workspace: root, attachments: attachments.length } });

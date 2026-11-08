@@ -11,6 +11,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const skills = require('./skills');
 
 const BUNDLED = path.join(__dirname, '..', '..', '..', 'harness');
 
@@ -34,10 +35,20 @@ function bundled() {
   return out;
 }
 
-// The files that are instructions for a work order: work.md and every skill.
+// The files that are instructions for a work order: work.md in full, the skills as a catalog. A skill is
+// loaded whole only when the model takes it (use_skill), which is what keeps this prompt a page and the
+// shelf as long as it likes.
 function workNotes(files) {
-  const names = Object.keys(files).filter((n) => n === 'work.md' || n.startsWith('skills/')).sort();
-  return names.map((n) => `## ${n.replace(/^skills\//, '').replace(/\.md$/, '')}\n\n${files[n].trim()}`).join('\n\n');
+  const work = String(files['work.md'] || '').trim();
+  const shelf = skills.catalog(files);
+  const parts = [];
+  if (work) parts.push(`## work\n\n${work}`);
+  if (shelf.length) {
+    parts.push(`## The skills you can take\n\n${skills.catalogText(files)}\n\n`
+      + 'A skill is a checklist for a kind of job. When one fits what you are doing, call use_skill with its name '
+      + 'before you start — it answers with the whole text. Taking one is never wrong; skipping one that fits is.');
+  }
+  return parts.join('\n\n');
 }
 
 // The standing notes go on her chat's system prompt, after her persona, before anything about tools.
@@ -130,7 +141,7 @@ function tasksMessages({ goal, spec, plan, narrator, attachments = [], where = '
   ];
 }
 
-function stepMessages({ task, spec, plan, notes, log, autonomy, nudge = '', narrator, attachments = [], where = '' }) {
+function stepMessages({ task, spec, plan, notes, log, autonomy, nudge = '', hint = '', narrator, attachments = [], where = '' }) {
   const mayRun = autonomy === 'full'
     ? 'any program except the ones that wipe a disk or change how the machine boots (a shell too, if you need one)'
     : autonomy === 'trusted'
@@ -149,6 +160,7 @@ function stepMessages({ task, spec, plan, notes, log, autonomy, nudge = '', narr
       `The plan (how):\n\n${plan}`,
       brief(attachments, where),
       `The task you are doing now — ${task.id}: ${task.title}`,
+      hint,
       log.length ? `What you have already done in this task:\n${log.slice(-8).map((l) => `- ${l}`).join('\n')}` : '',
       nudge,
       `Do this task now. When it is done and checked, call update_plan with status "done" and a sentence about it. `

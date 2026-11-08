@@ -1,3 +1,9 @@
+---
+name: craft
+description: the checklist for a task that touches code — read first, one idea per change, check it the project's way
+when: code, fix, bug, refactor, test, build, скрипт, код, починить, тест, сборка, patch
+---
+
 # Craft
 
 The checklist for a task that touches code. Read it before the first edit, not after the last.

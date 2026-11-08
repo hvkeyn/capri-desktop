@@ -19,6 +19,7 @@ const spec = require('./spec');
 const prompts = require('./prompts');
 const attach = require('./attach');
 const more = require('../tools-more'); // a page off the web, the same reader her chat has
+const skills = require('./skills'); // the shelf of checklists she takes by name
 const { Plan } = require('./plan');
 
 const TOOL_ROUNDS = 24; // one task may take this many model turns before it is called stuck (big work is big)
@@ -164,6 +165,18 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'use_skill',
+      description: 'Load one of the skills (the checklists listed above) before doing the work: the whole text, not the summary. Take the one that fits the job.',
+      parameters: {
+        type: 'object',
+        properties: { name: { type: 'string', description: 'the skill, as it is named in the list' } },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'update_plan',
       description: 'Mark this task done or failed, with one sentence. Call it when the task is finished (and checked) or blocked.',
       parameters: {
@@ -187,7 +200,7 @@ const stripFence = (text) => {
 const tokens = (text) => Math.ceil(String(text || '').length / 4);
 
 class Runner {
-  constructor({ ask, store, emit = () => {}, autonomy = 'guard', clock = () => Date.now(), maxToolRounds = TOOL_ROUNDS, narrator = null }) {
+  constructor({ ask, store, emit = () => {}, autonomy = 'guard', clock = () => Date.now(), maxToolRounds = TOOL_ROUNDS, narrator = null, harness = null }) {
     this.ask = ask;
     this.store = store;
     this.emit = emit;
@@ -195,6 +208,9 @@ class Runner {
     this.clock = clock;
     this.maxToolRounds = maxToolRounds;
     this.narrator = narrator; // who is on the desktop tonight: { name, persona } (skin.json)
+    // her harness as files ({ 'work.md': '…', 'skills/research.md': '…' }): hers from storage, the
+    // shipped one when there is none — the skills are read from it, and the work.md is what she is told
+    this.harness = harness && Object.keys(harness || {}).length ? harness : prompts.bundled();
     this.abort = new AbortController();
     this.plan = null;
     this.dir = null;
@@ -250,7 +266,7 @@ class Runner {
     this.where = path.relative(workspace, this.dir).split(path.sep).join('/'); // 'specs/001-…', as read_file sees it
     this.plan.id = feature.id;
     this.plan.slug = feature.id;
-    this.notes = prompts.workNotes(prompts.bundled());
+    this.notes = prompts.workNotes(this.harness);
     // what you handed over becomes a block in the prompt, a copy in the feature folder and a note on
     // the board; a picture with no vision pass is named as one rather than silently dropped
     if (this.attachments.length) {
@@ -371,6 +387,14 @@ class Runner {
     return `(the sub-team ran out of turns; last: ${String(log.at(-1) || '').slice(0, 300)})`;
   }
 
+  // The skills that look like this step, by their own words — a pointer, never a command: the model
+  // decides, and may take any skill on the shelf or none at all.
+  hintFor(step) {
+    const liked = skills.suggest(this.harness, `${step?.title || ''} ${this.plan?.goal || ''}`);
+    if (!liked.length) return '';
+    return `A skill that fits this step: ${liked.map((skill) => skill.name).join(', ')} — take it with use_skill before you start.`;
+  }
+
   // One task, its own tool loop: read, change, check, until she says it's done or the rounds run out.
   async buildStep(step) {
     this.plan.start(step.id).setPhase('build');
@@ -399,6 +423,7 @@ class Runner {
       }
       const messages = prompts.stepMessages({
         task: step, spec: this.specText, plan: this.planText, notes: this.notes, log, autonomy: this.autonomy, nudge,
+        hint: this.hintFor(step),
         narrator: this.narrator, attachments: this.attachments, where: this.where,
       });
       const res = await this.turn(messages, TOOLS);
@@ -533,6 +558,17 @@ class Runner {
         if (!job) { out = { error: 'the job is empty' }; break; }
         this.plan.note(`DELEGATES ${job.slice(0, 60)}`, 'run');
         out = { result: await this.subagent(job) };
+        break;
+      }
+      case 'use_skill': {
+        const skill = skills.find(this.harness, args.name);
+        if (!skill) {
+          const shelf = skills.catalog(this.harness).map((item) => item.name).join(', ');
+          out = { error: `no skill called "${args.name}"; the shelf has: ${shelf}` };
+          break;
+        }
+        this.plan.note(`TAKES the ${skill.name} skill`, 'note');
+        out = { skill: skill.name, text: skill.body.slice(0, 6000) };
         break;
       }
       case 'run_command': {
