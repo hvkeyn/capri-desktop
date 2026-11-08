@@ -1740,6 +1740,7 @@ html[data-motion='reduced'] .intro-shot {
   position: fixed;
   right: 10px;
   bottom: 0;
+  z-index: 55;
   will-change: transform, opacity;
   contain: layout paint;
   z-index: 32;
