@@ -454,6 +454,15 @@ async function boot() {
   setInterval(() => {
     const wanted = floorUnder(capri.pos.x);
     if (Math.abs((capri.view?.floor || 0) - wanted) > 2) capri.setView(innerWidth, innerHeight, wanted);
+    // a window's top edge is not a floor to stand on: she sits on it, hips on the edge, legs hanging
+    if (capri.stance !== 'stand' || capri.busy || capri.dragging) return;
+    const ledgeWin = (capri.windows?.wins || []).find((w) => w && w.id !== 'taskbar'
+      && Math.abs(w.y - wanted) <= 3 && capri.pos.x >= w.x && capri.pos.x <= w.x + w.w);
+    if (!ledgeWin || capri.perch?.id === ledgeWin.id) return;
+    const dx = Math.min(Math.max(capri.pos.x - ledgeWin.x, 60), Math.max(60, ledgeWin.w - 190));
+    capri.pos = capri.seat(ledgeWin, dx); // straight down onto the edge: no teleport flicker
+    capri.setStance('sit', { perch: { id: ledgeWin.id, dx } });
+    capri.place();
   }, 180);
   // a character keeps its own colours: her colour grade belongs to her own art
   capri.skinGrade = skin ? (typeof skin.grade === 'number' ? skin.grade : 0) : 1;
