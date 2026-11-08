@@ -49,7 +49,10 @@
         24
       ]
     },
-    "fall": "poses/fall.png"
+    "fall": "poses/fall.png",
+    "peek": {
+      "image": "poses/lean.png"
+    }
   },
   "auto": {
     "idle": [

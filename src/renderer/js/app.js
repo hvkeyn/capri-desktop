@@ -462,6 +462,7 @@ async function boot() {
   capri.skinRim = typeof skin?.rim === 'number' ? skin.rim : 1;
   // a skin can draw her being handled: hanging from the hand that holds her, falling ("stances")
   capri.stancePictures = skin?.stances || {};
+  capri.skinPoses = skin?.poses || {};
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
   // the drawing it starts in: one of its poses, if that's what was picked last time
@@ -523,17 +524,18 @@ async function boot() {
 
   // an entrance can leave the window click-through; when it ends, the pointer decides again
   window.addEventListener('capri:intro-done', () => {
-    interactive = false;
+    interactive = null; // unknown again: main may have been left click-through by the entrance
     setInteractive(false);
     refreshHit();
   });
 
   // Click-through everywhere except on her body, the panel and her biochip.
-  let interactive = false;
+  let interactive = null;
   let mouse = null;
   const setInteractive = (on) => {
+    if (on === interactive) return; // talking to the window on every mouse move kills its focus
     interactive = on;
-    host.setInteractive(on); // always said out loud: the window may have been left click-through by an entrance
+    host.setInteractive(on);
   };
   const onChip = () => Boolean(chip.visible && mouse && chip.contains(mouse.x, mouse.y, 0));
   const refreshHit = () => {
