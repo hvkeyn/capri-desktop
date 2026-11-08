@@ -57,12 +57,37 @@ soundtrack.
 - **The tracks are also yours to keep**: `C:\Users\<you>\Music\Capri Guitar` holds all thirteen as
   separate MP3s, named and timed.
 
+## A2
+
+The other character this fork ships is **A2** (YoRHa Type A No. 2) from *NieR: Automata*: her figure and
+eight poses cut out of the renders in `A2/` beside the repo, two breathing loops, five close-ups for her
+cut-ins, and — unlike Johnny — drawings for being handled: hanging from one hand, falling, and sitting on
+the floor when she is knocked out.
+
+- **Her entrance is a film** (`assets/characters/a2/intro/entrance.mp4`): the whole screen, her own sound,
+  four lines over it in the language you picked, and the music brought down over the last two seconds so
+  the cut doesn't stop it mid-note.
+- **She is worn, not bent**: `"flat": true` keeps her photographic art out of the rig, `"squash": false`
+  keeps a landing from flattening her like a cel, and the drawings of being carried, falling or being
+  knocked out are swapped in whole (`stances`) instead of deforming her one picture. Carried, she hangs
+  from her own raised hand — the hand is what stays under the cursor, and she swings on it.
+- **Her size is yours**: pick it in **Her size** (small / medium / large). Her art is cut to the same
+  306-pixel figure Johnny's is, so the multiplier in `skin.json` only compensates for the sheet, not a
+  taste in size — at *medium* she stands about as tall as Capri does.
+- **Her windows are YoRHa's** (`"theme": "yorha"`): warm black plates, cream type, one hairline and a
+  corner tick at each corner, no neon anywhere. Pick anyone else and your own theme comes back.
+- **Her voice is hers**: her `persona` and `lines/ru.json` / `lines/en.json` — command, the allies who
+  forgot, and the one who never will — keep the model in A2's clipped, tired register.
+
+Her art is fan work for this noncommercial fork (see Credits).
+
 ## Install
 
 1. Take `Capri-x.y.z-portable.exe` from [Releases](https://github.com/hvkeyn/capri-desktop/releases/latest).
 2. It isn't code-signed, so SmartScreen may ask: **More info** → **Run anyway**.
 3. Start her, open the tray icon, choose **Her AI** → provider, model, key. DeepSeek, OpenAI, Ollama and
    Claude Code all work; the panel tells you what's missing.
+4. Who lives on your desktop: **Character** → **Capri**, **Johnny Silverhand** or **A2**.
 
 The portable exe keeps itself in `%LOCALAPPDATA%\Programs\Capri` and updates in place.
 
@@ -162,7 +187,7 @@ relaunches. No installer, no admin rights.
 
 ```bash
 npm install
-npm test            # 72 tests, node --test
+npm test            # 81 tests, node --test
 npm run check:secrets
 npm run dist        # portable exe + zip into dist/
 ```
