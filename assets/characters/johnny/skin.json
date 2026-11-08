@@ -241,7 +241,7 @@
   "floorOffset": 26,
   "guitar": {
     "source": "audio/guitar-full.mp3",
-    "scale": 0.75,
+    "scale": 0.6,
     "frames": [
       "guitar/001.webp",
       "guitar/002.webp",

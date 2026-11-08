@@ -90,8 +90,11 @@ export class Guitar {
       avatarEl.style.visibility = 'hidden';
     }
     document.body.appendChild(canvas);
-    canvas.style.opacity = '1';
-    canvas.classList.add('is-here');
+    canvas.classList.add('is-arriving');
+    setTimeout(() => {
+      canvas.classList.remove('is-arriving');
+      canvas.classList.add('is-here');
+    }, 300);
 
     this.frame = 0;
     this.started = performance.now();

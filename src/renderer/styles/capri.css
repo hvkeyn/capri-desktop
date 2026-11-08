@@ -1740,7 +1740,7 @@ html[data-motion='reduced'] .intro-shot {
   position: fixed;
   right: 10px;
   bottom: 0;
-  z-index: 55;
+  z-index: 2;
   will-change: transform, opacity;
   contain: layout paint;
   z-index: 32;
@@ -1791,4 +1791,3 @@ html[data-motion='reduced'] .intro-shot {
   100% { opacity: 1; filter: none; }
 }
 
-.guitar { z-index: 55 !important; }
