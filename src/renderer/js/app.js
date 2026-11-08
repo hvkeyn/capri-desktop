@@ -458,6 +458,8 @@ async function boot() {
   capri.skinFlat = Boolean(skin?.flat);
   // the violet copy behind her is her own art's: someone else's drawing can turn it off ("rim": 0)
   capri.skinRim = typeof skin?.rim === 'number' ? skin.rim : 1;
+  // a skin can draw her being handled: hanging from the hand that holds her, falling ("stances")
+  capri.stancePictures = skin?.stances || {};
   // and can be a projection, like the relic's (skin.json's "holo")
   capri.skinHolo = Number(skin?.holo) || 0;
   // the drawing it starts in: one of its poses, if that's what was picked last time

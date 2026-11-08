@@ -164,6 +164,17 @@ function read(dir, base) {
     cutins: map(base, raw.cutins),
     // other drawings of the same character, one per pose ("crossed", "smoke"…): her menu switches them
     poses: map(base, raw.poses),
+    // the drawings it wears in a stance of the app's instead of the pose: picked up by the pointer
+    // ("held", hung from the hand at "at", in the sheet's pixels) or in the air ("fall")
+    stances: Object.fromEntries(Object.entries(raw.stances || {})
+      .map(([name, value]) => {
+        const url = picture(base, typeof value === 'string' ? value : value?.image);
+        if (!url) return [name, null];
+        const at = Array.isArray(value?.at) && value.at.length === 2 ? value.at.map(Number) : [];
+        const point = at.length === 2 && at.every(Number.isFinite) ? { x: at[0], y: at[1] } : null;
+        return [name, { image: url, at: point }];
+      })
+      .filter(([, value]) => value)),
     // a few drawings played once, as a little animation ("glasses": glasses on → taking them off → off)
     sequences: Object.fromEntries(Object.entries(raw.sequences || {})
       .map(([name, list]) => [name, (Array.isArray(list) ? list : []).map((file) => picture(base, file)).filter(Boolean)])

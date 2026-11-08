@@ -41,6 +41,16 @@
     "slouch": "poses/slouch.png",
     "lean": "poses/lean.png"
   },
+  "stances": {
+    "held": {
+      "image": "poses/held.png",
+      "at": [
+        118,
+        24
+      ]
+    },
+    "fall": "poses/fall.png"
+  },
   "auto": {
     "idle": [
       "idle",

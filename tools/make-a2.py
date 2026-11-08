@@ -1,14 +1,17 @@
 """Builds the "a2" character skin out of the renders in the A2 folder beside the repository.
 
-The art arrives on a green screen: a standing figure (M.png), and seventeen more drawings on two
-sheets (poses1.png, twelve in a 4 x 3 grid; poses2.png, five in a row). Eight of them are used.
-Everything here is about getting it onto her rig, unchanged in every way that matters:
+The art arrives on a green screen: a standing figure (M.png), and nineteen more drawings on three
+sheets (poses1.png, twelve in a 4 x 3 grid; poses2.png, five in a row; poses3.png, the two of being
+handled, one above the other). Ten of them are used. Everything here is about getting it onto her
+rig, unchanged in every way that matters:
 
 - the green is keyed out by how much greener a pixel is than anything light or dark in it, and the
   colour the fringe kept is taken back out of it, so no halo shows on a dark desktop;
 - one figure is fitted to the 240 x 420 sheet her own art uses — feet on the floor line, the body's
   own axis on the sheet's middle — and every pose is fitted at the *same* scale, so a sitting pose
   really is lower than a standing one;
+- the two of being handled are the exception: the one hanging from her own raised hand is anchored on
+  that hand (the point the pointer holds her by), the falling one on her feet like the rest;
 - the head is squared off for her panels, and five close-ups are cut for her cut-ins;
 - two loops are made from the drawings, the way Johnny's were: a standing breath and a seated one.
 
@@ -36,18 +39,33 @@ INK = (20, 16, 28, 255)  # the ink a cut-in is flung over (fx.js COLORS.ink), be
 LOOP_FRAMES = 24
 LOOP_FPS = 12
 
-# A piece of a sheet: which sheet, how it is gridded, which cell, and what the pose is called in
-# skin.json. "M" is the standing render, its own picture.
+# The sheets, and how each is gridded. "M" is the standing render, its own picture.
+SHEETS = {'poses1.png': (4, 3), 'poses2.png': (5, 1), 'poses3.png': (1, 2)}
+
+# A pose of a sheet: which sheet, which figure on it (in reading order) and what it is called in
+# skin.json's "poses" — the ones her menu switches between.
 POSES = [
-    ('poses2.png', 5, 1, 2, 'open'),     # arms open, palms up
-    ('poses2.png', 5, 1, 3, 'point'),    # the right arm flung out, pointing
-    ('poses2.png', 5, 1, 4, 'stance'),   # knee up, hand raised, hair thrown
-    ('poses2.png', 5, 1, 5, 'sit'),      # sitting on a knee
-    ('poses1.png', 4, 3, 1, 'floor'),    # sitting on the floor, legs out
-    ('poses1.png', 4, 3, 6, 'kneel'),    # down on one knee
-    ('poses1.png', 4, 3, 7, 'slouch'),   # standing, hands at her sides
-    ('poses1.png', 4, 3, 12, 'lean'),    # leaning on a wall, one leg up
+    ('poses2.png', 2, 'open'),     # arms open, palms up
+    ('poses2.png', 3, 'point'),    # the right arm flung out, pointing
+    ('poses2.png', 4, 'stance'),   # knee up, hand raised, hair thrown
+    ('poses2.png', 5, 'sit'),      # sitting on a knee
+    ('poses1.png', 1, 'floor'),    # sitting on the floor, legs out
+    ('poses1.png', 6, 'kneel'),    # down on one knee
+    ('poses1.png', 7, 'slouch'),   # standing, hands at her sides
+    ('poses1.png', 12, 'lean'),    # leaning on a wall, one leg up
 ]
+
+# The two drawings of being handled, from the same sheets' own scale, and worn by the app by itself:
+# hanging from the hand that holds her (picked up with the pointer) and falling (dropped, teleporting
+# in). They are not in her menu: they are stances, not poses.
+STANCES = [
+    ('poses3.png', 1, 'held'),   # hanging from one raised arm
+    ('poses3.png', 2, 'fall'),   # in the air, arms up, legs tucked
+]
+
+# Where the hand she hangs from sits on the sheet, in its pixels: skin.json gives the same point as the
+# place the pointer holds her, so the app keeps her hand under the cursor and swings her around it.
+HELD_AT = (118, 24)
 
 
 # ---------- the green screen ----------
@@ -172,6 +190,25 @@ def on_rig(fig, px_per_unit, foot_y=FLOOR_Y):
     return sheet
 
 
+def on_hand(fig, px_per_unit, at=HELD_AT):
+    """`fig` hanging from the hand at the top of it, which lands on `at`: she is held by that hand, so
+    the sheet is anchored on it, not on a floor she is nowhere near. Returns the sheet, and the point
+    of it the hand is on (the same `at`, by construction)."""
+    fig = trim(fig)
+    width = max(1, round(fig.width * px_per_unit))
+    height = max(1, round(fig.height * px_per_unit))
+    fig = fig.resize((width, height), Image.LANCZOS)
+    # the hand: the middle of the topmost few rows of the drawing (the fingers of the raised glove)
+    alpha = np.asarray(fig.getchannel('A'))
+    ys, xs = np.where(alpha > 60)
+    top = int(ys.min())
+    band = ys <= top + max(2, round(0.012 * height))
+    hand_x = float((xs[band].min() + xs[band].max()) / 2)
+    sheet = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    sheet.alpha_composite(fig, (round(at[0] - hand_x), round(at[1] - top)))
+    return sheet
+
+
 def face_of(fig, size=FACE_PX):
     """Her head, squared: the top of the figure down to about a fifth of its height."""
     w, h = fig.size
@@ -272,20 +309,35 @@ def build(src, out, dump=None):
     # sizes, which is what makes a crouch crouch.
     os.makedirs(os.path.join(out, 'poses'), exist_ok=True)
     split = {}
-    for sheet in dict.fromkeys(entry[0] for entry in POSES):
-        split[sheet] = pieces(Image.open(src / sheet), *next((c, r) for s, c, r, _, _ in POSES if s == sheet))
+    for sheet, (cols, rows) in SHEETS.items():
+        split[sheet] = pieces(Image.open(src / sheet), cols, rows)
         if dump:
             os.makedirs(dump, exist_ok=True)
             for i, image in split[sheet]:
                 image.save(os.path.join(dump, f'{sheet[:-4]}-{i:02d}.png'))
     scale = {sheet: RIG_HEIGHT / max(trim(image).height for _, image in figures) for sheet, figures in split.items()}
-    for sheet, cols, rows, index, name in POSES:
+    # poses3.png was not drawn at the sheets' scale either, and neither of its two figures is standing
+    # (measuring one would make her a head shorter, or taller: they are hanging and falling). It was
+    # matched to her standing art by eye: at this factor her head and her boots are the same size.
+    scale['poses3.png'] = scale['poses2.png'] * 0.72
+    for sheet, index, name in POSES:
         by_index = {i: image for i, image in split[sheet]}
         if index not in by_index:
             print(f'  {name}: no figure {index} on {sheet}, skipped')
             continue
         on_rig(by_index[index], scale[sheet]).save(os.path.join(out, 'poses', f'{name}.png'))
         print(f'  {name}: {sheet} #{index} at {scale[sheet]:.3f}')
+
+    # the two stances: hanging from the hand that holds her, and falling
+    for sheet, index, name in STANCES:
+        by_index = {i: image for i, image in split[sheet]}
+        if index not in by_index:
+            print(f'  {name}: no figure {index} on {sheet}, skipped')
+            continue
+        pose = on_hand(by_index[index], scale[sheet]) if name == 'held' else on_rig(by_index[index], scale[sheet])
+        pose.save(os.path.join(out, 'poses', f'{name}.png'))
+        print(f'  {name}: {sheet} #{index} at {scale[sheet]:.3f}')
+
 
     # the loops: a standing breath, and one taken sitting down
     loops = {

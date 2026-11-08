@@ -98,14 +98,36 @@ test('the entrance a skin brings keeps its captions and its line in every langua
   assert.ok(skin.intro.lineByLang.ru.length && skin.intro.lineByLang.en.length);
   // every picture it names is there, and every pose it names is a different one
   const base = path.join(ROOT, 'assets', 'characters', 'a2');
-  for (const file of [skin.sprite, ...Object.values(skin.poses), ...Object.values(skin.cutins), skin.intro.video]) {
+  for (const file of [skin.sprite, ...Object.values(skin.poses), ...Object.values(skin.cutins), skin.intro.video,
+    ...Object.values(skin.stances).map((stance) => stance.image)]) {
     const rel = file.replace('capri://app/assets/characters/a2/', '');
     assert.ok(fs.existsSync(path.join(base, rel)), rel);
   }
+  // the two of being handled: she hangs from her own hand, and falls
+  assert.deepEqual(skin.stances.held.at, { x: 118, y: 24 });
+  assert.ok(skin.stances.fall.image.endsWith('/poses/fall.png'));
   assert.equal(new Set(Object.values(skin.poses)).size, Object.keys(skin.poses).length);
   // its loops are real loops, and its words are its own
   for (const loop of Object.values(skin.animations)) assert.ok(loop.frames.length > 2, 'a loop of drawings');
   assert.ok(skin.lines.ru.hello.length > 3 && skin.lines.en.hello.length > 3);
+});
+
+test('being handled is drawn too: hanging from the hand, and falling', () => {
+  const dir = folder({
+    label: 'Test',
+    stances: { held: { image: 'poses/held.png', at: [120, 20] }, fall: 'poses/fall.png' },
+  }, ['full.png', 'poses/held.png', 'poses/fall.png']);
+  const skin = characters.get('one', dirs(dir));
+  assert.deepEqual(skin.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: { x: 120, y: 20 } });
+  assert.deepEqual(skin.stances.fall, { image: 'capri://app/characters/one/poses/fall.png', at: null });
+  // a point of the drawing is two numbers or it is nothing, and a picture is a picture
+  fs.writeFileSync(path.join(dir, 'skin.json'), JSON.stringify({
+    label: 'Test',
+    stances: { held: { image: 'poses/held.png', at: ['x', 2] }, fall: 'poses/fall.exe' },
+  }));
+  const bare = characters.get('one', dirs(dir));
+  assert.deepEqual(bare.stances.held, { image: 'capri://app/characters/one/poses/held.png', at: null });
+  assert.equal(bare.stances.fall, undefined);
 });
 
 test('a character with a theme is offered with it, and her own are untouched', () => {

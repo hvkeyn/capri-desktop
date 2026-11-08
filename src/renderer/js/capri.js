@@ -102,6 +102,12 @@ export class Capri {
     this.skinHolo = 0; // how strongly a character wears the projection look *while it appears or goes*
     this.skinFlat = false; // art that isn't hers: no rig deformation, only its own animation
     this.skinRim = 1; // her violet misregistration behind the figure (a skin can turn it off)
+    // a drawing per stance, for a skin that drew her being handled (skin.json's "stances"): held by
+    // the pointer, in the air. They are worn for the whole stance and taken off after it.
+    this.stancePictures = {};
+    this.stancePicture = ''; // the stance whose drawing is on her now
+    this.stanceCovered = null; // what that drawing covered: { image, loop }, put back when she's on her feet
+    this.loopPlaying = null; // the loop playing now, { urls, fps }: a stance stops it and puts it back after
     this.holoUntil = 0; // until when (performance.now) that moment lasts
     this.loopId = 0;    // bumped to stop an animation loop (startLoop, setPose, playSequence)
     this.loopTimer = 0;
@@ -511,6 +517,11 @@ export class Capri {
     if (!url) return false;
     const img = await this.loadPicture(url);
     if (!img || !img.naturalWidth) return false;
+    // held or in the air, her stance's own drawing stays on: this one is what she wears after it
+    if (this.stancePicture) {
+      this.stanceCovered = { image: img, loop: null };
+      return true;
+    }
     this.sprite.setImage(img);
     this.holoBurst(340); // a projection stutters when it changes
     return true;
@@ -539,6 +550,12 @@ export class Capri {
   // Returns false when it can't play; a newer loop, a pose or a sequence replaces it cleanly.
   async startLoop(urls, fps = 12) {
     if (!Array.isArray(urls) || urls.length < 2) return false;
+    // held or in the air, her stance's own drawing stays on; the loop is what she goes back to
+    if (this.stancePicture) {
+      this.loopPlaying = { urls, fps };
+      this.stanceCovered = { image: this.stanceCovered?.image || this.sprite.image, loop: { urls, fps } };
+      return true;
+    }
     const id = ++this.loopId;
     clearInterval(this.loopTimer);
     const frames = [];
@@ -555,14 +572,45 @@ export class Capri {
     };
     tick();
     this.loopTimer = setInterval(tick, step);
+    this.loopPlaying = { urls, fps };
     this.holoBurst(300);
     return true;
   }
 
-  stopLoop() {
+  // `keep`: the loop is stopped for a stance drawing and will be put back after it, so don't forget it
+  stopLoop(keep = false) {
     this.loopId += 1;
     clearInterval(this.loopTimer);
     this.loopTimer = 0;
+    if (!keep) this.loopPlaying = null;
+  }
+
+  // Which drawing she wears in the stance she is in. A skin may have drawn her being handled
+  // (skin.json's "stances"): hanging from the hand that holds her, or in the air. That drawing goes on
+  // for the whole stance — and the pose, or the loop, it covered comes back when she's on her feet.
+  wearStance(stance) {
+    const picture = this.stancePictures?.[stance];
+    if (!picture) {
+      if (!this.stancePicture) return;
+      this.stancePicture = '';
+      const back = this.stanceCovered;
+      this.stanceCovered = null;
+      if (back?.loop) this.startLoop(back.loop.urls, back.loop.fps);
+      else if (back?.image) this.sprite.setImage(back.image);
+      return;
+    }
+    if (this.stancePicture === stance) return;
+    // the point the pointer holds her by, when the drawing says where its own hand is: she hangs from
+    // that hand, and it is what stays under the cursor
+    if (picture.at && this.held) this.held.at = picture.at;
+    if (!this.stancePicture) {
+      this.stanceCovered = { image: this.sprite.image, loop: this.loopPlaying ? { ...this.loopPlaying } : null };
+    }
+    this.stancePicture = stance;
+    this.stopLoop(true);
+    this.loadPicture(picture.image).then((img) => {
+      if (img && this.stancePicture === stance) this.sprite.setImage(img);
+    });
   }
 
   // Pick the drawing: the stance's cycle underneath, the current act on top.
@@ -844,6 +892,8 @@ export class Capri {
     if (stance !== 'down') this.lying = null;
     this.lounge = null;
     this.base = this.restBase(dir);
+    // a stance drawing may change what she hangs from: it has to be known before the pivot is set
+    this.wearStance(stance);
     this.pivot();
   }
 
@@ -2034,11 +2084,12 @@ export class Capri {
     this.endAct(false);
     const at = { x: clamp(down.at.x, 24, SPRITE.width - 24), y: clamp(down.at.y, 24, SPRITE.height - 24) };
     this.held = { at, w: 0, last: performance.now() };
-    this.setStance('held');
+    this.setStance('held'); // a stance drawing may say she hangs from her own hand, not from where you got her
     this.spin = spin;
     // the point you hold stays right under the pointer, whatever she does around it
     const s = this.scale;
-    this.pos = { x: down.x - (at.x - SPRITE.feet.x) * s * this.facing, y: down.y - (at.y - SPRITE.feet.y) * s };
+    const hung = this.held.at;
+    this.pos = { x: down.x - (hung.x - SPRITE.feet.x) * s * this.facing, y: down.y - (hung.y - SPRITE.feet.y) * s };
     down.pos = { ...this.pos };
     this.perform('grabbed');
     this.p.glitchSeed = Math.random() * 100;

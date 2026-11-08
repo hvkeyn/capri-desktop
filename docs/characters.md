@@ -44,6 +44,11 @@ characters/
 - `sequences` (optional) are a few drawings played once, in order, like a flipbook —
   `"glasses": ["poses/glasses1.png", "poses/glasses2.png", "poses/glasses3.png"]` plays in her menu as
   **Take off his sunglasses**.
+- `stances` (optional) are the drawings it wears while it is being handled, instead of the pose: the
+  app's own stance names, `held` (picked up with the pointer) and `fall` (in the air), one picture each —
+  `{"held": {"image": "poses/held.png", "at": [118, 24]}, "fall": "poses/fall.png"}`. `at` is the point
+  of the picture the pointer holds (a raised hand, in the sheet's pixels): it stays under the cursor and
+  she swings around it. The pose, or the loop, the stance covered comes back when she is on her feet.
 - `gender` (`"m"` or `"f"`, optional) is how the menu talks about them: "Talk to him" instead of "her".
 - `holo` (0 to 1, optional) makes them flicker like a projection while they appear, vanish or change.
 - `persona` (optional) replaces Capri's own lines in her chat: the character's voice.
@@ -109,11 +114,12 @@ and keep or edit the `skin.json` beside them.
 ## About A2
 
 The `a2` folder is the other character this fork ships: YoRHa Type A No. 2 from **NieR: Automata**,
-built from the renders in the `A2` folder beside this repository — one standing figure and two pose
+built from the renders in the `A2` folder beside this repository — one standing figure and three pose
 sheets on a green screen. `tools/make-a2.py` does the whole cut: it keys the green out (and takes it back
 out of the edges, so no halo shows on a dark desktop), puts every pose on her 240 x 420 rig at one scale
 (a crouch really is lower than a stand), cuts her head for the panels, five close-ups for the cut-ins,
-and the two breathing loops. Regenerate it with:
+and the two breathing loops. Two of the drawings are not poses but stances: hanging from her raised hand
+while you carry her with the pointer, and falling. Regenerate it with:
 
 ```bash
 python tools/make-a2.py            # ../A2 -> assets/characters/a2, needs Pillow, numpy, OpenCV
