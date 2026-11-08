@@ -70,6 +70,8 @@ export class Guitar {
     document.body.appendChild(img);
     this.el = img;
     this.place(img);
+    img.style.opacity = '1';
+    img.style.transform = 'none';
     img.classList.add('is-arriving');
     const avatarEl = document.getElementById('capri');
     if (avatarEl) {
