@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 // A character is a folder (characters.js): what its skin.json is allowed to say, and what it is not.
 // The two skins this build ships are read here as well, so a wrong path in one of them shows up as a
@@ -87,8 +87,14 @@ test('the entrance a skin brings keeps its captions and its line in every langua
   assert.equal(skin.flat, true);
   assert.ok(skin.intro.video.endsWith('/intro/entrance.mp4'));
   assert.equal(skin.intro.fade, 2.2);
-  assert.ok(skin.intro.captionsByLang.ru.length && skin.intro.captionsByLang.en.length);
-  assert.ok(skin.intro.captionsByLang.ru.every((c) => Number.isFinite(c.at)));
+  // the film says four things, in every language the app speaks, at the same beats of it
+  const spoken = skin.intro.captionsByLang;
+  assert.deepEqual(Object.keys(spoken).sort(), ['en', 'es', 'fr', 'pt', 'ru']);
+  for (const [lang, list] of Object.entries(spoken)) {
+    assert.equal(list.length, 4, `${lang}: four captions`);
+    assert.deepEqual(list.map((c) => c.at), [1.6, 8, 12.5, 19], `${lang}: the same four beats`);
+    assert.ok(list.every((c) => c.text.length > 3), `${lang}: every caption says something`);
+  }
   assert.ok(skin.intro.lineByLang.ru.length && skin.intro.lineByLang.en.length);
   // every picture it names is there, and every pose it names is a different one
   const base = path.join(ROOT, 'assets', 'characters', 'a2');

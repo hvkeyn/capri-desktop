@@ -60,51 +60,91 @@
     "captionsByLang": {
       "ru": [
         {
-          "at": 3,
+          "at": 1.6,
           "text": "КОМАНДОВАНИЕ ПРЕДАЛО ТЕБЯ"
         },
         {
-          "at": 18.4,
+          "at": 8,
+          "text": "СОЮЗНИКИ УЖЕ ЗАБЫЛИ"
+        },
+        {
+          "at": 12.5,
+          "text": "НО Я НЕ ПРЕДАМ НИКОГДА"
+        },
+        {
+          "at": 19,
           "text": "СЛАВА ЧЕЛОВЕЧЕСТВУ"
         }
       ],
       "en": [
         {
-          "at": 3,
-          "text": "COMMAND IS THE ONE WHO BETRAYED YOU"
+          "at": 1.6,
+          "text": "COMMAND BETRAYED YOU"
         },
         {
-          "at": 18.4,
+          "at": 8,
+          "text": "THE ALLIES HAVE FORGOTTEN"
+        },
+        {
+          "at": 12.5,
+          "text": "BUT I NEVER WILL"
+        },
+        {
+          "at": 19,
           "text": "GLORY TO MANKIND"
         }
       ],
       "fr": [
         {
-          "at": 3,
+          "at": 1.6,
           "text": "LE COMMANDEMENT T'A TRAHI"
         },
         {
-          "at": 18.4,
+          "at": 8,
+          "text": "LES ALLIÉS ONT OUBLIÉ"
+        },
+        {
+          "at": 12.5,
+          "text": "MOI, JAMAIS"
+        },
+        {
+          "at": 19,
           "text": "GLOIRE À L'HUMANITÉ"
         }
       ],
       "es": [
         {
-          "at": 3,
-          "text": "EL MANDO ES QUIEN TE TRAICIONÓ"
+          "at": 1.6,
+          "text": "EL MANDO TE TRAICIONÓ"
         },
         {
-          "at": 18.4,
+          "at": 8,
+          "text": "LOS ALIADOS YA OLVIDARON"
+        },
+        {
+          "at": 12.5,
+          "text": "YO NUNCA LO HARÉ"
+        },
+        {
+          "at": 19,
           "text": "GLORIA A LA HUMANIDAD"
         }
       ],
       "pt": [
         {
-          "at": 3,
-          "text": "O COMANDO FOI QUEM TE TRAIU"
+          "at": 1.6,
+          "text": "O COMANDO TE TRAIU"
         },
         {
-          "at": 18.4,
+          "at": 8,
+          "text": "OS ALIADOS JÁ ESQUECERAM"
+        },
+        {
+          "at": 12.5,
+          "text": "EU NUNCA VOU"
+        },
+        {
+          "at": 19,
           "text": "GLÓRIA À HUMANIDADE"
         }
       ]
