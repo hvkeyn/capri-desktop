@@ -2092,9 +2092,12 @@ export class Capri {
     this.pos = { x: down.x - (hung.x - SPRITE.feet.x) * s * this.facing, y: down.y - (hung.y - SPRITE.feet.y) * s };
     down.pos = { ...this.pos };
     this.perform('grabbed');
-    this.p.glitchSeed = Math.random() * 100;
-    this.p.glitch = 0.18;
-    this.p.split = 2;
+    // the tear her own art gets when she's picked up: a skin that drew her being held doesn't need it
+    if (!this.stancePictures?.held) {
+      this.p.glitchSeed = Math.random() * 100;
+      this.p.glitch = 0.18;
+      this.p.split = 2;
+    }
     this.onTeleport?.('start');
     this.voice.play('tick');
     this.place();
