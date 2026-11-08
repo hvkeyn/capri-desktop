@@ -202,6 +202,33 @@ function recordMessages({ task, notes, log = [], narrator }) {
   ];
 }
 
+// A step that has been going a long time: what it read and did so far, folded into a short note, so the
+// next turn reads a page instead of a log. The last few lines stay as they are.
+function compactMessages({ lines }) {
+  return [
+    system('You keep the working memory of a long task. Be exact, keep file names, paths, numbers and what failed. No advice.'),
+    user([
+      `What was done, in order:\n\n${lines}`,
+      'Fold it into at most ten short lines: what was read, what was written (with paths), what failed and why. '
+      + 'Facts only, no sentences about yourself, no plan. Answer with the lines only.',
+    ].join('\n\n')),
+  ];
+}
+
+// A sub-team of one: the work order hands it a narrower job while it keeps the wide one.
+function subagentMessages({ goal, notes, narrator, log = [] }) {
+  return [
+    system(`${voice(narrator)}\n\n${notes}\n\nYou are the part of this work order that was sent to do one narrower job. `
+      + 'Do it with the tools you have, then answer with the result only: what you found, the addresses, the numbers — '
+      + 'the things the one who sent you can use without asking again. Nothing about yourself, no plan, no advice.'),
+    user([
+      `Your job:\n\n${goal}`,
+      log.length ? `What you have done so far:\n${log.slice(-10).map((line) => `- ${String(line).slice(0, 240)}`).join('\n')}` : '',
+      'Do it now. When it is done, call answer with the result as text.',
+    ].filter(Boolean).join('\n\n')),
+  ];
+}
+
 // The last thing a stuck step is asked: not "do more", but "decide". With update_plan as the only tool
 // on the table, a weak model has nothing left to read the folder with, and the board gets its answer.
 function decideMessages({ task, notes, log = [], narrator }) {
@@ -219,4 +246,5 @@ function decideMessages({ task, notes, log = [], narrator }) {
 module.exports = {
   bundled, workNotes, personaNote, voice, brief,
   specMessages, planMessages, tasksMessages, stepMessages, reportMessages, retryMessages, recordMessages, decideMessages,
+  compactMessages, subagentMessages,
 };

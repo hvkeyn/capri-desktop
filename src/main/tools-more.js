@@ -49,6 +49,42 @@ async function webFetch(url, { fetchImpl = globalThis.fetch, timeout = 20000 } =
   }
 }
 
+// A search, so a work order doesn't have to guess addresses: DuckDuckGo's plain HTML page, its result
+// links decoded (they come wrapped in a redirect), and the snippet beside each one.
+function ddgHref(href) {
+  const m = /[?&]uddg=([^&]+)/.exec(String(href || ''));
+  if (!m) return String(href || '');
+  try { return decodeURIComponent(m[1]); } catch { return href; }
+}
+
+async function webSearch(query, { limit = 6, fetchImpl = globalThis.fetch, timeout = 15000 } = {}) {
+  const q = String(query || '').trim();
+  if (!q) return { error: 'nothing to search for' };
+  let html = '';
+  try {
+    const res = await fetchImpl(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
+      headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Capri/1.0' },
+      signal: AbortSignal.timeout(timeout),
+    });
+    if (!res.ok) return { error: `the search answered ${res.status}` };
+    html = await res.text();
+  } catch (err) {
+    return { error: err.message || 'the search failed' };
+  }
+  const clean = (s) => String(s || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/&quot;/g, '"')
+    .replace(/\s+/g, ' ').trim();
+  const results = [];
+  const re = /<a[^>]+class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>([\s\S]{0,800}?)(?=<a[^>]+class="[^"]*result__a|$)/g;
+  let m;
+  while ((m = re.exec(html)) && results.length < limit) {
+    const snippet = (/class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/(?:a|div|span)>/.exec(m[3]) || [])[1];
+    results.push({ title: clean(m[2]), url: ddgHref(m[1]), snippet: snippet ? clean(snippet).slice(0, 300) : null });
+  }
+  return { query: q, results, ...(results.length ? {} : { note: 'the search returned no results' }) };
+}
+
 // What is wrong, from what the machine says: a pure function, so the thresholds can be tested.
 function findings(info = {}) {
   const out = [];
@@ -125,4 +161,4 @@ async function run(name, args, ctx) {
   return { tool: name, ...out };
 }
 
-module.exports = { attach, webFetch, findings, diagnose, loadCustom, schemas, fillCommand, run, CUSTOM: () => CUSTOM };
+module.exports = { attach, webFetch, webSearch, findings, diagnose, loadCustom, schemas, fillCommand, run, CUSTOM: () => CUSTOM };

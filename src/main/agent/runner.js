@@ -21,7 +21,9 @@ const attach = require('./attach');
 const more = require('../tools-more'); // a page off the web, the same reader her chat has
 const { Plan } = require('./plan');
 
-const TOOL_ROUNDS = 8; // one task may take this many model turns before it is called stuck
+const TOOL_ROUNDS = 24; // one task may take this many model turns before it is called stuck (big work is big)
+const SUB_ROUNDS = 8; // a sub-team job is narrower: it doesn't get a plan of its own
+const LOG_FOLD = 40; // a step's log is folded into a short note past this, so the next turn reads a page, not a diary
 const FENCE = /^\s*```[a-z]*\s*\n([\s\S]*?)\n\s*```\s*$/i;
 // A step title that means "put something on paper": it is told, in so many words, that the record is a
 // file — and told again while it hasn't written one (a model that answers in the chat instead of
@@ -29,9 +31,19 @@ const FENCE = /^\s*```[a-z]*\s*\n([\s\S]*?)\n\s*```\s*$/i;
 const RECORD = /запи|зафикс|сохран|отч[её]т|отчет|сводк|итог|report|summary|note|save|write|record|log/i;
 // The tools that are looking rather than doing, and how many times a record step may use them before the
 // file is the only move left.
-const READERS = new Set(['read_file', 'list_dir', 'search_files', 'web_fetch']);
-const READS_BEFORE_WRITE = 4;
+const READERS = new Set(['read_file', 'list_dir', 'search_files', 'web_fetch', 'web_search']);
+const READS_BEFORE_WRITE = 6;
 const FETCH_CAP = 6000; // a page, cut to what a step can hold: titles and the first paragraphs
+// what a sub-team may use: it reads, writes and searches, and it answers — no plan, no shell, no team of its own
+const SUBAGENT_TOOLS = new Set(['read_file', 'write_file', 'patch_file', 'list_dir', 'search_files', 'web_fetch', 'web_search']);
+const ANSWER_TOOL = {
+  type: 'function',
+  function: {
+    name: 'answer',
+    description: 'The result of your job, as text: what you found, the addresses, the numbers. Call it when you are done.',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+  },
+};
 
 // What the model may do inside the folder, as function-calling schemas.
 const TOOLS = [
@@ -122,6 +134,30 @@ const TOOLS = [
         type: 'object',
         properties: { url: { type: 'string', description: 'http(s) address' } },
         required: ['url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'web_search',
+      description: 'Search the web and get titles, addresses and snippets. Use it when you do not know the address of what you need; then read the best ones with web_fetch.',
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string' }, limit: { type: 'integer', description: 'default 6' } },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delegate',
+      description: 'Hand a narrower job to a sub-team that works on its own and answers with the result: a few pages to read, a list to check, one question to settle. Use it to do several things at once or to keep your own turns for the whole.',
+      parameters: {
+        type: 'object',
+        properties: { goal: { type: 'string', description: 'the job, in one or two sentences, with what a good answer contains' } },
+        required: ['goal'],
       },
     },
   },
@@ -264,19 +300,28 @@ class Runner {
     for (const step of this.plan.steps) {
       this.throwIfStopped();
       await this.buildStep(step);
-      if (step.status !== 'done') {
-        for (const rest of this.plan.steps) if (rest.status === 'queued') this.plan.skip(rest.id, `${step.id} ${step.status}`);
-        this.plan.halt(`${step.id}: ${step.note || step.status}`);
+      // a failed step gets one more route before the board gives up on it: the same task, told what
+      // stopped it, not the same attempt again
+      if (step.status === 'failed' && !step.retried) {
+        step.retried = true;
+        this.plan.note(`${step.id} failed: one more route`, 'note');
         this.push();
-        await this.writeReport();
-        return this.push();
+        await this.buildStep(step);
       }
+      if (step.status !== 'done') this.plan.note(`${step.id} ${step.status}: the rest goes on`, 'error');
+      this.push();
     }
 
-    // 5. the report
+    // 5. the report — written whether the work all landed or only part of it: a half-done order that says
+    // what is done is worth more than a board with nothing on it
+    const undone = this.plan.steps.filter((step) => step.status !== 'done');
     await this.writeReport();
-    this.plan.done();
-    this.plan.note(`done · ${Math.round(this.plan.elapsedMs / 1000)} s`, 'note');
+    if (!undone.length) {
+      this.plan.done();
+      this.plan.note(`done · ${Math.round(this.plan.elapsedMs / 1000)} s`, 'note');
+    } else {
+      this.plan.halt(`${undone.map((step) => `${step.id} ${step.status}`).join(', ')}`);
+    }
     this.push();
     this.store?.observe?.({
       kind: 'work',
@@ -284,6 +329,46 @@ class Runner {
       meta: { id: this.plan.id, status: this.plan.status, steps: this.plan.steps.length, tokens: this.spent },
     });
     return this.snapshot();
+  }
+
+  // A step's diary, folded: the first lines become a short note in the model's own words, the last ten
+  // stay as they are. A long step then costs a page of context instead of a book.
+  async foldLog(log) {
+    const head = log.slice(0, log.length - 10);
+    const keep = log.slice(-10);
+    try {
+      const note = await this.tell(prompts.compactMessages({ lines: head.join('\n') }));
+      return [`(what was done before, folded)\n${note.trim().slice(0, 1200)}`, ...keep];
+    } catch {
+      return [`(${head.length} earlier lines left out)`, ...keep];
+    }
+  }
+
+  // A narrower job, done on its own: the reader, the writer and the web, no plan of its own, and one
+  // answer at the end. It cannot delegate again — a chain of teams that only hand work on spends a day
+  // and learns nothing.
+  async subagent(goal) {
+    const toolset = [...TOOLS.filter((tool) => SUBAGENT_TOOLS.has(tool.function.name)), ANSWER_TOOL];
+    const log = [];
+    const fake = { id: 'sub', title: 'sub-team' };
+    for (let round = 0; round < SUB_ROUNDS; round++) {
+      this.throwIfStopped();
+      const res = await this.turn(prompts.subagentMessages({ goal, notes: this.notes, narrator: this.narrator, log }), toolset);
+      if (res.text) log.push(res.text.slice(0, 300));
+      const calls = res.toolCalls || [];
+      if (!calls.length) return String(res.text || '').slice(0, 4000) || '(the sub-team answered nothing)';
+      for (const call of calls) {
+        if (call.name === 'answer') {
+          let said = '';
+          try { said = String(JSON.parse(call.arguments || '{}').text || ''); } catch { said = String(call.arguments || ''); }
+          this.plan.note('SUB answers', 'note');
+          return said.slice(0, 4000);
+        }
+        const out = await this.use(call, fake);
+        log.push(`${call.name}: ${JSON.stringify(out).slice(0, 300)}`);
+      }
+    }
+    return `(the sub-team ran out of turns; last: ${String(log.at(-1) || '').slice(0, 300)})`;
   }
 
   // One task, its own tool loop: read, change, check, until she says it's done or the rounds run out.
@@ -300,6 +385,7 @@ class Runner {
     this.stepWrote = false;
     for (let round = 0; round < this.maxToolRounds; round++) {
       this.throwIfStopped();
+      if (log.length > LOG_FOLD) log = await this.foldLog(log);
       // a weak model can keep reading the same folder forever: after a couple of rounds it is told,
       // in plain words, that the information is in and the only useful call left is update_plan
       let nudge = '';
@@ -341,8 +427,9 @@ class Runner {
       }
       if (step.status !== 'running') break;
     }
-    if (step.status === 'running' && !this.stepWrote) {
-      // nothing on disk: one turn with the pencil and the decision, and nothing to read with
+    if (!this.stepWrote && (step.status === 'running' || step.status === 'failed')) {
+      // nothing on disk: one turn with the pencil and the decision, and nothing to read with — a model
+      // that gave up because it never wrote what it had gets that one chance before the board believes it
       const forced = await this.turn(
         prompts.recordMessages({ task: step, notes: this.notes, log, narrator: this.narrator }),
         TOOLS.filter((tool) => tool.function.name === 'write_file' || tool.function.name === 'update_plan'),
@@ -434,6 +521,18 @@ class Runner {
         // a feed is a page of titles: enough to pick from, and a 20 KB page would spend the step's context
         // before it ever reaches the file
         if (out?.text && out.text.length > FETCH_CAP) out = { ...out, text: out.text.slice(0, FETCH_CAP), more: true };
+        break;
+      }
+      case 'web_search': {
+        this.plan.note(`SEARCHES ${String(args.query || '').slice(0, 60)}`, 'run');
+        out = await more.webSearch(args.query, { limit: Math.max(1, Math.min(10, Number(args.limit) || 6)) });
+        break;
+      }
+      case 'delegate': {
+        const job = String(args.goal || '').trim();
+        if (!job) { out = { error: 'the job is empty' }; break; }
+        this.plan.note(`DELEGATES ${job.slice(0, 60)}`, 'run');
+        out = { result: await this.subagent(job) };
         break;
       }
       case 'run_command': {

@@ -197,6 +197,14 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'web_search',
+      description: 'Search the web: titles, addresses and snippets. Use it when you do not know the address of what they asked about, then read the best ones with web_fetch.',
+      parameters: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'integer', description: 'default 6' } }, required: ['query'] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'see_screen',
       description: 'Look at the user\'s screen right now: a description of it if the model can see pictures, otherwise the text Windows recognized on it. Use it when they ask what is on their screen.',
       parameters: { type: 'object', properties: {}, required: [] },
@@ -383,6 +391,7 @@ async function run(name, args = {}, ctx = {}) {
     case 'run_command': return runCommand(a.command, a.cwd, ctx);
     case 'web_fetch':
     case 'diagnose': return more.run(name, a, ctx);
+    case 'web_search': return more.webSearch(a.query, { limit: Math.max(1, Math.min(10, Number(a.limit) || 6)) });
     default: return (await more.run(name, a, ctx)) || { error: `no such tool: ${name}` };
   }
 }

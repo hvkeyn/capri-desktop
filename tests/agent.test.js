@@ -446,6 +446,68 @@ test('a step that records something is told to write a file, and told again', as
 test('a work order can read the web, not only the folder', () => {
   const { TOOLS } = require('../src/main/agent/runner');
   assert.ok(TOOLS.some((tool) => tool.function.name === 'web_fetch'), 'web_fetch is offered in a work order');
+  assert.ok(TOOLS.some((tool) => tool.function.name === 'web_search'), 'web_search is offered in a work order');
+  assert.ok(TOOLS.some((tool) => tool.function.name === 'delegate'), 'a work order can hand a narrower job to a sub-team');
+});
+
+test('a failed step does not take the rest of the plan with it', async (t) => {
+  const root = scratch(t);
+  const ask = async ({ messages }) => {
+    const last = String(messages[messages.length - 1].content || '');
+    if (/Write `spec\.md`/.test(last)) return { text: '# spec' };
+    if (/Write `plan\.md`/.test(last)) return { text: '# plan' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '## Phase 1\n- [ ] T001 impossible\n- [ ] T002 possible\n' };
+    if (/Write `report\.md`/.test(last)) return { text: '# report\n---\nreported.' };
+    if (/T001/.test(last)) return { toolCalls: [{ id: 'a', name: 'update_plan', arguments: JSON.stringify({ status: 'failed', note: 'no way' }) }] };
+    if (/T002/.test(last)) {
+      return {
+        toolCalls: [
+          { id: 'b', name: 'write_file', arguments: JSON.stringify({ path: 'done.txt', content: 'x' }) },
+          { id: 'c', name: 'update_plan', arguments: JSON.stringify({ status: 'done', note: 'did it' }) },
+        ],
+      };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({ ask, store: { savePlan() {}, observe() {} }, emit() {}, autonomy: 'guard' });
+  runner.start({ goal: 'two steps', workspace: root });
+  const done = await runner.completion;
+  assert.equal(done.steps[0].status, 'failed');
+  assert.equal(done.steps[1].status, 'done', 'the second step still ran');
+  assert.ok(fs.existsSync(path.join(root, 'done.txt')), 'its file is on disk');
+});
+
+test('a step can hand a narrower job to a sub-team and use its answer', async (t) => {
+  const root = scratch(t);
+  const ask = async ({ messages }) => {
+    const last = String(messages[messages.length - 1].content || '');
+    const whole = messages.map((m) => String(m.content || '')).join('\n');
+    if (/Write `spec\.md`/.test(last)) return { text: '# spec' };
+    if (/Write `plan\.md`/.test(last)) return { text: '# plan' };
+    if (/Write `tasks\.md`/.test(last)) return { text: '## Phase 1\n- [ ] T001 find the numbers\n' };
+    if (/Write `report\.md`/.test(last)) return { text: '# report\n---\nreported.' };
+    if (/sent to do one narrower job/.test(whole)) {
+      return { toolCalls: [{ id: 's', name: 'answer', arguments: JSON.stringify({ text: 'THE SUB RESULT' }) }] };
+    }
+    if (/T001/.test(last)) {
+      // first turn: hand the job off; after that the sub-team's answer is in the log
+      if (!/THE SUB RESULT/.test(last)) {
+        return { toolCalls: [{ id: 'd', name: 'delegate', arguments: JSON.stringify({ goal: 'find the numbers' }) }] };
+      }
+      return {
+        toolCalls: [
+          { id: 'w', name: 'write_file', arguments: JSON.stringify({ path: 'numbers.txt', content: 'THE SUB RESULT' }) },
+          { id: 'u', name: 'update_plan', arguments: JSON.stringify({ status: 'done', note: 'from the sub-team' }) },
+        ],
+      };
+    }
+    return { text: 'ok' };
+  };
+  const runner = new Runner({ ask, store: { savePlan() {}, observe() {} }, emit() {}, autonomy: 'guard' });
+  runner.start({ goal: 'use a sub-team', workspace: root });
+  const done = await runner.completion;
+  assert.equal(done.steps[0].status, 'done');
+  assert.match(fs.readFileSync(path.join(root, 'numbers.txt'), 'utf8'), /THE SUB RESULT/);
 });
 
 test('a step that ends with nothing on disk gets one turn with the pencil', async (t) => {
