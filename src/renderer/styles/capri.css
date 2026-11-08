@@ -1738,9 +1738,8 @@ html[data-motion='reduced'] .intro-shot {
 /* the guitar: he sits on the edge of the screen, leaning on it, and plays */
 .guitar {
   position: fixed;
-  right: 1vw;
-  bottom: -3vh;
-  height: 46vh;
+  right: 10px;
+  bottom: 0;
   will-change: transform, opacity;
   contain: layout paint;
   z-index: 32;
@@ -1754,4 +1753,17 @@ html[data-motion='reduced'] .intro-shot {
 .guitar.is-here {
   opacity: 1;
   transform: translateY(0) rotate(0deg);
+}
+
+
+/* cut off mid-song: he comes apart like bad footage */
+.guitar.is-glitching {
+  animation: guitar-glitch 90ms steps(2, end) 3;
+}
+
+@keyframes guitar-glitch {
+  0% { opacity: 1; transform: translateX(0); filter: none; clip-path: inset(0 0 0 0); }
+  40% { opacity: 0.7; transform: translateX(-6px); filter: hue-rotate(40deg) saturate(1.6); clip-path: inset(12% 0 34% 0); }
+  70% { opacity: 0.4; transform: translateX(5px); filter: hue-rotate(-30deg) saturate(2); clip-path: inset(46% 0 8% 0); }
+  100% { opacity: 0; transform: translateX(0); filter: none; clip-path: inset(0 0 0 0); }
 }

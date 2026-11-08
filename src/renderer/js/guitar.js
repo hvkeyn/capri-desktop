@@ -1,10 +1,9 @@
-// The guitar: he sits on the edge of the screen, leans on it and plays. Sometimes it is one chord and
-// gone; sometimes a whole song from his own playlist (the in-game tracks, cut from the gamerip).
-//
-// The frames are a real animation (56 of them, cut from his sheet): while a song plays, they run in a loop
-// at a strumming pace. When a chord is asked for, the same loop runs for a few seconds and stops.
+// The guitar: he sits on the edge or in the corner, leans back and plays. A whole song from his playlist,
+// or one chord when nothing is happening. He is drawn at the size of the character he sits beside — never
+// bigger — and when you cut him off he comes apart in a glitch instead of vanishing.
 
-const FRAME_MS = 85; // a strumming pace, not a film: he is sitting, not running
+const STRUM_MS = 240; // two drawings, alternating like a slow strum
+const GLITCH_MS = 320;
 
 export class Guitar {
   constructor({ capri, panel, host, skin }) {
@@ -12,7 +11,6 @@ export class Guitar {
     this.panel = panel;
     this.host = host;
     this.frames = Array.isArray(skin?.guitar?.frames) ? skin.guitar.frames : [];
-    this.image = skin?.guitar?.image || this.frames[0] || '';
     this.tracks = Array.isArray(skin?.guitar?.tracks) ? skin.guitar.tracks : [];
     this.audio = null;
     this.el = null;
@@ -24,62 +22,84 @@ export class Guitar {
   }
 
   get available() {
-    return Boolean(this.image && this.tracks.length);
+    return Boolean(this.frames.length && this.tracks.length);
   }
 
   get playing() {
     return Boolean(this.el);
   }
 
-  start({ seconds = 0, volume = 0.55, track = null } = {}) {
+  // The place: on the window edge under him when there is one, otherwise the corner of the screen, and
+  // no taller than the character himself.
+  place(img) {
+    const avatar = document.getElementById('capri');
+    const rect = avatar?.getBoundingClientRect();
+    const floor = this.capri?.view?.floor || window.innerHeight;
+    const height = Math.round(rect?.height || Math.floor(window.innerHeight * 0.36));
+    const bottom = Math.max(0, Math.round(window.innerHeight - floor));
+    const width = Math.round((height * img.naturalWidth) / (img.naturalHeight || 1));
+    const right = 10;
+    img.style.height = `${height}px`;
+    img.style.width = `${width}px`;
+    img.style.bottom = `${bottom}px`;
+    img.style.right = `${right}px`;
+    img.style.left = 'auto';
+  }
+
+  async start({ seconds = 0, volume = 0.55, track = null } = {}) {
     if (!this.available || this.playing) return false;
     const index = track ?? this.nextTrack();
     const src = this.tracks[index];
     if (!src) return false;
 
+    // decode both drawings before showing anything: swapping them later must not flicker
+    await Promise.all(this.frames.map((frame) => new Promise((resolve) => {
+      const probe = new Image();
+      probe.onload = probe.onerror = resolve;
+      probe.src = frame;
+    })));
+
     const img = document.createElement('img');
     img.className = 'guitar';
-    img.src = this.image;
+    img.src = this.frames[0];
     img.alt = '';
-    // the same size as the character he sits beside, and on the same floor: he is a drawing of the same
-    // person, not a poster in the corner
-    const avatar = document.getElementById('capri');
-    const rect = avatar?.getBoundingClientRect();
-    const height = Math.max(220, Math.round((rect?.height || window.innerHeight * 0.36) * 1.02));
-    const bottom = Math.round(window.innerHeight - (rect?.bottom ?? window.innerHeight));
-    img.style.height = `${height}px`;
-    img.style.bottom = `${Math.max(0, bottom)}px`;
-    img.style.right = 'auto';
-    img.style.left = `${Math.round((rect?.left ?? window.innerWidth * 0.78) - height * 1.02)}px`;
+    img.decoding = 'async';
+    img.addEventListener('load', () => this.place(img), { once: true });
     document.body.appendChild(img);
     this.el = img;
+    this.place(img);
     requestAnimationFrame(() => img.classList.add('is-here'));
-    this.runFrames();
+    this.frame = 0;
+    this.frameTimer = setInterval(() => {
+      if (!this.el || this.frames.length < 2) return;
+      this.frame = (this.frame + 1) % this.frames.length;
+      this.el.src = this.frames[this.frame];
+    }, STRUM_MS);
 
     const audio = new Audio(src);
     audio.volume = volume;
     audio.preload = 'auto';
     this.audio = audio;
-    audio.addEventListener('ended', () => this.stop());
+    audio.addEventListener('ended', () => this.finish());
     audio.play().catch(() => {});
 
-    if (seconds > 0) this.timer = setTimeout(() => this.stop(), seconds * 1000);
+    if (seconds > 0) this.timer = setTimeout(() => this.interrupt(), seconds * 1000);
     this.onChange?.(true);
     return true;
   }
 
-  runFrames() {
-    if (this.frames.length < 2 || !this.el) return;
-    clearInterval(this.frameTimer);
-    this.frame = 0;
-    this.frameTimer = setInterval(() => {
-      if (!this.el) return;
-      this.frame = (this.frame + 1) % this.frames.length;
-      this.el.src = this.frames[this.frame];
-    }, FRAME_MS);
+  // A song ran out: he puts the guitar down, no glitch, it was meant to end.
+  finish() {
+    this.teardown(false);
   }
 
-  stop() {
+  // Cut off in the middle: a short glitch, then gone.
+  interrupt() {
+    if (!this.playing) return;
+    this.teardown(true);
+  }
+
+  teardown(glitch) {
     clearTimeout(this.timer);
     clearInterval(this.frameTimer);
     this.timer = 0;
@@ -93,17 +113,21 @@ export class Guitar {
       }
       this.audio = null;
     }
-    if (this.el) {
-      this.el.classList.remove('is-here');
-      const el = this.el;
-      this.el = null;
+    if (!this.el) return;
+    const el = this.el;
+    this.el = null;
+    if (glitch) {
+      el.classList.add('is-glitching');
+      setTimeout(() => el.remove(), GLITCH_MS + 40);
+    } else {
+      el.classList.remove('is-here');
       setTimeout(() => el.remove(), 260);
     }
     this.onChange?.(false);
   }
 
   toggle() {
-    if (this.playing) this.stop();
+    if (this.playing) this.interrupt();
     else this.start();
   }
 
@@ -115,7 +139,6 @@ export class Guitar {
     return index;
   }
 
-  // Nothing is happening: now and then one chord and no more.
   maybe() {
     if (!this.available || this.playing) return;
     if (Math.random() > 0.3) return;
