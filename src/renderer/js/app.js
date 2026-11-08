@@ -93,7 +93,9 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   // the captions follow the language of the app, not the language of the skin
   const langKey = String(lang && lang !== 'auto' ? lang : (navigator.language || 'en')).slice(0, 2).toLowerCase();
   const spoken = intro.captionsByLang || {};
-  const captions = ((spoken[langKey] || spoken.en || intro.captions) || []).filter((c) => c && typeof c.text === 'string');
+  // the entrance keeps the original English line: it is a quote, and the translations read wrong
+  const original = Array.isArray(intro.captionsOriginal) ? intro.captionsOriginal : [];
+  const captions = ((original.length ? original : (spoken[langKey] || spoken.en || intro.captions)) || []).filter((c) => c && typeof c.text === 'string');
   const captionsAt = new Map(captions.map((c) => [c.from, c.text]));
   const closing = (intro.lineByLang && (intro.lineByLang[langKey] || intro.lineByLang.en)) || intro.line;
   // the sound that comes with it: the line about the city, played as the words land, faded out with the glitch

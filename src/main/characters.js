@@ -91,6 +91,9 @@ function introOf(base, raw) {
     durations: durations.length === frames.length ? durations : [],
     captions,
     captionsByLang,
+    captionsOriginal: Array.isArray(raw.captionsOriginal)
+      ? raw.captionsOriginal.map((c) => ({ text: String(c?.text || '').trim().slice(0, 90) })).filter((c) => c.text)
+      : [],
     lineByLang,
     // the track is not a picture: picture() would refuse it, so the file is addressed directly
     sound: typeof raw.sound === 'string' && raw.sound ? `${base}${raw.sound}` : '',
