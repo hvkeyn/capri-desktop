@@ -180,6 +180,7 @@ async function playIntro(capri, skin, intro, avatar, panel, lang) {
   await sleep(520);
   stage.remove();
   document.body.classList.remove('intro-live');
+  window.dispatchEvent(new Event('capri:intro-done'));
   panel?.resume?.();
   if (closing) panel?.say({ kind: 'info', face: 'smug', line: closing, hold: 7000 });
   return true;
@@ -230,6 +231,7 @@ async function playVideoIntro(capri, intro, avatar, panel, lang) {
     stage.remove();
     caption.remove();
     document.body.classList.remove('intro-live');
+  window.dispatchEvent(new Event('capri:intro-done'));
     if (avatar) avatar.style.visibility = '';
     panel?.resume?.();
   };
@@ -519,13 +521,19 @@ async function boot() {
     if (brain.t.chat) brain.t.chat.badge = skin.label.toUpperCase();
   }
 
+  // an entrance can leave the window click-through; when it ends, the pointer decides again
+  window.addEventListener('capri:intro-done', () => {
+    interactive = false;
+    setInteractive(false);
+    refreshHit();
+  });
+
   // Click-through everywhere except on her body, the panel and her biochip.
   let interactive = false;
   let mouse = null;
   const setInteractive = (on) => {
-    if (on === interactive) return;
     interactive = on;
-    host.setInteractive(on);
+    host.setInteractive(on); // always said out loud: the window may have been left click-through by an entrance
   };
   const onChip = () => Boolean(chip.visible && mouse && chip.contains(mouse.x, mouse.y, 0));
   const refreshHit = () => {

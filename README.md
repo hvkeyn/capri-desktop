@@ -40,6 +40,23 @@ The upstream project is a beautiful animated character that can talk. This fork 
   corrections, with a budget, a critic and backups.
 - **She updates herself** — GitHub releases, streamed download, in-place swap, relaunch.
 
+## The guitar
+
+Johnny can put the desk aside and play. **Her menu → `Play the guitar`** (or the tray item) and he sits on
+the edge of the window he is on — or in the corner of the screen — and plays one whole song from the game's
+soundtrack.
+
+- **24 frames**, cut from seven drawn phases and laid out as a long wave (1-7, then 6-2, twice), played at
+  115 ms a frame: a slow, tired strum, not a slideshow.
+- **His size is yours**: the figure is 0.55 of the character size you picked in the menu and sits exactly
+  where he stands. One of him on screen — the standing avatar leaves through a glitch, the guitar arrives
+  through the same glitch, and afterwards it goes back the same way.
+- **The whole song, not a loop**: the thirteen tracks live in one file and are played as segments, from the
+  first note to the last. A song ends by itself; if you cut it short (the menu item again, her chat, a call)
+  it comes apart in a glitch. No teleports, no idle stunts while he plays.
+- **The tracks are also yours to keep**: `C:\Users\<you>\Music\Capri Guitar` holds all thirteen as
+  separate MP3s, named and timed.
+
 ## Install
 
 1. Take `Capri-x.y.z-portable.exe` from [Releases](https://github.com/hvkeyn/capri-desktop/releases/latest).
