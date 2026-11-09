@@ -2,7 +2,7 @@
 
 A personality on your desktop that actually does things: she watches the machine, reads your screen, searches
 your files, writes code through Claude Code, and reports back in her own voice. A fork of
-[capri](https://github.com/ilharpg/capri) with the working half built out — work orders, full system access
+[capri](https://github.com/mochiiwuff/capri-desktop) with the working half built out — work orders, full system access
 behind a guard, file search, screen reading, and a self-improving harness.
 
 Windows 10/11, x64. Electron. No framework, no cloud of its own: the AI is yours (DeepSeek, OpenAI, Ollama,
@@ -240,7 +240,7 @@ bring the look of its windows (`"theme": "yorha"`) and an entrance film of its o
 
 ## Credits
 
-- Upstream character and panel: [capri](https://github.com/ilharpg/capri).
+- Upstream character and panel: [capri](https://github.com/mochiiwuff/capri-desktop).
 - Search ideas: [Kensaku](https://github.com/yjid/kensaku) (MIT) — the index, the filters, the "delete means
   the bin" courtesy. No code copied.
 - Cyberpunk 2077 and its characters belong to CD Projekt Red. This is a fan project, not affiliated.
