@@ -5,6 +5,7 @@ import { Panel, FACES } from './panel.js';
 import { Board } from './board.js';
 import { Voice } from './voice.js';
 import { Speech } from './speech.js';
+import { Mic } from './mic.js';
 import { Brain } from './brain.js';
 import { Improv } from './improv.js';
 import { Guide } from './guide.js';
@@ -710,6 +711,25 @@ async function boot() {
   window.__capriGuitar = guitar;
   // Talking to her (chat.js): "Talk to her" in her menu, or the button when you click her idle.
   const chat = new Chat({ capri, panel, voice, host, brain });
+  // her ears (mic.js): Ctrl+Alt+M, or her menu, and what you said lands in her chat's field
+  const mic = new Mic({
+    host,
+    onText: async (text) => {
+      if (!chat.open) await chat.start();
+      if (panel.chatInput) {
+        panel.chatInput.value = text;
+        panel.chatInput.focus();
+        panel.chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    },
+    onState: (state, why) => {
+      if (state === 'listening') panel.say({ kind: 'info', line: 'Слушаю…', hold: null });
+      else if (state === 'thinking') panel.say({ kind: 'info', line: 'Разбираю…', hold: null });
+      else if (why) panel.say({ kind: 'error', line: why, hold: 4000 });
+      else panel.hide();
+    },
+  });
+  window.__capriMic = mic;
   // nothing is happening: now and then one chord from the edge, never while the chat or a job is open
   setInterval(() => {
     if (chat.open || guide.running || capri.busy || capri.stowed || capri.dragging) return;
@@ -1186,6 +1206,12 @@ async function boot() {
         break;
       case 'setupVoice': // her menu › Her voice: a voice picked, or "Set her voice"
         setup.voiceSettings();
+        break;
+      case 'voiceListen': // Ctrl+Alt+M, or her menu: say the thing, press again, it lands in her chat
+        mic.toggle();
+        break;
+      case 'speechNote': // how far along a download of the local voice or ears is
+        panel.say({ kind: 'info', line: cmd.text || '', tag: 'SPEECH', hold: 3000 });
         break;
       case 'setupFree': // --dev: Claude Code (or Codex) through Ollama
         setup.free();

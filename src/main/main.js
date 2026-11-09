@@ -7,7 +7,7 @@ const { execFile } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const {
   app, BrowserWindow, Tray, Menu, ipcMain, screen, protocol, net, shell, globalShortcut, nativeImage,
-  clipboard, ClipboardItem, dialog, powerMonitor, desktopCapturer,
+  clipboard, ClipboardItem, dialog, powerMonitor, desktopCapturer, session,
 } = require('electron');
 const { randomUUID } = require('node:crypto');
 
@@ -453,6 +453,30 @@ function sendCommand(name, payload = {}) {
   overlay?.webContents.send('capri:command', { name, ...payload });
 }
 
+// The local voices, downloaded once: the menu item, with her panel saying how far along it is.
+let installingVoice = false;
+async function installVoice(engine = 'piper') {
+  if (installingVoice) return { ok: false, error: 'already downloading' };
+  installingVoice = true;
+  const say = (text) => overlay?.webContents.send('capri:command', { name: 'speechNote', text });
+  say(engine === 'piper' ? 'Скачиваю голос (около 85 МБ)…' : 'Скачиваю уши (около 160 МБ)…');
+  try {
+    const progress = (p) => {
+      const pct = p?.total ? Math.round((p.got / p.total) * 100) : null;
+      if (pct === null || pct % 10 === 0) say(`${engine === 'piper' ? 'Голос' : 'Уши'}: ${pct ?? '…'} %`);
+    };
+    if (engine === 'whisper') await speech.ensureWhisper(progress);
+    else await speech.ensurePiper(progress);
+    say(engine === 'piper' ? 'Голос скачан.' : 'Уши скачаны.');
+    return { ok: true, engines: speech.engines() };
+  } catch (err) {
+    say(`Не скачалось: ${err.message}`);
+    return { ok: false, error: err.message };
+  } finally {
+    installingVoice = false;
+  }
+}
+
 // Ctrl+Alt+C: she folds herself away into her biochip in the corner, or comes back out of it.
 function toggleVisible(force) {
   const visible = typeof force === 'boolean' ? force : !config.load().visible;
@@ -728,17 +752,22 @@ function rebuildTray() {
     {
       label: t.speech,
       submenu: [
-        ...[['off', t.speechOff], ['windows', t.speechWindows], ['local', t.speechLocal], ['openai', 'OpenAI'], ['elevenlabs', 'ElevenLabs']]
+        ...[['off', t.speechOff], ['windows', t.speechWindows], ['piper', t.speechPiper], ['local', t.speechLocal], ['openai', 'OpenAI'], ['elevenlabs', 'ElevenLabs']]
           .map(([provider, label]) => ({
             label, type: 'radio', checked: (cfg.speech?.provider || 'off') === provider,
             click: () => {
               updateConfig({ speech: { ...cfg.speech, provider } });
-              if (provider !== 'off') sendCommand('setupVoice'); // what it needs, then a word in it
+              if (provider === 'piper' && !speech.engines().piper) installVoice('piper'); // the voice is a download, once
+              else if (provider !== 'off') sendCommand('setupVoice'); // what it needs, then a word in it
             },
           })),
         { type: 'separator' },
         { label: t.speechSet, enabled: (cfg.speech?.provider || 'off') !== 'off', click: () => sendCommand('setupVoice') },
-      ],
+        { label: t.speechGet, click: () => installVoice('piper') },
+        { type: 'separator' },
+        // her ears: the microphone, on Ctrl+Alt+M, the words into her chat
+        { label: `${t.speechMic}\tCtrl+Alt+M`, click: () => sendCommand('voiceListen') },
+      ].filter(Boolean),
     },
     {
       label: t.screen,
@@ -1638,6 +1667,30 @@ function registerIpc() {
     updateConfig(patch);
     return true;
   });
+  // her ears: a wav from her overlay's microphone, the words back (whisper.cpp on this PC)
+  ipcMain.handle('speech:transcribe', async (_e, audio, lang) => {
+    try {
+      return { text: await speech.transcribe(Buffer.from(audio || []), String(lang || config.load().lang || 'ru')) };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+  // the local engines, downloaded once: piper with a Russian voice, whisper with its model. The panel
+  // shows how far along it is; nothing else waits on it but the download itself.
+  ipcMain.handle('speech:engines', () => speech.engines());
+  ipcMain.handle('speech:install', async (_e, engine) => {
+    const which = String(engine || 'piper');
+    const progress = (p) => sendCommand('speechDownload', { engine: which, ...p });
+    try {
+      if (which === 'piper') await speech.ensurePiper(progress);
+      else if (which === 'whisper') await speech.ensureWhisper(progress);
+      else return { ok: false, error: `no such engine: ${which}` };
+      progress({ step: 'done', got: 1, total: 1 });
+      return { ok: true, engines: speech.engines() };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
   // how hard the processor works, in %, since the last time she asked (pc.js)
   let cpuBefore = null;
   ipcMain.handle('pc:cpu', () => {
@@ -1923,6 +1976,8 @@ function main() {
     getAgent(); // her harness on disk is seeded here, at the start, not at the first work order: the
                 // skills shelf must be there before she is asked to choose from it
     tools.setScreenReader(readScreen); // "what is on my screen" is a tool now, like the rest
+    // the local voice and ears live in her storage, next to everything else of hers
+    speech.attach({ dir: () => path.join(app.getPath('userData'), 'speech') });
     // once, a little after she is up: update.js caches the answer for 12 hours, and a quiet check says
     // nothing when there is nothing to say (an update that exists is always shown)
     if (config.load().checkUpdates !== false) {
@@ -1944,6 +1999,12 @@ function main() {
       onDebug: DEV ? debugHandler : null,
     });
     globalShortcut.register('Control+Alt+C', () => toggleVisible());
+    // Ctrl+Alt+M: she listens to the microphone (whisper on this PC), and the words go to her chat
+    globalShortcut.register('Control+Alt+M', () => sendCommand('voiceListen'));
+    // her overlay needs the microphone for that: the only permission this app ever asks the system for
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+      callback(permission === 'media' || permission === 'audioCapture');
+    });
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list
     setTimeout(() => launch.launchables().catch(() => {}), 20000); // what she can open, before you ask
